@@ -1,0 +1,22 @@
+{
+  "name": "qdrant-mcp-server",
+  "version": "0.1.0",
+  "description": "A MCP server which provide RAG service based on Qdrant database",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "qdrant-mcp-server": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "inspector": "npx @modelcontextprotocol/inspector src/index.js"
+  },
+  "dependencies": {
+    "@qdrant/qdrant-js": "^1.15.1",
+    "fastmcp": "^3.14.5",
+    "openai": "^5.12.2",
+    "winston": "^3.17.0"
+  }
+}
