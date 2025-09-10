@@ -688,7 +688,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
   }): SearchResult[] {
     const limit = params.limit ?? 10;
     // 参数顺序：collectionId, MATCH 查询词, 其他过滤参数..., limit
-    const queryParams: any[] = [params.collectionId, params.query];
+    // 为避免查询词恰好为 FTS5 解析为列名（如 “match”）导致报错，将其包裹双引号
+    const safeQuery =
+      `"${params.query.replace(/"/g, '""')}"`; // 内部双引号转义
+    const queryParams: any[] = [params.collectionId, safeQuery];
     let filterSql = '';
 
     if (params.filters) {
@@ -720,7 +723,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     JOIN docs       ON chunk_meta.docId = docs.docId
     WHERE chunk_meta.collectionId = ?
       AND docs.is_deleted = 0
-      AND chunks_fts5 MATCH ?
+      AND chunks_fts5 MATCH (?)
       ${params.latestOnly ? 'AND versions.is_current = 1' : ''}
       ${filterSql}
     ORDER BY bm25(chunks_fts5) ASC
