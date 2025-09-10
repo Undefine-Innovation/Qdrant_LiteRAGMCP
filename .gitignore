@@ -3,7 +3,7 @@
 *.log
 .env
 .roo/
-Qdrant_Insertor/
 */package-lock.json
 *.md
 !README.md
+*.code-workspace
