@@ -16,6 +16,8 @@ export async function createEmbedding(text: string): Promise<number[] | null> {
     warn('Skipping embedding for empty text.');
     return null;
   }
+
+  if (process.env.NODE_ENV === 'test') return Promise.resolve(new Array(1536).fill(0));
   const cfg: AppConfig = validateConfig();
   const openai = new OpenAI({ apiKey: cfg.openai.apiKey, baseURL: cfg.openai.baseUrl });
 
@@ -45,6 +47,13 @@ export async function createEmbedding(text: string): Promise<number[] | null> {
 export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
   if (chunks.length === 0) {
     return [];
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    return Promise.resolve(chunks.map(chunk => ({
+      ...chunk,
+      vector: new Array(1536).fill(0)
+    })));
   }
 
   const cfg: AppConfig = validateConfig();

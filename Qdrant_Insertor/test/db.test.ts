@@ -110,6 +110,7 @@ describe('ChunksDatabase', () => {
     });
 
     test('should set and get current version', () => {
+describe('version management', () => {
       const newVersion = db.createVersion(collectionId, 'v2.0', 'Second version');
       db.setCurrentVersion(newVersion.versionId, collectionId);
 
@@ -137,6 +138,7 @@ describe('ChunksDatabase', () => {
       expect(db.getChunkMeta(pointId)).toBeNull();
     });
       expect(oldVersion?.is_current).toBe(false);
+});
       const updatedNewVersion = db.getVersion(newVersion.versionId);
       expect(updatedNewVersion?.is_current).toBe(true);
     });

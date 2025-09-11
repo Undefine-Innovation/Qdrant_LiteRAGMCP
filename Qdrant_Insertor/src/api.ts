@@ -54,7 +54,7 @@ export function createApp(deps?: { db?: DB }) {
     try {
       const { name, description } = req.body || {};
       if (!name || typeof name !== "string") {
-        return res.status(400).json({ error: "BadRequest: name required." });
+        return res.status(400).json({ error: "BadRequest: name required" });
       }
       const col = db.getCollectionById(req.params.collectionId);
       if (!col) return res.status(404).json({ error: "Collection not found" });
@@ -131,7 +131,7 @@ export function createApp(deps?: { db?: DB }) {
     const version = db.getVersion(versionId);
     if (!version) return res.status(404).json({ error: 'Version not found' });
     if (version.status !== 'EDITING') {
-      return res.status(400).json({ error: 'BadRequest: Only versions in "EDITING" status can be finalized.' });
+      return res.status(400).json({ error: 'BadRequest: Only versions in "EDITING" status can be finalized' });
     }
     try {
       const { finalVersionId, isNew } = db.finalizeVersion(versionId);
@@ -178,6 +178,7 @@ export function createApp(deps?: { db?: DB }) {
       return res.status(400).json({ error: 'BadRequest: content, collectionId, versionId, and key required' });
     }
     try {
+      const doc = db.createDoc(versionId, collectionId, key, content, name ?? metadata?.title ?? '', mimeType || 'text/plain');
       const { splitDocument: splitDocumentCreate } = await import('./splitter.js');
       const chunksCreate = await splitDocumentCreate(content, { strategy: 'markdown' });
       const metasCreate = chunksCreate.map((chunk, index) => ({
@@ -191,7 +192,6 @@ export function createApp(deps?: { db?: DB }) {
         content: chunk.content,
         title: chunk.titleChain ? chunk.titleChain[chunk.titleChain.length - 1] : '',
       }));
-      const doc = db.createDoc(versionId, collectionId, key, content, name ?? metadata?.title ?? '', mimeType || 'text/plain');
       await db.insertChunkBatch({
         collectionId,
         versionId,
@@ -211,10 +211,10 @@ export function createApp(deps?: { db?: DB }) {
     const doc = db.getDocById(docId);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
     try {
-      const { splitDocument: splitDocumentUpdate } = await import('./splitter.js');
-      const chunksUpdate = await splitDocumentUpdate(content, { strategy: 'markdown' });
       const updated = db.updateDoc(docId, content, name || doc.name, mimeType || doc.mime);
       if (!updated) throw new Error('Document update failed');
+      const { splitDocument: splitDocumentUpdate } = await import('./splitter.js');
+      const chunksUpdate = await splitDocumentUpdate(content, { strategy: 'markdown' });
       const metasUpdate = chunksUpdate.map((chunk, index) => ({
         pointId: `${updated.docId}#${index}`,
         chunkIndex: index,
