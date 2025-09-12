@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import Database from 'better-sqlite3';
 import {
   makeCollectionId,
   makeVersionId,
@@ -6,7 +6,7 @@ import {
   makePointId,
   parsePointId,
   hashContent,
-} from "../utils/id.js";
+} from '../utils/id.js';
 
 export interface Collection {
   collectionId: string;
@@ -78,11 +78,10 @@ export class DB {
     this.bootstrap();
   }
 
-
   private bootstrap() {
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("synchronous = NORMAL");
-    this.db.pragma("foreign_keys = ON");
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.db.pragma('foreign_keys = ON');
 
     const tx = this.db.transaction(() => {
       this.db.exec(`
@@ -195,7 +194,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return rows.map(this.rowToCollection);
   }
 
-  updateCollection(collectionId: string, name?: string, description?: string): Collection | null {
+  updateCollection(
+    collectionId: string,
+    name?: string,
+    description?: string,
+  ): Collection | null {
     const existingCollection = this.getCollectionById(collectionId);
     if (!existingCollection) {
       console.warn('updateCollection: no such collectionId', collectionId);
@@ -222,20 +225,32 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
 
     this.transaction(() => {
       const docsToSoftDelete = this.db
-        .prepare(`SELECT docId FROM docs WHERE versionId IN (SELECT versionId FROM versions WHERE collectionId = ?)`)
+        .prepare(
+          `SELECT docId FROM docs WHERE versionId IN (SELECT versionId FROM versions WHERE collectionId = ?)`,
+        )
         .all(collectionId) as { docId: string }[];
 
       for (const doc of docsToSoftDelete) {
         this.deleteDoc(doc.docId);
       }
 
-      this.db.prepare(`DELETE FROM versions WHERE collectionId = ?`).run(collectionId);
-      this.db.prepare(`DELETE FROM collections WHERE collectionId = ?`).run(collectionId);
+      this.db
+        .prepare(`DELETE FROM versions WHERE collectionId = ?`)
+        .run(collectionId);
+      this.db
+        .prepare(`DELETE FROM collections WHERE collectionId = ?`)
+        .run(collectionId);
     });
-    console.log(`Collection ${collectionId} and its associated versions, docs, and chunks have been deleted.`);
+    console.log(
+      `Collection ${collectionId} and its associated versions, docs, and chunks have been deleted.`,
+    );
   }
 
-  createVersion(collectionId: string, name: string, description?: string): Version {
+  createVersion(
+    collectionId: string,
+    name: string,
+    description?: string,
+  ): Version {
     const versionId = makeVersionId();
     const createdAt = Date.now();
     const updatedAt = createdAt;
@@ -343,9 +358,13 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
         this.deleteDoc(doc.docId);
       }
 
-      this.db.prepare(`DELETE FROM versions WHERE versionId = ?`).run(versionId);
+      this.db
+        .prepare(`DELETE FROM versions WHERE versionId = ?`)
+        .run(versionId);
     });
-    console.log(`Version ${versionId} and its associated documents and chunks have been deleted.`);
+    console.log(
+      `Version ${versionId} and its associated documents and chunks have been deleted.`,
+    );
     return true;
   }
   createDoc(
@@ -357,7 +376,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     mime?: string,
   ): Doc {
     const docId = makeDocId(content);
-    const size_bytes = typeof content === 'string' ? new TextEncoder().encode(content).length : content.byteLength;
+    const size_bytes =
+      typeof content === 'string'
+        ? new TextEncoder().encode(content).length
+        : content.byteLength;
     const createdAt = Date.now();
     const existingDocWithSameContent = this.getDocById(docId);
     if (existingDocWithSameContent) {
@@ -385,7 +407,9 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
         versionId,
         key,
         name ?? null,
-        typeof content === 'string' ? content : new TextDecoder().decode(content),
+        typeof content === 'string'
+          ? content
+          : new TextDecoder().decode(content),
         size_bytes,
         mime === undefined ? null : mime,
         createdAt,
@@ -395,8 +419,15 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     });
 
     // content字段从chunks表中获取，避免返回空内容
-    const contentRow = this.db.prepare(`SELECT content FROM chunks_fts5 WHERE pointId LIKE ? LIMIT 1`).get(`${docId}%`) as { content?: string } | undefined;
-    const contentStr = contentRow && contentRow.content ? contentRow.content : (typeof content === 'string' ? content : new TextDecoder().decode(content));
+    const contentRow = this.db
+      .prepare(`SELECT content FROM chunks_fts5 WHERE pointId LIKE ? LIMIT 1`)
+      .get(`${docId}%`) as { content?: string } | undefined;
+    const contentStr =
+      contentRow && contentRow.content
+        ? contentRow.content
+        : typeof content === 'string'
+          ? content
+          : new TextDecoder().decode(content);
 
     return {
       docId,
@@ -466,7 +497,12 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return rows.map(this.rowToDoc.bind(this));
   }
 
-  updateDoc(docId: string, content: string | Uint8Array, name?: string, mime?: string): Doc | null {
+  updateDoc(
+    docId: string,
+    content: string | Uint8Array,
+    name?: string,
+    mime?: string,
+  ): Doc | null {
     const existingDoc = this.getDocById(docId);
     if (!existingDoc) {
       console.error('updateDoc: Document not found', docId);
@@ -474,7 +510,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     }
 
     const newDocId = makeDocId(content);
-    const size_bytes = typeof content === 'string' ? new TextEncoder().encode(content).length : content.byteLength;
+    const size_bytes =
+      typeof content === 'string'
+        ? new TextEncoder().encode(content).length
+        : content.byteLength;
     const updatedAt = Date.now();
 
     const stmt = this.db.prepare(`
@@ -490,11 +529,13 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       stmt.run(
         newDocId,
         name ?? null,
-        typeof content === 'string' ? content : new TextDecoder().decode(content),
+        typeof content === 'string'
+          ? content
+          : new TextDecoder().decode(content),
         size_bytes,
         mime === undefined ? null : mime,
         updatedAt,
-        docId
+        docId,
       );
       // 更新 chunk_meta 表中的 docId，保持一致
       updateChunkMetaStmt.run(newDocId, docId);
@@ -513,7 +554,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     }
 
     this.transaction(() => {
-      this.db.prepare(`UPDATE docs SET is_deleted = 1, updated_at = ? WHERE docId = ?`).run(Date.now(), docId);
+      this.db
+        .prepare(
+          `UPDATE docs SET is_deleted = 1, updated_at = ? WHERE docId = ?`,
+        )
+        .run(Date.now(), docId);
       this.deleteChunksByDoc(docId);
     });
     return true;
@@ -524,7 +569,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       SELECT docId FROM docs WHERE versionId = ? AND is_deleted = 0
     `);
     const rows = stmt.all(versionId) as { docId: string }[];
-    return rows.map(row => row.docId);
+    return rows.map((row) => row.docId);
   }
 
   insertChunkBatch(args: {
@@ -540,21 +585,21 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     texts: Array<{ pointId: string; content: string; title?: string }>;
     createdAt?: number;
   }): { inserted: number } {
-   const stmtMeta = this.db.prepare(`
+    const stmtMeta = this.db.prepare(`
       INSERT INTO chunk_meta (
          pointId, docId, versionId, collectionId, chunkIndex , titleChain, contentHash, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(pointId) DO UPDATE SET docId=excluded.docId, versionId=excluded.versionId, collectionId=excluded.collectionId, chunkIndex=excluded.chunkIndex, titleChain=excluded.titleChain, contentHash=excluded.contentHash, created_at=excluded.created_at
     `);
-   const stmtChunks = this.db.prepare(`
+    const stmtChunks = this.db.prepare(`
      INSERT INTO chunks (
        content, title , pointId
      ) VALUES (?, ?, ?)
      ON CONFLICT(pointId) DO UPDATE SET content=excluded.content, title=excluded.title
    `);
-   const stmtChunksFts5 = this.db.prepare(
-     `INSERT INTO chunks_fts5 (content, title, pointId) VALUES (?, ?, ?)`
-   );
+    const stmtChunksFts5 = this.db.prepare(
+      `INSERT INTO chunks_fts5 (content, title, pointId) VALUES (?, ?, ?)`,
+    );
     const createdAt = args.createdAt ?? Date.now();
     this.transaction(() => {
       if (args.metas.length !== args.texts.length) {
@@ -617,7 +662,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const stmt = this.db.prepare(`
   SELECT pointId, content, title FROM chunks WHERE pointId IN (${placeholders})
 `);
-    const rows = stmt.all(...pointIds) as Array<{ pointId: string; content: string; title?: string }>;
+    const rows = stmt.all(...pointIds) as Array<{
+      pointId: string;
+      content: string;
+      title?: string;
+    }>;
 
     if (rows.length === 0) {
       console.warn('getChunkTexts: no chunks found');
@@ -646,7 +695,8 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     if (rows.length === 0) {
       console.warn(
         'getChunkMetasByVersion: no chunks found for versionId',
-        versionId)
+        versionId,
+      );
       return [];
     }
     return rows.map(this.rowToChunk.bind(this));
@@ -689,15 +739,16 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const limit = params.limit ?? 10;
     // 参数顺序：collectionId, MATCH 查询词, 其他过滤参数..., limit
     // 为避免查询词恰好为 FTS5 解析为列名（如 “match”）导致报错，将其包裹双引号
-    const safeQuery =
-      `"${params.query.replace(/"/g, '""')}"`; // 内部双引号转义
+    const safeQuery = `"${params.query.replace(/"/g, '""')}"`; // 内部双引号转义
     const queryParams: any[] = [params.collectionId, safeQuery];
     let filterSql = '';
 
     if (params.filters) {
       for (const key in params.filters) {
         if (Object.prototype.hasOwnProperty.call(params.filters, key)) {
-          if (['versionId', 'docId', 'collectionId', 'chunkIndex'].includes(key)) {
+          if (
+            ['versionId', 'docId', 'collectionId', 'chunkIndex'].includes(key)
+          ) {
             filterSql += ` AND chunk_meta.${key} = ?`;
             queryParams.push(params.filters[key]);
           } else if (key === 'status') {
@@ -791,7 +842,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     }));
   }
 
-  finalizeVersion(temporaryVersionId: string): { finalVersionId: string; isNew: boolean } {
+  finalizeVersion(temporaryVersionId: string): {
+    finalVersionId: string;
+    isNew: boolean;
+  } {
     const docIds = this.getDocIdsByVersion(temporaryVersionId);
     docIds.sort();
     const combinedDocIds = docIds.join('|');
@@ -801,38 +855,58 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
 
     if (existingVersion) {
       this.transaction(() => {
-        this.db.prepare(`UPDATE docs SET versionId = ?, updated_at = ? WHERE versionId = ?`)
+        this.db
+          .prepare(
+            `UPDATE docs SET versionId = ?, updated_at = ? WHERE versionId = ?`,
+          )
           .run(finalVersionId, Date.now(), temporaryVersionId);
 
-        this.db.prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
+        this.db
+          .prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
           .run(finalVersionId, temporaryVersionId);
 
-        this.db.prepare(`DELETE FROM versions WHERE versionId = ?`)
+        this.db
+          .prepare(`DELETE FROM versions WHERE versionId = ?`)
           .run(temporaryVersionId);
       });
       return { finalVersionId, isNew: false };
     } else {
+      const tempVersion = this.getVersion(temporaryVersionId);
+      if (!tempVersion) {
+        console.warn(
+          `finalizeVersion: no such versionId ${temporaryVersionId}`,
+        );
+        // 注意：此时 docIds 为空将产生一个稳定的 finalVersionId（hashContent('')）
+        return { finalVersionId, isNew: true };
+      }
       this.transaction(() => {
-        // 先插入新版本记录，确保外键约束通过
-        const tempVersion = this.getVersion(temporaryVersionId);
-        if (!tempVersion) {
-          throw new Error(`Version ${temporaryVersionId} does not exist`);
-        }
         const createdAt = tempVersion.created_at;
         const updatedAt = Date.now();
-        this.db.prepare(`
+        this.db
+          .prepare(
+            `
           INSERT INTO versions (versionId, collectionId, name, description, status, is_current, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(finalVersionId, tempVersion.collectionId, tempVersion.name, tempVersion.description, 'ACTIVE', 0, createdAt, updatedAt);
-
-        // 更新 docs 表 versionId
-        this.db.prepare(`UPDATE docs SET versionId = ? WHERE versionId = ?`)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+          )
+          .run(
+            finalVersionId,
+            tempVersion.collectionId,
+            tempVersion.name,
+            tempVersion.description,
+            'ACTIVE',
+            0,
+            createdAt,
+            updatedAt,
+          );
+        this.db
+          .prepare(`UPDATE docs SET versionId = ? WHERE versionId = ?`)
           .run(finalVersionId, temporaryVersionId);
-        // 更新 chunk_meta 表 versionId
-        this.db.prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
+        this.db
+          .prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
           .run(finalVersionId, temporaryVersionId);
-        // 删除临时版本
-        this.db.prepare(`DELETE FROM versions WHERE versionId = ?`)
+        this.db
+          .prepare(`DELETE FROM versions WHERE versionId = ?`)
           .run(temporaryVersionId);
       });
       return { finalVersionId, isNew: true };
@@ -852,17 +926,19 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return {
       docId: row.docId,
       versionId: row.versionId,
-      collectionId: row.collectionId ?? (
+      collectionId:
+        row.collectionId ??
         // docs 表无 collectionId 字段时，尝试通过 versionId 反查
         (() => {
           try {
-            const v = this.db.prepare('SELECT collectionId FROM versions WHERE versionId = ?').get(row.versionId) as { collectionId?: string } | undefined;
+            const v = this.db
+              .prepare('SELECT collectionId FROM versions WHERE versionId = ?')
+              .get(row.versionId) as { collectionId?: string } | undefined;
             return v && v.collectionId ? v.collectionId : undefined;
           } catch {
             return undefined;
           }
-        })()
-      ),
+        })(),
       key: row.key,
       name: row.name ?? undefined,
       content: row.content ?? '',
@@ -875,7 +951,9 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
   }
 
   private rowToChunk(row: any): Chunk {
-    const contentRow = this.db.prepare(`SELECT content FROM chunks_fts5 WHERE pointId = ?`).get(row.pointId) as { content: string } | undefined;
+    const contentRow = this.db
+      .prepare(`SELECT content FROM chunks_fts5 WHERE pointId = ?`)
+      .get(row.pointId) as { content: string } | undefined;
     const content = contentRow ? contentRow.content : '';
 
     return {
@@ -897,10 +975,18 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     docs: number;
     chunks: number;
   } {
-    const collections = this.db.prepare(`SELECT COUNT(*) FROM collections`).get() as { 'COUNT(*)': number };
-    const versions = this.db.prepare(`SELECT COUNT(*) FROM versions`).get() as { 'COUNT(*)': number };
-    const docs = this.db.prepare(`SELECT COUNT(*) FROM docs WHERE is_deleted = 0`).get() as { 'COUNT(*)': number };
-    const chunks = this.db.prepare(`SELECT COUNT(*) FROM chunk_meta`).get() as { 'COUNT(*)': number };
+    const collections = this.db
+      .prepare(`SELECT COUNT(*) FROM collections`)
+      .get() as { 'COUNT(*)': number };
+    const versions = this.db.prepare(`SELECT COUNT(*) FROM versions`).get() as {
+      'COUNT(*)': number;
+    };
+    const docs = this.db
+      .prepare(`SELECT COUNT(*) FROM docs WHERE is_deleted = 0`)
+      .get() as { 'COUNT(*)': number };
+    const chunks = this.db.prepare(`SELECT COUNT(*) FROM chunk_meta`).get() as {
+      'COUNT(*)': number;
+    };
     return {
       collections: collections['COUNT(*)'],
       versions: versions['COUNT(*)'],
