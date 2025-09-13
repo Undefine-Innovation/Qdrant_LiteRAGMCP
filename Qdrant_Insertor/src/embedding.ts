@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import { validateConfig, AppConfig } from '../config.js'; // Import AppConfig type
-import { DocumentChunk } from './splitter.js'; // Import the DocumentChunk interface
 import { Chunk, ChunkWithVector } from './db.js'; // Import Chunk and ChunkWithVector interfaces
 
 /**

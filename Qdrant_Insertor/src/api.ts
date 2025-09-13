@@ -379,17 +379,8 @@ export function createApp(deps?: { db?: DB }) {
 
   // 统一错误处理（把 500 变成可读 JSON）
   app.use((err: any, _req: any, res: any, _next: any) => {
-    // 统一错误消息格式，去除句号
-    let msg = err?.message || 'InternalError';
-    if (typeof msg === 'string' && msg.endsWith('.')) {
-      msg = msg.slice(0, -1);
-    }
-    // 统一 500 错误消息为 InternalError，避免泄露内部信息
-    if (res.statusCode === 500) {
-      msg = 'InternalError';
-    }
     console.error('API error:', err);
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: 'InternalError' });
   });
 
   return app;

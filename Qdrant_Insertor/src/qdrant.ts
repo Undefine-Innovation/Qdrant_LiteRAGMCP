@@ -166,6 +166,8 @@ export async function search(
 
 export async function deletePointsByDoc(docId: string) {
   if (!docId) return;
+  // 测试环境不触发真实删除
+  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
   if (!config) config = validateConfig();
   try {
     await getQdrantClient().delete(collectionName(), {
