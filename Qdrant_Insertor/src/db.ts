@@ -510,40 +510,45 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     }
 
     const newDocId = makeDocId(content);
-    const size_bytes =
-      typeof content === 'string'
-        ? new TextEncoder().encode(content).length
-        : content.byteLength;
     const updatedAt = Date.now();
 
-    const stmt = this.db.prepare(`
-      UPDATE docs
-      SET docId = ?, name = ?, content = ?, size_bytes = ?, mime = ?, updated_at = ?
-      WHERE docId = ?
-    `);
-    const updateChunkMetaStmt = this.db.prepare(`
-      UPDATE chunk_meta SET docId = ? WHERE docId = ?
-    `);
+    // 1) 内容未变：只更新元数据
+    if (newDocId === docId) {
+      const stmtSame = this.db.prepare(`
+        UPDATE docs
+        SET
+          name = COALESCE(?, name),
+          mime = COALESCE(?, mime),
+          updated_at = ?
+        WHERE docId = ?
+      `);
+      this.transaction(() => {
+        stmtSame.run(
+          name ?? null,
+          mime === undefined ? null : mime,
+          updatedAt,
+          docId,
+        );
+      });
+      return this.getDocById(docId);
+    }
+
+    // 2) 内容已变：硬替换（删旧 -> 新建）
+    const { versionId, collectionId, key } = existingDoc;
     this.transaction(() => {
-      // 先更新 docs 表，避免外键约束冲突
-      stmt.run(
-        newDocId,
-        name ?? null,
-        typeof content === 'string'
-          ? content
-          : new TextDecoder().decode(content),
-        size_bytes,
-        mime === undefined ? null : mime,
-        updatedAt,
-        docId,
-      );
-      // 更新 chunk_meta 表中的 docId，保持一致
-      updateChunkMetaStmt.run(newDocId, docId);
-      // 再删除旧的 chunks，确保事务原子性
-      this.deleteChunksByDoc(docId);
+      this.deleteDoc(docId); // 将执行硬删除
     });
 
-    return this.getDocById(newDocId);
+    // 复用 createDoc 的插入逻辑
+    return this.createDoc(
+      versionId,
+      // rowToDoc 已做 versionId -> collectionId 的反查，正常应存在
+      collectionId as string,
+      key,
+      content,
+      name ?? existingDoc.name,
+      mime,
+    );
   }
 
   deleteDoc(docId: string): boolean {
@@ -554,12 +559,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     }
 
     this.transaction(() => {
-      this.db
-        .prepare(
-          `UPDATE docs SET is_deleted = 1, updated_at = ? WHERE docId = ?`,
-        )
-        .run(Date.now(), docId);
+      // 先删所有 chunk 及索引
       this.deleteChunksByDoc(docId);
+      // 再删 docs 记录（硬删）
+      this.db.prepare(`DELETE FROM docs WHERE docId = ?`).run(docId);
     });
     return true;
   }
@@ -718,12 +721,16 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const pointIds = ids.map((r) => r.pointId);
     const ph = pointIds.map(() => '?').join(',');
 
+    const delChunksFts = this.db.prepare(
+      `DELETE FROM chunks_fts5 WHERE pointId IN (${ph})`,
+    );
     const delChunks = this.db.prepare(
       `DELETE FROM chunks WHERE pointId IN (${ph})`,
     );
     const delMeta = this.db.prepare(`DELETE FROM chunk_meta WHERE docId=?`);
 
     this.transaction(() => {
+      delChunksFts.run(...pointIds);
       delChunks.run(...pointIds);
       delMeta.run(docId);
     });
@@ -754,6 +761,12 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
           } else if (key === 'status') {
             filterSql += ` AND versions.${key} = ?`;
             queryParams.push(params.filters[key]);
+          } else if (key === 'titleChain') {
+            filterSql += ` AND chunk_meta.titleChain LIKE ?`;
+            queryParams.push(`%${params.filters[key]}%`);
+          } else if (key === 'is_current') {
+            filterSql += ` AND versions.is_current = ?`;
+            queryParams.push(params.filters[key] ? 1 : 0);
           }
         }
       }
@@ -774,7 +787,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     JOIN docs       ON chunk_meta.docId = docs.docId
     WHERE chunk_meta.collectionId = ?
       AND docs.is_deleted = 0
-      AND chunks_fts5 MATCH (?)
+      AND chunks_fts5 MATCH ?
       ${params.latestOnly ? 'AND versions.is_current = 1' : ''}
       ${filterSql}
     ORDER BY bm25(chunks_fts5) ASC
@@ -816,7 +829,9 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const sql = `
       SELECT
         cm.pointId,
+        cm.collectionId AS collectionId,     -- 新增
         c.content,
+        cm.titleChain AS titleChain,          -- 新增
         c.title,
         cm.versionId,
         cm.docId,

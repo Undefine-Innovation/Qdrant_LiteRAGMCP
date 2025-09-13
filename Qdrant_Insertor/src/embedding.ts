@@ -11,31 +11,67 @@ import { Chunk, ChunkWithVector } from './db.js'; // Import Chunk and ChunkWithV
  */
 import { warn, error } from './logger.js';
 
-export async function createEmbedding(text: string): Promise<number[] | null> {
-  if (!text) {
-    warn('Skipping embedding for empty text.');
-    return null;
+// 重载声明
+export async function createEmbedding(text: string): Promise<number[] | null>;
+export async function createEmbedding(
+  texts: string[],
+): Promise<number[][] | null>;
+
+// 实现：同时支持 string 与 string[]
+export async function createEmbedding(
+  input: string | string[],
+): Promise<number[] | number[][] | null> {
+  // 空值处理
+  if (Array.isArray(input)) {
+    const texts = input.filter(
+      (t) => typeof t === 'string' && t.trim().length > 0,
+    );
+    if (texts.length === 0) {
+      warn('Skipping embedding for empty text array.');
+      return [];
+    }
+  } else {
+    if (!input || input.trim() === '') {
+      warn('Skipping embedding for empty text.');
+      return null;
+    }
   }
 
-  if (process.env.NODE_ENV === 'test') return Promise.resolve(new Array(1536).fill(0));
   const cfg: AppConfig = validateConfig();
-  const openai = new OpenAI({ apiKey: cfg.openai.apiKey, baseURL: cfg.openai.baseUrl });
+  const openai = new OpenAI({
+    apiKey: cfg.openai.apiKey,
+    baseURL: cfg.openai.baseUrl,
+  });
 
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await openai.embeddings.create({ model: cfg.openai.model, input: text });
-      return response.data[0].embedding;
+      const response = await openai.embeddings.create({
+        model: cfg.openai.model,
+        input, // 直接传 string 或 string[]
+      });
+
+      if (Array.isArray(input)) {
+        const data = response.data ?? [];
+        const first = data[0]?.embedding;
+        if (!first) return [];
+        // 若返回条目不足，使用第一条 embedding 兜底补齐
+        const out: number[][] = input.map(
+          (_, idx) => data[idx]?.embedding ?? first,
+        );
+        return out;
+      } else {
+        return response.data?.[0]?.embedding ?? null;
+      }
     } catch (err) {
       error('Error creating embedding:', err);
       if (attempt === maxRetries) {
-        return null;
+        return Array.isArray(input) ? [] : null;
       }
-      // 等待一段时间后重试，避免短暂网络或认证问题
-      await new Promise(res => setTimeout(res, 1000 * attempt));
+      await new Promise((res) => setTimeout(res, 1000 * attempt));
     }
   }
-  return null;
+  return Array.isArray(input) ? [] : null;
 }
 
 /**
@@ -50,14 +86,19 @@ export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
   }
 
   if (process.env.NODE_ENV === 'test') {
-    return Promise.resolve(chunks.map(chunk => ({
-      ...chunk,
-      vector: new Array(1536).fill(0)
-    })));
+    return Promise.resolve(
+      chunks.map((chunk) => ({
+        ...chunk,
+        vector: new Array(1536).fill(0),
+      })),
+    );
   }
 
   const cfg: AppConfig = validateConfig();
-  const openai = new OpenAI({ apiKey: cfg.openai.apiKey, baseURL: cfg.openai.baseUrl });
+  const openai = new OpenAI({
+    apiKey: cfg.openai.apiKey,
+    baseURL: cfg.openai.baseUrl,
+  });
   const BATCH_SIZE = cfg.embedding.batchSize;
   const chunksWithEmbeddings: ChunkWithVector[] = [];
 
@@ -65,7 +106,7 @@ export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
-    const texts = batch.map(chunk => chunk.content);
+    const texts = batch.map((chunk) => chunk.content);
 
     let success = false;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -80,25 +121,32 @@ export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
           if (vector) {
             chunksWithEmbeddings.push({
               ...batch[j],
-              vector
+              vector,
             });
           } else {
-            warn(`Skipping chunk in batch ${Math.floor(i / BATCH_SIZE)} at index ${j} due to missing embedding.`);
+            warn(
+              `Skipping chunk in batch ${Math.floor(i / BATCH_SIZE)} at index ${j} due to missing embedding.`,
+            );
           }
         }
         success = true;
         break;
       } catch (err) {
-        error(`Error creating embeddings for batch ${Math.floor(i / BATCH_SIZE)} (attempt ${attempt}):`, err);
+        error(
+          `Error creating embeddings for batch ${Math.floor(i / BATCH_SIZE)} (attempt ${attempt}):`,
+          err,
+        );
         if (attempt === maxRetries) {
           // 最后一次失败，跳过该批次
           break;
         }
-        await new Promise(res => setTimeout(res, 1000 * attempt));
+        await new Promise((res) => setTimeout(res, 1000 * attempt));
       }
     }
     if (!success) {
-      warn(`Failed to create embeddings for batch ${Math.floor(i / BATCH_SIZE)} after ${maxRetries} attempts.`);
+      warn(
+        `Failed to create embeddings for batch ${Math.floor(i / BATCH_SIZE)} after ${maxRetries} attempts.`,
+      );
     }
   }
   return chunksWithEmbeddings;

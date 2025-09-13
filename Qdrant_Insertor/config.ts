@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-
+dotenv.config();
 /**
  * Interface for the application configuration object.
  */
@@ -44,10 +44,8 @@ export function validateConfig(env = process.env): AppConfig {
 
   const DB_PATH = validateString(env.DB_PATH, "DB_PATH");
 
-  // Qdrant 地址拼接
-  const QDRANT_URL = `${env.QDRANT_PROTOCOL || "http"}://${
-    env.QDRANT_HOST || "localhost"
-  }:${env.QDRANT_PORT || "6333"}`;
+  // Qdrant 直读 URL（缺失直接抛错）
+  const QDRANT_URL = validateString(env.QDRANT_URL, "QDRANT_URL");
   const QDRANT_COLLECTION = env.QDRANT_COLLECTION || "chunks";
 
   // 数值参数校验

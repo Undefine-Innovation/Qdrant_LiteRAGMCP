@@ -1,4 +1,3 @@
-import { QdrantClient } from '@qdrant/js-client-rest';
 import { DB } from './db.js'; // ChunksDatabase is default export
 import { createEmbedding } from './embedding.js';
 import { search as qdrantSearch } from './qdrant.js';
@@ -95,7 +94,13 @@ export async function runSearch(
 
   // 关键词检索 -> 统一结构
   const kwRows =
-    dbInstance.searchKeyword({ collectionId, query, limit, latestOnly }) ?? [];
+    dbInstance.searchKeyword({
+      collectionId,
+      query,
+      limit,
+      latestOnly,
+      filters,
+    }) ?? [];
   const keywordResults: UnifiedSearchResult[] = kwRows.map((r: any) => ({
     pointId: String(r.pointId ?? r.id),
     content: r.content,
@@ -124,12 +129,12 @@ export async function runSearch(
     // ✅ 兼容两种返回形状
     const points = Array.isArray(raw) ? raw : (raw.points ?? []);
 
-    const pointIds = points.map((x: any) => String(x.id));
+    const pointIds = points.map((x: any) => String(x.pointId ?? x.id));
     const chunks =
       dbInstance.getChunksByPointIds(pointIds, collectionId, latestOnly) ?? [];
 
     const scoreById = new Map<string, number>(
-      points.map((x: any) => [String(x.id), Number(x.score) || 0]),
+      points.map((x: any) => [String(x.pointId ?? x.id), Number(x.score) || 0]),
     );
 
     semanticResults = chunks.map((c: any) => ({
@@ -156,4 +161,3 @@ export async function runSearch(
   }
   return fused;
 }
-

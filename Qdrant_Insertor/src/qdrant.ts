@@ -55,6 +55,24 @@ export async function ensureCollection() {
       throw new Error('Failed to create collection');
     }
   }
+  // 校验已存在集合的向量维度是否与配置一致
+  try {
+    const info = await client.getCollection(collectionName());
+    // 兼容不同版本返回结构，尽力取到 size
+    const actualSize =
+      (info as any)?.result?.config?.params?.vectors?.size ??
+      (info as any)?.result?.vectors?.size ??
+      (info as any)?.result?.config?.vectors?.size;
+
+    if (actualSize && actualSize !== config.qdrant.vectorSize) {
+      throw new Error(
+        `Qdrant collection "${collectionName()}" vector size mismatch: ` +
+          `expected ${config.qdrant.vectorSize}, got ${actualSize}`,
+      );
+    }
+  } catch (err) {
+    console.warn('ensureCollection: could not verify vector size', err);
+  }
 }
 
 const BATCH = 100;
@@ -69,6 +87,7 @@ export interface ChunkWithVector {
   vector: number[];
   pointId?: string;
   source?: string;
+  contentHash?: string;
 }
 
 export async function upsertChunks(chunks: ChunkWithVector[]) {
@@ -79,15 +98,22 @@ export async function upsertChunks(chunks: ChunkWithVector[]) {
   if (!config) config = validateConfig(); // Ensure config is loaded
   for (let i = 0; i < chunks.length; i += BATCH) {
     const batch = chunks.slice(i, i + BATCH);
+    for (const c of batch) {
+      if (!c.pointId) c.pointId = `${c.docId}#${c.chunkIndex}`;
+    }
     const points = batch.map((c) => ({
-      id: c.pointId ?? `${c.docId}#${c.chunkIndex}`,
+      id: c.pointId,
       vector: c.vector,
       payload: {
         content: c.content,
-        titleChain: Array.isArray(c.titleChain) ? c.titleChain.join(' > ') : c.titleChain,
+        titleChain: Array.isArray(c.titleChain)
+          ? c.titleChain.join(' > ')
+          : c.titleChain,
         source: c.source,
+        contentHash: (c as any).contentHash,
         docId: c.docId,
         versionId: c.versionId,
+        collectionId: c.collectionId,
         chunkIndex: c.chunkIndex,
       },
     }));
@@ -95,7 +121,10 @@ export async function upsertChunks(chunks: ChunkWithVector[]) {
     try {
       await getQdrantClient().upsert(collectionName(), { wait: true, points });
     } catch (e) {
-      console.error(`Error upserting batch ${Math.floor(i / BATCH) + 1}:`, e as Error);
+      console.error(
+        `Error upserting batch ${Math.floor(i / BATCH) + 1}:`,
+        e as Error,
+      );
     }
   }
 }
@@ -112,14 +141,38 @@ export async function search(
   if (!config) config = validateConfig();
 
   try {
-    return await getQdrantClient().search(collectionId, {
+    const res = await getQdrantClient().search(collectionId, {
       vector,
       limit,
-      filter,             // 👈 保持 filter 传递，测试断言里需要
+      filter,
       with_payload: true,
     });
+    const items = Array.isArray(res) ? res : (res?.result ?? []);
+    return items.map((item: any) => ({
+      pointId: item.id as string,
+      score: item.score,
+      content: item.payload?.content,
+      titleChain: item.payload?.titleChain,
+      docId: item.payload?.docId,
+      versionId: item.payload?.versionId,
+      collectionId: item.payload?.collectionId,
+      chunkIndex: item.payload?.chunkIndex,
+    }));
   } catch (e) {
     console.error('Error searching Qdrant:', e as Error);
     return [];
+  }
+}
+
+export async function deletePointsByDoc(docId: string) {
+  if (!docId) return;
+  if (!config) config = validateConfig();
+  try {
+    await getQdrantClient().delete(collectionName(), {
+      wait: true,
+      filter: { must: [{ key: 'docId', match: { value: docId } }] },
+    });
+  } catch (e) {
+    console.warn('deletePointsByDoc: failed to delete points', docId, e);
   }
 }
