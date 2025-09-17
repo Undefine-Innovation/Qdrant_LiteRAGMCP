@@ -9,6 +9,4 @@ const SummaryBoard = (containerName : string,detailIntroduction : string) => {
     </div>;
 }
 
-const 
-
 export default SummaryBoard;

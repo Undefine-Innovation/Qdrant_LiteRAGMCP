@@ -8,63 +8,7 @@ import {
   hashContent,
 } from '../utils/id.js';
 
-export interface Collection {
-  collectionId: string;
-  name: string;
-  description?: string;
-  created_at: number;
-}
-
-export interface Version {
-  versionId: string;
-  collectionId: string;
-  name: string;
-  description?: string;
-  status: string;
-  is_current?: boolean;
-  created_at: number;
-  updated_at?: number;
-}
-
-export interface Doc {
-  docId: string;
-  versionId: string;
-  collectionId: string;
-  key: string;
-  name?: string;
-  content: string;
-  size_bytes?: number;
-  mime?: string;
-  created_at: number;
-  updated_at?: number;
-  is_deleted?: boolean;
-}
-
-export interface Chunk {
-  pointId: string;
-  docId: string;
-  versionId: string;
-  collectionId: string;
-  chunkIndex: number;
-  titleChain?: string;
-  contentHash?: string;
-  created_at: number;
-  content: string;
-}
-
-export interface ChunkWithVector extends Chunk {
-  vector: number[];
-}
-
-export interface SearchResult {
-  pointId: string;
-  content: string;
-  title?: string;
-  versionId: string;
-  docId: string;
-  chunkIndex: number;
-  is_current?: boolean;
-}
+import { Collection, Version, Doc, ChunkMeta, ChunkWithVector, SearchResult, CollectionId, VersionId, DocId, PointId } from '../share/type.js';
 
 export class DB {
   private db: Database.Database;
@@ -156,7 +100,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
   }
 
   createCollection(name: string, description?: string): Collection {
-    const collectionId = makeCollectionId();
+    const collectionId = makeCollectionId() as CollectionId;
     const createdAt = Date.now();
     const stmt = this.db.prepare(`
                 INSERT INTO collections (collectionId, name, description, created_at)
@@ -164,13 +108,13 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     this.transaction(() => {
       stmt.run(collectionId, name, description ?? null, createdAt);
     });
-    return { collectionId, name, description, created_at: createdAt };
+    return { collectionId, name, description, created_at: createdAt } as Collection;
   }
   getCollectionById(collectionId: string): Collection | null {
     const stmt = this.db.prepare(`
     SELECT * FROM collections WHERE collectionId = ?
   `);
-    const row = stmt.get(collectionId);
+    const row = stmt.get(collectionId) as Collection;
     return row ? this.rowToCollection(row) : null;
   }
 
@@ -178,7 +122,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const stmt = this.db.prepare(`
     SELECT * FROM collections WHERE name = ?
   `);
-    const row = stmt.get(name);
+    const row = stmt.get(name) as Collection;
     return row ? this.rowToCollection(row) : null;
   }
 
@@ -211,7 +155,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       WHERE collectionId = ?
     `);
     this.transaction(() => {
-      stmt.run(name ?? null, description ?? null, collectionId);
+      stmt.run(name ?? null, description ?? null, collectionId as string);
     });
     return this.getCollectionById(collectionId);
   }
@@ -251,7 +195,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     name: string,
     description?: string,
   ): Version {
-    const versionId = makeVersionId();
+    const versionId = makeVersionId() as VersionId;
     const createdAt = Date.now();
     const updatedAt = createdAt;
     const stmt = this.db.prepare(`
@@ -259,8 +203,8 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       VALUES (?, ?, ?, ?, ?, ?, ?)`);
     this.transaction(() => {
       stmt.run(
-        versionId,
-        collectionId,
+        versionId as string,
+        collectionId as string,
         name,
         description ?? null,
         'EDITING',
@@ -277,24 +221,24 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       is_current: false,
       created_at: createdAt,
       updated_at: updatedAt,
-    };
+    } as Version;
   }
   getVersion(versionId: string): Version | null {
     const stmt = this.db.prepare(`
       SELECT * FROM versions WHERE versionId = ?
     `);
-    const row = stmt.get(versionId) as Version | undefined;
+    const row = stmt.get(versionId) as any | undefined;
     if (!row) return null;
     return {
-      versionId: row.versionId,
-      collectionId: row.collectionId,
+      versionId: row.versionId as VersionId,
+      collectionId: row.collectionId as CollectionId,
       name: row.name,
       description: row.description ?? undefined,
       status: row.status,
       is_current: !!row.is_current,
       created_at: row.created_at,
       updated_at: row.updated_at ?? undefined,
-    };
+    } as Version;
   }
 
   listVersions(collectionId: string): Version[] {
@@ -304,11 +248,15 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const rows = stmt.all(collectionId);
     return rows.map((row: any) => ({
       ...(row as Version),
+      versionId: row.versionId as VersionId,
+      collectionId: row.collectionId as CollectionId,
       name: row.name,
       description: row.description ?? undefined,
+      status: row.status,
       is_current: !!row.is_current,
+      created_at: row.created_at,
       updated_at: row.updated_at ?? undefined,
-    }));
+    })) as Version[];
   }
 
   setVersionStatus(versionId: string, status: Version['status']): void {
@@ -375,7 +323,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     name?: string,
     mime?: string,
   ): Doc {
-    const docId = makeDocId(content);
+    const docId = makeDocId(content) as DocId;
     const size_bytes =
       typeof content === 'string'
         ? new TextEncoder().encode(content).length
@@ -403,8 +351,8 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     `);
     this.transaction(() => {
       stmt.run(
-        docId,
-        versionId,
+        docId as string,
+        versionId as string,
         key,
         name ?? null,
         typeof content === 'string'
@@ -432,7 +380,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return {
       docId,
       versionId,
-      collectionId,
+      collectionId: collectionId as CollectionId,
       key,
       name: name ?? undefined,
       size_bytes,
@@ -441,7 +389,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       updated_at: createdAt,
       is_deleted: false,
       content: contentStr,
-    };
+    } as Doc;
   }
 
   getAllDocs(): Doc[] {
@@ -469,7 +417,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       // console.error('getDocById: no such docId', docId); // 移除错误日志，避免测试噪音
       return null;
     }
-    return this.rowToDoc(row);
+    return this.rowToDoc(row) as Doc;
   }
 
   getDocByKey(versionId: string, key: string): Doc | null {
@@ -543,7 +491,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return this.createDoc(
       versionId,
       // rowToDoc 已做 versionId -> collectionId 的反查，正常应存在
-      collectionId as string,
+      collectionId as CollectionId,
       key,
       content,
       name ?? existingDoc.name,
@@ -620,10 +568,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
         const meta = args.metas[i];
         const text = args.texts[i];
         stmtMeta.run(
-          meta.pointId,
-          args.docId,
-          args.versionId,
-          args.collectionId,
+          meta.pointId as PointId as string,
+          args.docId as DocId as string,
+          args.versionId as VersionId as string,
+          args.collectionId as CollectionId as string,
           meta.chunkIndex,
           meta.titleChain ?? null,
           meta.contentHash ?? null,
@@ -637,7 +585,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return { inserted: args.metas.length };
   }
 
-  getChunkMeta(pointId: string): Chunk | null {
+  getChunkMeta(pointId: string): ChunkMeta | null {
     const stmt = this.db.prepare(`
       SELECT * FROM chunk_meta WHERE pointId = ?
     `);
@@ -652,7 +600,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       );
       return null;
     }
-    return this.rowToChunk(row);
+    return this.rowToChunkMeta(row);
   }
   getChunkTexts(
     pointIds: string[],
@@ -690,7 +638,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       {} as Record<string, { content: string; title?: string }>,
     );
   }
-  getChunkMetasByVersion(versionId: string): Chunk[] {
+  getChunkMetasByVersion(versionId: string): ChunkMeta[] {
     const stmt = this.db.prepare(`
       SELECT * FROM chunk_meta WHERE versionId = ? ORDER BY chunkIndex ASC
     `);
@@ -702,7 +650,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
       );
       return [];
     }
-    return rows.map(this.rowToChunk.bind(this));
+    return rows.map(this.rowToChunkMeta.bind(this)) as ChunkMeta[];
   }
   deleteChunksByDoc(docId: string): void {
     let ids = this.db
@@ -813,7 +761,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return rows.map((row: any) => ({
       ...(row as SearchResult),
       is_current: !!row.is_current,
-    }));
+      docId: row.docId as DocId,
+      pointId: row.pointId as PointId,
+      versionId: row.versionId as VersionId,
+      collectionId: row.collectionId as CollectionId,
+    })) as SearchResult[];
   }
 
   getChunksByPointIds(
@@ -854,7 +806,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     return rows.map((row: any) => ({
       ...(row as SearchResult),
       is_current: !!row.is_current,
-    }));
+      docId: row.docId as DocId,
+      pointId: row.pointId as PointId,
+      versionId: row.versionId as VersionId,
+      collectionId: row.collectionId as CollectionId,
+    })) as SearchResult[];
   }
 
   finalizeVersion(temporaryVersionId: string): {
@@ -864,7 +820,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     const docIds = this.getDocIdsByVersion(temporaryVersionId);
     docIds.sort();
     const combinedDocIds = docIds.join('|');
-    const finalVersionId = hashContent(combinedDocIds);
+    const finalVersionId = hashContent(combinedDocIds) as VersionId;
 
     const existingVersion = this.getVersion(finalVersionId);
 
@@ -874,11 +830,11 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
           .prepare(
             `UPDATE docs SET versionId = ?, updated_at = ? WHERE versionId = ?`,
           )
-          .run(finalVersionId, Date.now(), temporaryVersionId);
+          .run(finalVersionId as string, Date.now(), temporaryVersionId);
 
         this.db
           .prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
-          .run(finalVersionId, temporaryVersionId);
+          .run(finalVersionId as string, temporaryVersionId);
 
         this.db
           .prepare(`DELETE FROM versions WHERE versionId = ?`)
@@ -905,8 +861,8 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
         `,
           )
           .run(
-            finalVersionId,
-            tempVersion.collectionId,
+            finalVersionId as string,
+            tempVersion.collectionId as string,
             tempVersion.name,
             tempVersion.description,
             'ACTIVE',
@@ -916,10 +872,10 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
           );
         this.db
           .prepare(`UPDATE docs SET versionId = ? WHERE versionId = ?`)
-          .run(finalVersionId, temporaryVersionId);
+          .run(finalVersionId as string, temporaryVersionId);
         this.db
           .prepare(`UPDATE chunk_meta SET versionId = ? WHERE versionId = ?`)
-          .run(finalVersionId, temporaryVersionId);
+          .run(finalVersionId as string, temporaryVersionId);
         this.db
           .prepare(`DELETE FROM versions WHERE versionId = ?`)
           .run(temporaryVersionId);
@@ -930,7 +886,7 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
 
   private rowToCollection(row: any): Collection {
     return {
-      collectionId: row.collectionId,
+      collectionId: row.collectionId as CollectionId,
       name: row.name,
       description: row.description ?? undefined,
       created_at: row.created_at,
@@ -939,17 +895,17 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
 
   private rowToDoc(row: any): Doc {
     return {
-      docId: row.docId,
-      versionId: row.versionId,
+      docId: row.docId as DocId,
+      versionId: row.versionId as VersionId,
       collectionId:
-        row.collectionId ??
+        (row.collectionId as CollectionId) ??
         // docs 表无 collectionId 字段时，尝试通过 versionId 反查
         (() => {
           try {
             const v = this.db
               .prepare('SELECT collectionId FROM versions WHERE versionId = ?')
               .get(row.versionId) as { collectionId?: string } | undefined;
-            return v && v.collectionId ? v.collectionId : undefined;
+            return v && v.collectionId ? (v.collectionId as CollectionId) : undefined;
           } catch {
             return undefined;
           }
@@ -965,22 +921,16 @@ USING fts5(content, title, pointId UNINDEXED, content='' , tokenize='unicode61')
     };
   }
 
-  private rowToChunk(row: any): Chunk {
-    const contentRow = this.db
-      .prepare(`SELECT content FROM chunks_fts5 WHERE pointId = ?`)
-      .get(row.pointId) as { content: string } | undefined;
-    const content = contentRow ? contentRow.content : '';
-
+  private rowToChunkMeta(row: any): ChunkMeta {
     return {
-      pointId: row.pointId,
-      docId: row.docId,
-      versionId: row.versionId,
-      collectionId: row.collectionId,
+      pointId: row.pointId as PointId,
+      docId: row.docId as DocId,
+      versionId: row.versionId as VersionId,
+      collectionId: row.collectionId as CollectionId,
       chunkIndex: row.chunkIndex,
       titleChain: row.titleChain ?? undefined,
       contentHash: row.contentHash ?? undefined,
       created_at: row.created_at,
-      content: content,
     };
   }
 

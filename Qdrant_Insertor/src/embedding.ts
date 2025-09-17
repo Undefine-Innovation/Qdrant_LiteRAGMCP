@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { validateConfig, AppConfig } from '../config.js'; // Import AppConfig type
-import { Chunk, ChunkWithVector } from './db.js'; // Import Chunk and ChunkWithVector interfaces
+import { ChunkMeta, ChunkWithVector } from '../share/type.js';
 
 /**
  * Creates an embedding for a single text chunk.
@@ -79,7 +79,7 @@ export async function createEmbedding(
  * @param {Chunk[]} chunks - The array of document chunks. / 文档块数组。
  * @returns {Promise<ChunkWithVector[]>} A promise that resolves to an array of chunks with their corresponding vectors. / 一个解析为带有向量的块数组的 Promise。
  */
-export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
+export async function embedChunks(chunks: ChunkMeta[]): Promise<ChunkWithVector[]> {
   if (chunks.length === 0) {
     return [];
   }
@@ -105,7 +105,7 @@ export async function embedChunks(chunks: Chunk[]): Promise<ChunkWithVector[]> {
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
-    const texts = batch.map((chunk) => chunk.content);
+    const texts = batch.map((chunk) => (chunk as any).content);
 
     let success = false;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

@@ -86,7 +86,7 @@ export interface Chunk extends ChunkMeta {
   title?: string;
 }
 
-export interface ChunkWithVector extends Chunk {
+export interface ChunkWithVector extends ChunkMeta {
   vector: number[]; // embedding 向量
 }
 
