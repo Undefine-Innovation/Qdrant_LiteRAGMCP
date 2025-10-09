@@ -114,7 +114,7 @@ export async function runSearch(
 
   // 语义检索（可选）
   let semanticResults: UnifiedSearchResult[] = [];
-  const vec = await createEmbedding(query);
+  const vec = await createEmbedding(query, { forceLive: true });
   if (!vec) {
     console.warn(
       'Failed to create embedding for semantic search. Skipping semantic search.',

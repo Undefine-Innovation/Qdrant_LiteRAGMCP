@@ -247,6 +247,7 @@ export function createApp(deps?: { db?: DB }) {
       await ensureCollection();
       const _vecsC = await createEmbedding(
         chunksCreate.map((ch) => ch.content),
+        { forceLive: true },
       );
       const vectorsCreate = (Array.isArray(_vecsC) ? _vecsC : []) as number[][];
 
@@ -315,6 +316,7 @@ export function createApp(deps?: { db?: DB }) {
       await ensureCollection();
       const _vecsU = await createEmbedding(
         chunksUpdate.map((ch) => ch.content),
+        { forceLive: true },
       );
       const vectorsUpdate = (Array.isArray(_vecsU) ? _vecsU : []) as number[][];
 

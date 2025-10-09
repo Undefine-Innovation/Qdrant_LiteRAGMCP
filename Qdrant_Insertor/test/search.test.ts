@@ -338,7 +338,10 @@ describe('Search Functions', () => {
       } as any); // Cast to any to bypass type checking
       await runSearch(query, collectionId, mockLimit, false);
 
-      expect(mockCreateEmbedding).toHaveBeenCalledWith(query);
+      expect(mockCreateEmbedding).toHaveBeenCalledWith(
+        query,
+        expect.objectContaining({ forceLive: true }),
+      );
       expect(mockQdrantSearch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -439,7 +442,10 @@ describe('Search Functions', () => {
       } as any); // Cast to any to bypass type checking
       await runSearch(query, collectionId, mockLimit, false);
 
-      expect(mockCreateEmbedding).toHaveBeenCalledWith(query);
+      expect(mockCreateEmbedding).toHaveBeenCalledWith(
+        query,
+        expect.objectContaining({ forceLive: true }),
+      );
       expect(mockQdrantSearch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -463,4 +469,3 @@ describe('Search Functions', () => {
     });
   });
 });
-
