@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "strict": true,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "config": ["./config.ts"] // 暂时保留，后续再看是否需要调整
+    }
+  },
+  "include": ["src", "test", "utils", "config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
