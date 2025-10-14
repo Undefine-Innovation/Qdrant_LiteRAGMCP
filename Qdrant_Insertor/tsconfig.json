@@ -9,9 +9,10 @@
     "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
-      "config": ["./config.ts"] // 暂时保留，后续再看是否需要调整
+      "config": ["src/config.ts"], // 暂时保留，后续再看是否需要调整
+      "share/*": ["share/*"]
     }
   },
-  "include": ["src", "test", "utils", "config.ts"],
+  "include": ["backend", "share"],
   "exclude": ["node_modules", "dist"]
 }

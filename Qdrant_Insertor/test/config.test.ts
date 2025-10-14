@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { validateConfig, AppConfig } from '../config.js'; // Import validateConfig and AppConfig
+import { validateConfig, AppConfig } from '../backend/src/config.js'; // Import validateConfig and AppConfig
 
 describe('Config Validation', () => {
   let originalEnv: NodeJS.ProcessEnv;

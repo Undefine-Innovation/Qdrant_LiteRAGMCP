@@ -1,7 +1,6 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { DocumentChunk } from '../src/splitter.js';
-import { validateConfig, AppConfig } from '../config.js';
-import { Chunk } from '../src/db.js'; // Import Chunk type
+import { validateConfig, AppConfig } from '../backend/src/config.js';
+import { Chunk } from '../share/type.js'; // Import Chunk type
 
 // ---- 全局 mock 容器（避免重复声明） ----
 const g = globalThis as any;
