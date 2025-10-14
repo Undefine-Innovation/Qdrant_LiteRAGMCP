@@ -1,6 +1,6 @@
 import { jest, describe, test, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
-import { validateConfig, AppConfig } from '../config.js';
-import { ChunkWithVector } from '../src/db.js'; // ChunkWithVector is now from db.js
+import { validateConfig, AppConfig } from '../backend/src/config.js';
+import { ChunkWithVector } from '../share/type.js'; // ChunkWithVector is now from db.js
 
 // ---- 全局 mock 容器 ----
 const g = globalThis as any;

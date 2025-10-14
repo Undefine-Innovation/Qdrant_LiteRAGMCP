@@ -5,7 +5,7 @@ import {
   makeDocId,
   makePointId,
   parsePointId,
-} from '../utils/id.js';
+} from '../share/utils/id.js';
 
 describe('ID Generation and Hashing Functions', () => {
   describe('hashContent', () => {

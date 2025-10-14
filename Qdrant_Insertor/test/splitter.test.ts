@@ -1,4 +1,4 @@
-import { splitByMarkdownHeaders, splitByFixedSize, splitBySentence } from '../src/splitter';
+import { splitByMarkdownHeaders, splitByFixedSize, splitBySentence } from '../backend/src/splitter.js';
 
 describe('Splitter Functions', () => {
   const testDocContent = `

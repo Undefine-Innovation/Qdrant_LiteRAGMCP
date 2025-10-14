@@ -1,10 +1,10 @@
 import request from 'supertest';
 import { jest, describe, test, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
-import { DB } from '../src/db.js';
-import { validateConfig } from '../config.js';
-import { makeCollectionId, makeVersionId, makeDocId } from '../utils/id.js';
-import { DocumentChunk } from '../src/splitter.js';
-import { setEmbeddingMock } from '../src/mock-registry.js';
+import { DB } from '../backend/src/db.js';
+import { validateConfig } from '../backend/src/config.js';
+import { makeCollectionId, makeVersionId, makeDocId } from '../share/utils/id.js';
+import { DocumentChunk } from '../backend/src/splitter.js';
+import { setEmbeddingMock } from '../backend/src/mock-registry.js';
 
 // Mock QdrantClient and OpenAI for API tests
 // 1. Jest ESM 模块模拟: 如何正确模拟 ES 模块（ESM）环境下的第三方库

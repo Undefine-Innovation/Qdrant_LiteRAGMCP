@@ -2,19 +2,21 @@ import { jest } from '@jest/globals';
 import fs from 'fs';
 import path from 'path';
 import {
-  DB,
+  DB
+} from '../backend/src/db.js';
+import {
   Collection,
   Version,
   Doc,
   Chunk,
   SearchResult,
-} from '../src/db.js';
+} from '../share/type.js';
 import {
   makeCollectionId,
   makeVersionId,
   makeDocId,
   makePointId,
-} from '../utils/id.js';
+} from '../share/utils/id.js';
 
 const TEST_DB_PATH = ':memory:'; // 使用内存数据库进行测试，每次测试都是干净的
 

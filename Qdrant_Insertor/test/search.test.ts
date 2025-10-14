@@ -15,12 +15,12 @@ import {
   makeVersionId,
   makeDocId,
   makePointId,
-} from '../utils/id.js';
-import { DB } from '../src/db.js';
-import type { UnifiedSearchResult } from '../src/search.js'; // 仅类型导入，不会触发模块求值
+} from '../share/utils/id.js';
+import { DB } from '../backend/src/db.js';
+import type { UnifiedSearchResult } from '../backend/src/search.js'; // 仅类型导入，不会触发模块求值
 
-let runSearch: typeof import('../src/search.js').runSearch;
-let reciprocalRankFusion: typeof import('../src/search.js').reciprocalRankFusion;
+let runSearch: typeof import('../backend/src/search.js').runSearch;
+let reciprocalRankFusion: typeof import('../backend/src/search.js').reciprocalRankFusion;
 let mockCreateEmbedding: jest.Mock<(...args: any[]) => Promise<number[] | null>>;
 let mockQdrantSearch: jest.Mock<(...args: any[]) => Promise<any>>;
 

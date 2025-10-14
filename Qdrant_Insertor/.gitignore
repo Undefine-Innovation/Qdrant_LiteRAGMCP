@@ -19,3 +19,9 @@ npm-debug.log*
 *.db
 *.db-shm
 *.db-wal
+
+coverage/
+
+*.js
+!index.js
+!run_test.js
