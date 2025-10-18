@@ -4,11 +4,12 @@ import { SQLiteRepo } from './infrastructure/SQLiteRepo.js';
 import { runSearch } from './search.js';
 import { AppError } from '../contracts/error.js';
 import { CollectionId, DocId, PointId } from '../../share/type.js';
-
-import { ensureCollection, upsertChunks, deletePointsByDoc } from './qdrant.js';
-import { createEmbedding } from './embedding.js';
+import { QdrantRepo } from './infrastructure/QdrantRepo.js';
 import { makeDocId } from '../../share/utils/id.js';
 import { validateConfig } from './config.js';
+import { IEmbeddingProvider } from './domain/embedding.js';
+import { createOpenAIEmbeddingProviderFromConfig } from './infrastructure/OpenAIEmbeddingProvider.js';
+import { MarkdownSplitter } from './infrastructure/MarkdownSplitter.js';
 
 /**
  * API Application Factory
@@ -19,20 +20,29 @@ import { validateConfig } from './config.js';
  * @param deps Optional dependency injection object, currently supporting { db?: SQLiteRepo }.
  * @returns A configured Express application instance.
  */
-export function createApp(deps?: { db?: SQLiteRepo }) {
+export function createApp(deps?: { db?: SQLiteRepo, embeddingProvider?: IEmbeddingProvider }) {
   const app = express();
   app.use(express.json());
 
   // Initialize the database connection and repository
   const dbInstance = new Database(cfg.db.path);
   const db = deps?.db ?? new SQLiteRepo(dbInstance);
+  const qdrantRepo = new QdrantRepo(cfg);
+  const embeddingProvider = deps?.embeddingProvider ?? createOpenAIEmbeddingProviderFromConfig();
+  const splitter = new MarkdownSplitter();
 
-  route(app, db);
+  route(app, db, qdrantRepo, embeddingProvider, splitter);
 
   return app;
 }
 
-function route(app: express.Express, db: SQLiteRepo) {
+function route(
+  app: express.Express,
+  db: SQLiteRepo,
+  qdrantRepo: QdrantRepo,
+  embeddingProvider: IEmbeddingProvider,
+  splitter: MarkdownSplitter,
+) {
   // Health check endpoint
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
@@ -124,8 +134,7 @@ function route(app: express.Express, db: SQLiteRepo) {
       const doc = db.docs.getById(docId);
       if (!doc) throw new Error('Failed to create document');
 
-      const { splitDocument } = await import('./splitter.js');
-      const chunks = await splitDocument(content, { strategy: 'markdown' });
+      const chunks = splitter.split(content, { docPath: key });
 
       const metas = chunks.map((chunk, index) => ({
         pointId: `${doc.docId}#${index}` as PointId,
@@ -137,8 +146,8 @@ function route(app: express.Express, db: SQLiteRepo) {
       }));
       db.chunkMeta.createBatch(metas);
 
-      await ensureCollection();
-      const vectors = await createEmbedding(chunks.map((ch) => ch.content), { forceLive: true });
+      await qdrantRepo.ensureCollection();
+      const vectors = await embeddingProvider.generate(chunks.map((ch) => ch.content));
 
       const upserts = chunks.map((chunk, index) => ({
         collectionId: doc.collectionId,
@@ -150,7 +159,7 @@ function route(app: express.Express, db: SQLiteRepo) {
         vector: (vectors as number[][])[index] ?? new Array(cfg.qdrant.vectorSize).fill(0),
         pointId: `${doc.docId}#${index}`,
       }));
-      await upsertChunks(upserts);
+      await qdrantRepo.upsertChunks(upserts);
 
       res.status(201).json(doc);
     } catch (err) {
@@ -176,8 +185,7 @@ function route(app: express.Express, db: SQLiteRepo) {
       );
       if (!updated) throw new Error('Document update failed');
 
-      const { splitDocument } = await import('./splitter.js');
-      const chunks = await splitDocument(content, { strategy: 'markdown' });
+      const chunks = splitter.split(content, { docPath: doc.key });
 
       const metas = chunks.map((chunk, index) => ({
         pointId: `${updated.docId}#${index}` as PointId,
@@ -189,9 +197,9 @@ function route(app: express.Express, db: SQLiteRepo) {
       }));
       db.chunkMeta.createBatch(metas);
 
-      await deletePointsByDoc(docId as DocId);
-      await ensureCollection();
-      const vectors = await createEmbedding(chunks.map((ch) => ch.content), { forceLive: true });
+      await qdrantRepo.deletePointsByDoc(docId as DocId);
+      await qdrantRepo.ensureCollection();
+      const vectors = await embeddingProvider.generate(chunks.map((ch) => ch.content));
 
       const upserts = chunks.map((chunk, index) => ({
         collectionId: updated.collectionId,
@@ -203,7 +211,7 @@ function route(app: express.Express, db: SQLiteRepo) {
         vector: (vectors as number[][])[index] ?? new Array(cfg.qdrant.vectorSize).fill(0),
         pointId: `${updated.docId}#${index}`,
       }));
-      await upsertChunks(upserts);
+      await qdrantRepo.upsertChunks(upserts);
 
       res.json(updated);
     } catch (err) {
@@ -216,7 +224,7 @@ function route(app: express.Express, db: SQLiteRepo) {
       const { docId } = req.params;
       const ok = db.deleteDoc(docId as DocId);
       if (!ok) return res.status(404).json({ error: 'Document not found' });
-      await deletePointsByDoc(docId as DocId);
+      await qdrantRepo.deletePointsByDoc(docId as DocId);
       res.status(204).end();
     } catch (e) {
       next(e);
@@ -230,7 +238,7 @@ function route(app: express.Express, db: SQLiteRepo) {
    * 返回: runSearch 的结果（已经封装好的相似度和元数据）
    */
   app.post('/search', async (req, res, next) => {
-    const { query, collectionId, limit, filters, latestOnly } = req.body ?? {};
+    const { query, collectionId, limit, latestOnly } = req.body ?? {};
     if (!query)
       return res.status(400).json({ error: 'BadRequest: query required' });
     if (!collectionId)
@@ -244,11 +252,11 @@ function route(app: express.Express, db: SQLiteRepo) {
 
     try {
       const results = await runSearch(
+        embeddingProvider,
         query,
         collectionId,
         safeLimit,
         onlyLatest,
-        filters,
       );
       res.json(results);
     } catch (err) {

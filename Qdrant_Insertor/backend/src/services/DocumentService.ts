@@ -3,11 +3,11 @@ import { SQLiteRepo } from '../infrastructure/SQLiteRepo.js';
 import { Doc, DocId, CollectionId, PointId } from '../../../share/type.js';
 
 // DEPRECATED: Version concept has been removed from the architecture
-import { splitDocument } from '../splitter.js';
-import { createEmbedding } from '../embedding.js';
-import { ensureCollection, upsertChunks, deletePointsByDoc } from '../qdrant.js';
+import { QdrantRepo } from '../infrastructure/QdrantRepo.js';
 import { makeDocId } from '../../../share/utils/id.js';
 import { AppConfig } from '../config.js';
+import { IEmbeddingProvider } from '../domain/embedding.js';
+import { ISplitter } from '../domain/splitter.js';
 
 /**
  * @class DocumentService
@@ -17,11 +17,30 @@ export class DocumentService implements IDocumentService {
   private db: SQLiteRepo;
   private logger: ILogger;
   private config: AppConfig;
+  private qdrantRepo: QdrantRepo;
+  private embeddingProvider: IEmbeddingProvider; // 向量化服务
+  private splitter: ISplitter;
 
-  constructor(db: SQLiteRepo, logger: ILogger, config: AppConfig) {
+  /**
+   * @param db SQLiteRepo 实例
+   * @param logger 日志记录器实例
+   * @param config 应用配置
+   * @param embeddingProvider 向量化服务提供者实例
+   * @param splitter 文档分割器实例
+   */
+  constructor(
+    db: SQLiteRepo,
+    logger: ILogger,
+    config: AppConfig,
+    embeddingProvider: IEmbeddingProvider,
+    splitter: ISplitter,
+  ) {
     this.db = db;
     this.logger = logger;
     this.config = config;
+    this.qdrantRepo = new QdrantRepo(config);
+    this.embeddingProvider = embeddingProvider;
+    this.splitter = splitter;
   }
 
   /**
@@ -68,9 +87,7 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Document created in DB: ${doc.docId}`);
 
       // 2. 使用 splitter 将文本拆分为 chunks
-      const chunks = splitDocument({ path: key, content: typeof content === 'string' ? content : new TextDecoder().decode(content) }, {
-        strategy: 'markdown', // 默认使用 markdown 策略
-      });
+      const chunks = this.splitter.split(typeof content === 'string' ? content : new TextDecoder().decode(content), { docPath: key });
       this.logger.info(`Document split into ${chunks.length} chunks.`);
 
       // 3. 将 chunk 的 meta 存入 DB
@@ -86,12 +103,10 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Chunks metadata and text inserted into DB for doc: ${doc.docId}`);
 
       // 4. 调用 embedding 服务生成向量
-      await ensureCollection(); // 确保 Qdrant 集合存在
-      const vectors = await createEmbedding(
+      await this.qdrantRepo.ensureCollection(); // 确保 Qdrant 集合存在
+      const vectorsArray = await this.embeddingProvider.generate(
         chunks.map((ch) => ch.content),
-        { forceLive: true },
       );
-      const vectorsArray = (Array.isArray(vectors) ? vectors : []) as number[][];
       this.logger.info(`Embeddings created for ${vectorsArray.length} chunks.`);
 
       // 5. 对每个 chunk 组装 upsert 对象并调用 Qdrant upsert
@@ -106,7 +121,7 @@ export class DocumentService implements IDocumentService {
           vectorsArray[index] ?? new Array(this.config.qdrant.vectorSize).fill(0),
         pointId: `${doc.docId}#${index}`,
       }));
-      await upsertChunks(upserts);
+      await this.qdrantRepo.upsertChunks(upserts);
       this.logger.info(`Chunks upserted to Qdrant for doc: ${doc.docId}`);
 
       return doc;
@@ -183,9 +198,7 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Document updated in DB: ${docId}`);
 
       // 重新拆分、入库 chunk
-      const chunks = splitDocument({ path: updated.key, content: typeof content === 'string' ? content : new TextDecoder().decode(content) }, {
-        strategy: 'markdown',
-      });
+      const chunks = this.splitter.split(typeof content === 'string' ? content : new TextDecoder().decode(content), { docPath: updated.key });
       this.logger.info(`Document re-split into ${chunks.length} chunks for update.`);
 
       const metas = chunks.map((chunk, index) => ({
@@ -200,16 +213,14 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Chunks metadata and text re-inserted into DB for updated doc: ${updated.docId}`);
 
       // 删除旧的 Qdrant 向量（按 docId）
-      await deletePointsByDoc(docId);
+      await this.qdrantRepo.deletePointsByDoc(docId);
       this.logger.info(`Old Qdrant points deleted for doc: ${docId}`);
 
       // 生成 embedding 并 upsert 新向量
-      await ensureCollection();
-      const vectors = await createEmbedding(
+      await this.qdrantRepo.ensureCollection();
+      const vectorsArray = await this.embeddingProvider.generate(
         chunks.map((ch) => ch.content),
-        { forceLive: true },
       );
-      const vectorsArray = (Array.isArray(vectors) ? vectors : []) as number[][];
       this.logger.info(`Embeddings re-created for ${vectorsArray.length} chunks for updated doc.`);
 
       const upserts = chunks.map((chunk, index) => ({
@@ -223,7 +234,7 @@ export class DocumentService implements IDocumentService {
           vectorsArray[index] ?? new Array(this.config.qdrant.vectorSize).fill(0),
         pointId: `${updated.docId}#${index}`,
       }));
-      await upsertChunks(upserts);
+      await this.qdrantRepo.upsertChunks(upserts);
       this.logger.info(`New chunks upserted to Qdrant for updated doc: ${updated.docId}`);
 
       return updated;
@@ -249,7 +260,7 @@ export class DocumentService implements IDocumentService {
       }
       const success = this.db.deleteDoc(docId);
       if (success) {
-        await deletePointsByDoc(docId); // 同步删除 Qdrant 中的向量
+        await this.qdrantRepo.deletePointsByDoc(docId); // 同步删除 Qdrant 中的向量
         this.logger.info(`Document and its Qdrant points deleted: ${docId}`);
       } else {
         this.logger.warn(`Failed to delete document: ${docId} (DB operation returned false)`);

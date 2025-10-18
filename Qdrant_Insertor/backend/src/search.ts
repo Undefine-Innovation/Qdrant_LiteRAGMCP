@@ -1,7 +1,9 @@
 import { SQLiteRepo } from './infrastructure/SQLiteRepo.js';
-import { createEmbedding } from './embedding.js';
-import { search as qdrantSearch } from './qdrant.js';
+import { QdrantRepo } from './infrastructure/QdrantRepo.js';
 import { validateConfig, AppConfig } from './config.js'; // Import config
+import { IEmbeddingProvider } from './domain/embedding.js';
+import { CollectionId } from '../../share/type.js';
+import Database from 'better-sqlite3';
 
 let config: AppConfig; // Declare config as a mutable variable
 let dbInstance: SQLiteRepo; // Declare dbInstance as a mutable variable
@@ -72,14 +74,14 @@ export function reciprocalRankFusion(
  * @param {boolean} [latestOnly=false] - Whether to search only the latest version. / 是否只搜索最新版本。
  */
 export async function runSearch(
+  embeddingProvider: IEmbeddingProvider,
   query: string,
   collectionId: string,
   limit: number = 10,
-  latestOnly: boolean = false,
-  filters?: { [key: string]: unknown },
+  latestOnly: boolean = false
 ): Promise<UnifiedSearchResult[]> {
   if (!config) config = validateConfig(); // Ensure config is loaded
-  if (!dbInstance) dbInstance = new SQLiteRepo(config.db.path); // Ensure db is initialized
+  if (!dbInstance) dbInstance = new SQLiteRepo(new Database(config.db.path)); // Ensure db is initialized
 
   if (!query?.trim()) {
     console.error('Please provide a search query.');
@@ -92,12 +94,11 @@ export async function runSearch(
 
   // 关键词检索 -> 统一结构
   const kwRows =
-    dbInstance.searchKeyword({
-      collectionId,
+    dbInstance.chunksFts5.search(
       query,
+      collectionId as CollectionId,
       limit,
-      filters,
-    }) ?? [];
+    ) ?? [];
   const keywordResults: UnifiedSearchResult[] = kwRows.map((r) => ({
     pointId: r.pointId,
     content: r.content,
@@ -110,20 +111,24 @@ export async function runSearch(
 
   // 语义检索（可选）
   let semanticResults: UnifiedSearchResult[] = [];
-  const vec = await createEmbedding(query, { forceLive: true });
-  if (!vec) {
+  const vectors = await embeddingProvider.generate([query]);
+  const vec = vectors[0];
+  if (!vec || vec.length === 0) {
     console.warn(
       'Failed to create embedding for semantic search. Skipping semantic search.',
     );
   } else {
+    const qdrantRepo = new QdrantRepo(config);
     // ✅ 与测试期望一致的调用形状
-    const raw = (await qdrantSearch(collectionId, {
+    const raw = await qdrantRepo.search(collectionId, {
       vector: vec,
       limit,
-      filter: latestOnly ? { latestOnly: true } : undefined,
-    })) as { points?: {id: string, score: number}[] } | {id: string, score: number}[];
-    // ✅ 兼容两种返回形状
-    const points = Array.isArray(raw) ? raw : (raw.points ?? []);
+      filter: latestOnly
+        ? { must: [{ key: 'is_current', match: { value: true } }] }
+        : undefined,
+    });
+    // The result from QdrantRepo.search is already an array of points.
+    const points = raw.map((p) => ({ id: p.pointId, score: p.score }));
 
     const pointIds = points.map((x) => String(x.id));
     const chunks =

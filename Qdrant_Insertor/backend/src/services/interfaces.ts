@@ -1,6 +1,6 @@
-import { Collection, Doc, SearchResult, CollectionId, DocId } from '../../share/type.js';
-import { DocumentChunk } from '../splitter.js';
-import { ChunkWithVector } from '../qdrant.js';
+import { Collection, Doc, SearchResult, CollectionId, DocId } from '../../../share/type.js';
+import { DocumentChunk } from '../../../share/type.js';
+import { ChunkWithVector } from '../infrastructure/QdrantRepo.js';
 import { AppConfig } from '../config.js';
 import { SQLiteRepo } from '../infrastructure/SQLiteRepo.js';
 
