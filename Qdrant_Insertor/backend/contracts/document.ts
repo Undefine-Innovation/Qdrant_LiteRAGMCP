@@ -4,7 +4,6 @@ import { z } from 'zod';
 export const ChunkDTOSchema = z.object({
   pointId: z.string().describe('Qdrant 中的向量点 ID，格式为 docId#chunkIndex'),
   docId: z.string().describe('文档 ID'),
-  versionId: z.string().describe('文档版本 ID'),
   collectionId: z.string().describe('集合 ID'),
   chunkIndex: z.number().int().describe('文本块在文档中的索引'),
   titleChain: z.string().describe('文本块的标题链，表示其上下文'),
@@ -52,3 +51,57 @@ export const DeleteDocParamsSchema = z.object({
 
 // 导出 DeleteDocParams 的 TypeScript 类型
 export type DeleteDocParams = z.infer<typeof DeleteDocParamsSchema>;
+
+/**
+ * @typedef {object} CreateDocumentRequestSchema
+ * @property {string} content - 文档的原始内容。
+ * @property {string} collectionId - 所属 Collection 的 ID。
+ * @property {object} [metadata] - 文档的额外元数据。
+ * @property {object} [splitOptions] - 文档分割选项。
+ */
+export const CreateDocumentRequestSchema = z.object({
+  content: z.string().describe('文档的原始内容'),
+  collectionId: z.string().describe('所属 Collection 的 ID'),
+  metadata: z.record(z.any()).optional().describe('文档的额外元数据'),
+  splitOptions: z.record(z.any()).optional().describe('文档分割选项'),
+});
+
+export type CreateDocumentRequest = z.infer<typeof CreateDocumentRequestSchema>;
+
+/**
+ * @typedef {object} UpdateDocumentRequestSchema
+ * @property {string} [content] - 文档的新内容。
+ * @property {object} [metadata] - 文档的额外元数据。
+ * @property {object} [splitOptions] - 文档分割选项。
+ */
+export const UpdateDocumentRequestSchema = z.object({
+  content: z.string().optional().describe('文档的新内容'),
+  metadata: z.record(z.any()).optional().describe('文档的额外元数据'),
+  splitOptions: z.record(z.any()).optional().describe('文档分割选项'),
+});
+
+export type UpdateDocumentRequest = z.infer<typeof UpdateDocumentRequestSchema>;
+
+/**
+ * @typedef {object} DocumentResponseSchema
+ * @property {string} docId - Document 的唯一标识符。
+ * @property {string} key - 文档的键。
+ * @property {string} name - 文档的名称。
+ * @property {number} sizeBytes - 文档大小（字节）。
+ * @property {string} mime - 文档的 MIME 类型。
+ * @property {number} createdAt - Document 的创建时间戳。
+ * @property {number} updatedAt - Document 的最后更新时间戳。
+ * @property {number} isDeleted - 是否已软删除 (0 或 1)。
+ */
+export const DocumentResponseSchema = z.object({
+  docId: z.string().describe('Document 的唯一标识符'),
+  key: z.string().describe('文档的键'),
+  name: z.string().describe('文档的名称'),
+  sizeBytes: z.number().int().describe('文档大小（字节）'),
+  mime: z.string().describe('文档的 MIME 类型'),
+  createdAt: z.number().int().describe('Document 的创建时间戳'),
+  updatedAt: z.number().int().describe('Document 的最后更新时间戳'),
+  isDeleted: z.number().int().min(0).max(1).describe('是否已软删除 (0 或 1)'),
+});
+
+export type DocumentResponse = z.infer<typeof DocumentResponseSchema>;

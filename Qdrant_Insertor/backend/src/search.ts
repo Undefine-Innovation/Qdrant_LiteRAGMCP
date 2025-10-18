@@ -1,17 +1,16 @@
-import { DB } from './db.js'; // ChunksDatabase is default export
+import { SQLiteRepo } from './infrastructure/SQLiteRepo.js';
 import { createEmbedding } from './embedding.js';
 import { search as qdrantSearch } from './qdrant.js';
 import { validateConfig, AppConfig } from './config.js'; // Import config
 
 let config: AppConfig; // Declare config as a mutable variable
-let dbInstance: DB; // Declare dbInstance as a mutable variable
+let dbInstance: SQLiteRepo; // Declare dbInstance as a mutable variable
 
 interface QdrantPayload {
   content?: string; // Make content optional
   source?: string; // Make source optional
   titleChain?: string;
   docId?: string;
-  versionId?: string;
   chunkIndex?: number;
   collectionId?: string;
 }
@@ -30,7 +29,6 @@ export interface UnifiedSearchResult {
   title?: string;
   source: string;
   score: number;
-  versionId: string; // Made required
   docId: string; // Made required
   chunkIndex: number; // Made required, compatible with DBSearchResult
   is_current?: boolean;
@@ -78,10 +76,10 @@ export async function runSearch(
   collectionId: string,
   limit: number = 10,
   latestOnly: boolean = false,
-  filters?: { [key: string]: any },
+  filters?: { [key: string]: unknown },
 ): Promise<UnifiedSearchResult[]> {
   if (!config) config = validateConfig(); // Ensure config is loaded
-  if (!dbInstance) dbInstance = new DB(config.db.path); // Ensure db is initialized
+  if (!dbInstance) dbInstance = new SQLiteRepo(config.db.path); // Ensure db is initialized
 
   if (!query?.trim()) {
     console.error('Please provide a search query.');
@@ -98,18 +96,16 @@ export async function runSearch(
       collectionId,
       query,
       limit,
-      latestOnly,
       filters,
     }) ?? [];
-  const keywordResults: UnifiedSearchResult[] = kwRows.map((r: any) => ({
-    pointId: String(r.pointId ?? r.id),
+  const keywordResults: UnifiedSearchResult[] = kwRows.map((r) => ({
+    pointId: r.pointId,
     content: r.content,
-    source: r.sourcePath ?? r.source,
+    source: r.docId, // Use docId as source for now
     score: 0,
     type: 'keyword',
-    versionId: r.versionId, // 添加 versionId
-    docId: r.docId, // 添加 docId
-    chunkIndex: r.chunkIndex, // 添加 chunkIndex
+    docId: r.docId,
+    chunkIndex: r.chunkIndex,
   }));
 
   // 语义检索（可选）
@@ -125,25 +121,24 @@ export async function runSearch(
       vector: vec,
       limit,
       filter: latestOnly ? { latestOnly: true } : undefined,
-    })) as { points?: any[] } | any[];
+    })) as { points?: {id: string, score: number}[] } | {id: string, score: number}[];
     // ✅ 兼容两种返回形状
     const points = Array.isArray(raw) ? raw : (raw.points ?? []);
 
-    const pointIds = points.map((x: any) => String(x.pointId ?? x.id));
+    const pointIds = points.map((x) => String(x.id));
     const chunks =
-      dbInstance.getChunksByPointIds(pointIds, collectionId, latestOnly) ?? [];
+      dbInstance.getChunksByPointIds(pointIds, collectionId) ?? [];
 
     const scoreById = new Map<string, number>(
-      points.map((x: any) => [String(x.pointId ?? x.id), Number(x.score) || 0]),
+      points.map((x) => [String(x.id), Number(x.score) || 0]),
     );
 
-    semanticResults = chunks.map((c: any) => ({
-      pointId: String(c.pointId ?? c.id),
+    semanticResults = chunks.map((c) => ({
+      pointId: c.pointId,
       content: c.content,
-      source: c.source ?? c.sourcePath,
-      score: scoreById.get(String(c.pointId ?? c.id)) ?? 0,
+      source: c.docId, // Use docId as source for now
+      score: scoreById.get(c.pointId) ?? 0,
       type: 'semantic',
-      versionId: c.versionId,
       docId: c.docId,
       chunkIndex: c.chunkIndex,
     }));

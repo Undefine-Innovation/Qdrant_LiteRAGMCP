@@ -79,7 +79,6 @@ const BATCH = 100;
 
 export interface ChunkWithVector {
   collectionId: string;
-  versionId: string;
   docId: string;
   chunkIndex: number;
   content: string;
@@ -89,6 +88,8 @@ export interface ChunkWithVector {
   source?: string;
   contentHash?: string;
 }
+
+// DEPRECATED: Version concept has been removed from the architecture
 
 export async function upsertChunks(chunks: ChunkWithVector[]) {
   if (!chunks?.length) {
@@ -112,7 +113,6 @@ export async function upsertChunks(chunks: ChunkWithVector[]) {
         source: c.source,
         contentHash: (c as any).contentHash,
         docId: c.docId,
-        versionId: c.versionId,
         collectionId: c.collectionId,
         chunkIndex: c.chunkIndex,
       },
@@ -154,7 +154,6 @@ export async function search(
       content: item.payload?.content,
       titleChain: item.payload?.titleChain,
       docId: item.payload?.docId,
-      versionId: item.payload?.versionId,
       collectionId: item.payload?.collectionId,
       chunkIndex: item.payload?.chunkIndex,
     }));

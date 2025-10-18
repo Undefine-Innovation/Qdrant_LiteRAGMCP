@@ -1,8 +1,10 @@
-import { Collection, Version, Doc, SearchResult, CollectionId, VersionId, DocId } from '../../share/type.js';
+import { Collection, Doc, SearchResult, CollectionId, DocId } from '../../share/type.js';
 import { DocumentChunk } from '../splitter.js';
 import { ChunkWithVector } from '../qdrant.js';
 import { AppConfig } from '../config.js';
-import { DB } from '../db.js';
+import { SQLiteRepo } from '../infrastructure/SQLiteRepo.js';
+
+// DEPRECATED: Version concept has been removed from the architecture
 
 /**
  * @interface ServiceError
@@ -71,58 +73,6 @@ export interface ICollectionService {
   deleteCollection(collectionId: CollectionId): Promise<void>;
 }
 
-/**
- * @interface IVersionService
- * @description 定义 Version 服务的接口，负责 Version 的 CRUD 操作和状态管理。
- */
-export interface IVersionService {
-  /**
-   * 为指定 Collection 创建一个新的 Version。
-   * @param collectionId 所属 Collection 的 ID。
-   * @param name Version 的名称。
-   * @param description Version 的描述（可选）。
-   * @returns 包含新创建 Version 信息的 Promise。
-   */
-  createVersion(collectionId: CollectionId, name: string, description?: string): Promise<Version>;
-  /**
-   * 列出指定 Collection 下的所有 Version。
-   * @param collectionId 所属 Collection 的 ID。
-   * @returns 包含所有 Version 数组的 Promise。
-   */
-  listVersions(collectionId: CollectionId): Promise<Version[]>;
-  /**
-   * 根据 ID 获取指定 Version。
-   * @param versionId Version 的唯一标识符。
-   * @returns 包含 Version 信息或 null 的 Promise。
-   */
-  getVersion(versionId: VersionId): Promise<Version | null>;
-  /**
-   * 更新指定 Version 的状态。
-   * @param versionId Version 的唯一标识符。
-   * @param status Version 的新状态。
-   * @returns 无返回值的 Promise。
-   */
-  setVersionStatus(versionId: VersionId, status: Version['status']): Promise<void>;
-  /**
-   * 将指定 Version 设为当前版本。
-   * @param versionId Version 的唯一标识符。
-   * @param collectionId 所属 Collection 的 ID。
-   * @returns 无返回值的 Promise。
-   */
-  setCurrentVersion(versionId: VersionId, collectionId: CollectionId): Promise<void>;
-  /**
-   * 最终确定一个临时版本，并可能合并到现有版本。
-   * @param temporaryVersionId 临时版本的 ID。
-   * @returns 包含最终版本 ID 和是否为新版本信息的 Promise。
-   */
-  finalizeVersion(temporaryVersionId: VersionId): Promise<{ finalVersionId: VersionId; isNew: boolean }>;
-  /**
-   * 删除指定 Version。
-   * @param versionId Version 的唯一标识符。
-   * @returns 表示删除是否成功的 Promise。
-   */
-  deleteVersion(versionId: VersionId): Promise<boolean>;
-}
 
 /**
  * @interface IDocumentService
@@ -131,7 +81,6 @@ export interface IVersionService {
 export interface IDocumentService {
   /**
    * 创建一个新的 Document。
-   * @param versionId 所属 Version 的 ID。
    * @param collectionId 所属 Collection 的 ID。
    * @param key 文档的唯一键。
    * @param content 文档的原始内容。
@@ -140,7 +89,6 @@ export interface IDocumentService {
    * @returns 包含新创建 Document 信息的 Promise。
    */
   createDoc(
-    versionId: VersionId,
     collectionId: CollectionId,
     key: string,
     content: string | Uint8Array,
@@ -179,11 +127,11 @@ export interface IDocumentService {
    */
   getAllDocs(): Promise<Doc[]>;
   /**
-   * 列出指定 Version 下的所有 Document。
-   * @param versionId 所属 Version 的 ID。
+   * 列出指定 Collection 下的所有 Document。
+   * @param collectionId 所属 Collection 的 ID。
    * @returns 包含所有 Document 数组的 Promise。
    */
-  listDocs(versionId: VersionId): Promise<Doc[]>;
+  listDocs(collectionId: CollectionId): Promise<Doc[]>;
 }
 
 /**
@@ -223,7 +171,6 @@ export interface IIngestionService {
   /**
    * 摄取单个文档到系统中。
    * @param collectionId 所属 Collection 的 ID。
-   * @param versionId 所属 Version 的 ID。
    * @param key 文档的唯一键。
    * @param content 文档的原始内容。
    * @param name 文档名称（可选）。
@@ -233,12 +180,11 @@ export interface IIngestionService {
    */
   ingestDocument(
     collectionId: CollectionId,
-    versionId: VersionId,
     key: string,
     content: string | Uint8Array,
     name?: string,
     mime?: string,
-    metadata?: any,
+    metadata?: unknown,
   ): Promise<Doc>;
 }
 
@@ -248,7 +194,6 @@ export interface IIngestionService {
  */
 export interface Services {
   collectionService: ICollectionService;
-  versionService: IVersionService;
   documentService: IDocumentService;
   searchService: ISearchService;
   ingestionService: IIngestionService;
@@ -259,7 +204,7 @@ export interface Services {
  * @description 定义基础设施依赖注入的接口，聚合所有基础设施组件。
  */
 export interface Infrastructure {
-  db: DB;
+  db: SQLiteRepo;
   config: AppConfig;
   logger: ILogger;
 }

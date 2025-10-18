@@ -1,10 +1,12 @@
 import { IDocumentService, ILogger, ServiceError } from './interfaces.js';
-import { DB } from '../db.js';
-import { Doc, DocId, VersionId, CollectionId } from 'share/type.js';
+import { SQLiteRepo } from '../infrastructure/SQLiteRepo.js';
+import { Doc, DocId, CollectionId, PointId } from '../../../share/type.js';
+
+// DEPRECATED: Version concept has been removed from the architecture
 import { splitDocument } from '../splitter.js';
 import { createEmbedding } from '../embedding.js';
 import { ensureCollection, upsertChunks, deletePointsByDoc } from '../qdrant.js';
-import { makeDocId } from 'share/utils/id.js';
+import { makeDocId } from '../../../share/utils/id.js';
 import { AppConfig } from '../config.js';
 
 /**
@@ -12,11 +14,11 @@ import { AppConfig } from '../config.js';
  * @description Document 服务的实现，负责 Document 的业务逻辑，包括与 DB、Splitter、Embedding 和 Qdrant 的交互。
  */
 export class DocumentService implements IDocumentService {
-  private db: DB;
+  private db: SQLiteRepo;
   private logger: ILogger;
   private config: AppConfig;
 
-  constructor(db: DB, logger: ILogger, config: AppConfig) {
+  constructor(db: SQLiteRepo, logger: ILogger, config: AppConfig) {
     this.db = db;
     this.logger = logger;
     this.config = config;
@@ -30,7 +32,6 @@ export class DocumentService implements IDocumentService {
    * 3. 将 chunk 的 meta / text 存入 DB
    * 4. 调用 embedding 服务生成向量
    * 5. 对每个 chunk 组装 upsert 对象并调用 Qdrant upsert
-   * @param versionId 所属 Version 的 ID。
    * @param collectionId 所属 Collection 的 ID。
    * @param key 文档的唯一键。
    * @param content 文档的原始内容。
@@ -40,27 +41,30 @@ export class DocumentService implements IDocumentService {
    * @throws {ServiceError} 如果参数无效、Version 或 Collection 不存在、或操作失败。
    */
   async createDoc(
-    versionId: VersionId,
     collectionId: CollectionId,
     key: string,
     content: string | Uint8Array,
     name?: string,
     mime?: string,
   ): Promise<Doc> {
-    if (!content || !collectionId || !versionId || !key) {
-      throw { code: 'BAD_REQUEST', message: 'Content, collectionId, versionId, and key are required.' } as ServiceError;
+    if (!content || !collectionId || !key) {
+      throw { code: 'BAD_REQUEST', message: 'Content, collectionId, and key are required.' } as ServiceError;
     }
 
     try {
       // 1. 在本地 DB 创建 doc
-      const doc = this.db.createDoc(
-        versionId,
+      const docId = this.db.docs.create({
         collectionId,
         key,
-        content,
+        content: typeof content === 'string' ? content : new TextDecoder().decode(content),
         name,
         mime,
-      );
+        size_bytes: typeof content === 'string' ? new TextEncoder().encode(content).length : content.byteLength,
+      });
+      const doc = this.db.docs.getById(docId);
+      if (!doc) {
+        throw new Error('Failed to create or retrieve document after creation.');
+      }
       this.logger.info(`Document created in DB: ${doc.docId}`);
 
       // 2. 使用 splitter 将文本拆分为 chunks
@@ -69,27 +73,16 @@ export class DocumentService implements IDocumentService {
       });
       this.logger.info(`Document split into ${chunks.length} chunks.`);
 
-      // 3. 将 chunk 的 meta / text 存入 DB
+      // 3. 将 chunk 的 meta 存入 DB
       const metas = chunks.map((chunk, index) => ({
-        pointId: `${doc.docId}#${index}`,
+        pointId: `${doc.docId}#${index}` as PointId,
+        docId: doc.docId,
+        collectionId: doc.collectionId,
         chunkIndex: index,
         titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: doc.docId, // 使用 docId 作为 contentHash
+        contentHash: makeDocId(chunk.content),
       }));
-      const texts = chunks.map((chunk, index) => ({
-        pointId: `${doc.docId}#${index}`,
-        content: chunk.content,
-        title: chunk.titleChain
-          ? chunk.titleChain[chunk.titleChain.length - 1]
-          : '',
-      }));
-      await this.db.insertChunkBatch({
-        collectionId,
-        versionId,
-        docId: doc.docId,
-        metas,
-        texts,
-      });
+      this.db.chunkMeta.createBatch(metas);
       this.logger.info(`Chunks metadata and text inserted into DB for doc: ${doc.docId}`);
 
       // 4. 调用 embedding 服务生成向量
@@ -104,7 +97,6 @@ export class DocumentService implements IDocumentService {
       // 5. 对每个 chunk 组装 upsert 对象并调用 Qdrant upsert
       const upserts = chunks.map((chunk, index) => ({
         collectionId,
-        versionId,
         docId: doc.docId,
         chunkIndex: index,
         content: chunk.content,
@@ -118,9 +110,11 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Chunks upserted to Qdrant for doc: ${doc.docId}`);
 
       return doc;
-    } catch (error: any) {
-      this.logger.error(`Failed to create document: ${error.message}`, error);
-      throw { code: error.code || 'CREATE_DOCUMENT_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      const code = (typeof error === 'object' && error !== null && 'code' in error) ? String((error as {code: string}).code) : 'CREATE_DOCUMENT_FAILED';
+      this.logger.error(`Failed to create document: ${err.message}`, err);
+      throw { code, message: err.message } as ServiceError;
     }
   }
 
@@ -132,16 +126,18 @@ export class DocumentService implements IDocumentService {
    */
   async getDocById(docId: DocId): Promise<Doc | null> {
     try {
-      const doc = this.db.getDocById(docId);
+      const doc = this.db.docs.getById(docId);
       if (!doc) {
         this.logger.warn(`Document not found: ${docId}`);
+        return null;
       } else {
         this.logger.debug(`Retrieved document: ${docId}`);
+        return doc;
       }
-      return doc;
-    } catch (error: any) {
-      this.logger.error(`Failed to get document by ID ${docId}: ${error.message}`, error);
-      throw { code: 'GET_DOCUMENT_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to get document by ID ${docId}: ${err.message}`, err);
+      throw { code: 'GET_DOCUMENT_FAILED', message: err.message } as ServiceError;
     }
   }
 
@@ -170,7 +166,7 @@ export class DocumentService implements IDocumentService {
     }
 
     try {
-      const existingDoc = this.db.getDocById(docId);
+      const existingDoc = this.db.docs.getById(docId);
       if (!existingDoc) {
         throw { code: 'DOCUMENT_NOT_FOUND', message: `Document with ID '${docId}' not found.` } as ServiceError;
       }
@@ -193,25 +189,14 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`Document re-split into ${chunks.length} chunks for update.`);
 
       const metas = chunks.map((chunk, index) => ({
-        pointId: `${updated.docId}#${index}`,
+        pointId: `${updated.docId}#${index}` as PointId,
+        docId: updated.docId,
+        collectionId: updated.collectionId,
         chunkIndex: index,
         titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: updated.docId,
+        contentHash: makeDocId(chunk.content),
       }));
-      const texts = chunks.map((chunk, index) => ({
-        pointId: `${updated.docId}#${index}`,
-        content: chunk.content,
-        title: chunk.titleChain
-          ? chunk.titleChain[chunk.titleChain.length - 1]
-          : '',
-      }));
-      await this.db.insertChunkBatch({
-        collectionId: updated.collectionId,
-        versionId: updated.versionId,
-        docId: updated.docId,
-        metas,
-        texts,
-      });
+      this.db.chunkMeta.createBatch(metas);
       this.logger.info(`Chunks metadata and text re-inserted into DB for updated doc: ${updated.docId}`);
 
       // 删除旧的 Qdrant 向量（按 docId）
@@ -229,7 +214,6 @@ export class DocumentService implements IDocumentService {
 
       const upserts = chunks.map((chunk, index) => ({
         collectionId: updated.collectionId,
-        versionId: updated.versionId,
         docId: updated.docId,
         chunkIndex: index,
         content: chunk.content,
@@ -243,9 +227,11 @@ export class DocumentService implements IDocumentService {
       this.logger.info(`New chunks upserted to Qdrant for updated doc: ${updated.docId}`);
 
       return updated;
-    } catch (error: any) {
-      this.logger.error(`Failed to update document ${docId}: ${error.message}`, error);
-      throw { code: error.code || 'UPDATE_DOCUMENT_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      const code = (typeof error === 'object' && error !== null && 'code' in error) ? String((error as {code: string}).code) : 'UPDATE_DOCUMENT_FAILED';
+      this.logger.error(`Failed to update document ${docId}: ${err.message}`, err);
+      throw { code, message: err.message } as ServiceError;
     }
   }
 
@@ -257,7 +243,7 @@ export class DocumentService implements IDocumentService {
    */
   async deleteDoc(docId: DocId): Promise<boolean> {
     try {
-      const existingDoc = this.db.getDocById(docId);
+      const existingDoc = this.db.docs.getById(docId);
       if (!existingDoc) {
         throw { code: 'DOCUMENT_NOT_FOUND', message: `Document with ID '${docId}' not found.` } as ServiceError;
       }
@@ -269,9 +255,11 @@ export class DocumentService implements IDocumentService {
         this.logger.warn(`Failed to delete document: ${docId} (DB operation returned false)`);
       }
       return success;
-    } catch (error: any) {
-      this.logger.error(`Failed to delete document ${docId}: ${error.message}`, error);
-      throw { code: error.code || 'DELETE_DOCUMENT_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      const code = (typeof error === 'object' && error !== null && 'code' in error) ? String((error as {code: string}).code) : 'DELETE_DOCUMENT_FAILED';
+      this.logger.error(`Failed to delete document ${docId}: ${err.message}`, err);
+      throw { code, message: err.message } as ServiceError;
     }
   }
 
@@ -282,29 +270,31 @@ export class DocumentService implements IDocumentService {
    */
   async getAllDocs(): Promise<Doc[]> {
     try {
-      const docs = this.db.getAllDocs();
+      const docs = this.db.docs.listAll();
       this.logger.debug(`Retrieved ${docs.length} documents.`);
       return docs;
-    } catch (error: any) {
-      this.logger.error(`Failed to get all documents: ${error.message}`, error);
-      throw { code: 'GET_ALL_DOCS_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to get all documents: ${err.message}`, err);
+      throw { code: 'GET_ALL_DOCS_FAILED', message: err.message } as ServiceError;
     }
   }
 
   /**
-   * 列出指定 Version 下的所有 Document。
-   * @param versionId 所属 Version 的 ID。
+   * 列出指定 Collection 下的所有 Document。
+   * @param collectionId 所属 Collection 的 ID。
    * @returns 包含所有 Document 数组的 Promise。
    * @throws {ServiceError} 如果数据库操作失败。
    */
-  async listDocs(versionId: VersionId): Promise<Doc[]> {
+  async listDocs(collectionId: CollectionId): Promise<Doc[]> {
     try {
-      const docs = this.db.listDocs(versionId);
-      this.logger.debug(`Listed ${docs.length} documents for version: ${versionId}`);
+      const docs = this.db.docs.listByCollection(collectionId);
+      this.logger.debug(`Listed ${docs.length} documents for collection: ${collectionId}`);
       return docs;
-    } catch (error: any) {
-      this.logger.error(`Failed to list documents for version ${versionId}: ${error.message}`, error);
-      throw { code: 'LIST_DOCS_FAILED', message: error.message } as ServiceError;
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to list documents for collection ${collectionId}: ${err.message}`, err);
+      throw { code: 'LIST_DOCS_FAILED', message: err.message } as ServiceError;
     }
   }
 }

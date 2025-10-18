@@ -1,23 +1,12 @@
 // ---------------------------------------------
 // 基础 & Brand ID（编译期更安全）
 // ---------------------------------------------
+// DEPRECATED: Version concept has been removed from the architecture
 type Brand<T, B extends string> = T & { __brand: B };
 
 export type CollectionId = Brand<string, 'CollectionId'>;
-export type VersionId    = Brand<string, 'VersionId'>;
 export type DocId        = Brand<string, 'DocId'>;
 export type PointId      = Brand<string, 'PointId'>;
-
-// ---------------------------------------------
-// 枚举 / 常量
-// ---------------------------------------------
-export type VersionStatus =
-  | 'PENDING'
-  | 'EDITING'
-  | 'ACTIVE'
-  | 'INDEXED_SQLITE'
-  | 'INDEXED_QDRANT'
-  | 'FAILED';
 
 // ---------------------------------------------
 // 领域实体（与数据库/存储结构一致，API 层也复用）
@@ -30,26 +19,14 @@ export interface Collection {
   created_at: number; // epoch ms
 }
 
-export interface Version {
-  versionId: VersionId;
-  collectionId: CollectionId;
-  name?: string;
-  description?: string;
-  status: VersionStatus | string; // 保持与现有 DB 兼容，推荐尽快收敛到 VersionStatus
-  is_current?: boolean;
-  created_at: number;
-  updated_at?: number;
-}
-
 /**
  * Doc 注意事项：
- * - 你的 docs 表并没有 content 字段；content 实际上只在“创建/更新时的输入载荷”里出现，
+ * - 你的 docs 表并没有 content 字段；content 实际上只在"创建/更新时的输入载荷"里出现，
  *   之后被拆到 chunks 中。为避免误导，这里把 content 标为可选，并在 DTO 中单独定义。
  */
 export interface Doc {
   docId: DocId;
-  versionId: VersionId;
-  collectionId: CollectionId; // 你在 JOIN versions 时会回带
+  collectionId: CollectionId;
   key: string;
   name?: string;
   size_bytes?: number;
@@ -66,7 +43,6 @@ export interface Doc {
 export interface ChunkMeta {
   pointId: PointId;
   docId: DocId;
-  versionId: VersionId;
   collectionId: CollectionId;
   chunkIndex: number;
   titleChain?: string;
@@ -94,11 +70,9 @@ export interface ChunkWithVector extends ChunkMeta {
 // 搜索相关
 // ---------------------------------------------
 export interface SearchFilters {
-  versionId?: VersionId;
   docId?: DocId;
   collectionId?: CollectionId;
   chunkIndex?: number;
-  status?: VersionStatus | string;
   // 如需扩展：时间范围、标题链匹配等都可以继续加
 }
 
@@ -106,7 +80,6 @@ export interface SearchRequest {
   query: string;
   collectionId?: CollectionId;
   limit?: number;
-  latestOnly?: boolean;
   filters?: SearchFilters;
 }
 
@@ -114,10 +87,8 @@ export interface SearchResult {
   pointId: PointId;
   content: string;
   title?: string;
-  versionId: VersionId;
   docId: DocId;
   chunkIndex: number;
-  is_current?: boolean;
   collectionId?: CollectionId;
   titleChain?: string;
   score?: number; // RRF 融合后可回传
@@ -146,13 +117,12 @@ export interface SplitOptions {
 export interface QdrantPointPayload {
   pointId: PointId;
   docId: DocId;
-  versionId: VersionId;
   collectionId: CollectionId;
   chunkIndex: number;
   titleChain?: string;
   contentHash?: string;
 
-  // 为了“快速预览”常会放一点文本，但注意别放过长
+  // 为了"快速预览"常会放一点文本，但注意别放过长
   content?: string;
   title?: string;
 }
@@ -175,34 +145,15 @@ export type CreateCollectionResponse = Collection;
 export type ListCollectionsResponse = Collection[];
 export type GetCollectionResponse = Collection;
 
-// Versions
-export interface CreateVersionRequest {
-  name: string;
-  description?: string;
-}
-export type CreateVersionResponse = Version;
-export type ListVersionsResponse = Version[];
-export type GetVersionResponse = Version;
-
-export interface SetCurrentVersionResponse extends Version {}
-export interface UpdateVersionStatusRequest {
-  status: VersionStatus | string;
-}
-export interface FinalizeVersionResponse {
-  finalVersionId: VersionId;
-  isNew: boolean;
-}
-
 // Docs
 export interface CreateDocRequest {
   collectionId: CollectionId;
-  versionId: VersionId;
   key: string;
   content: string | Uint8Array; // 输入载荷里才有 content
   name?: string;
   mime?: string;
   splitOptions?: SplitOptions;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 export type CreateDocResponse = Doc;
 
@@ -214,7 +165,7 @@ export interface UpdateDocRequest {
   name?: string;
   mime?: string;
   splitOptions?: SplitOptions;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 export type UpdateDocResponse = Doc;
 
@@ -244,7 +195,6 @@ export interface Paginated<T> {
 // ---------------------------------------------
 export interface Stats {
   collections: number;
-  versions: number;
   docs: number;
   chunks: number;
 }
