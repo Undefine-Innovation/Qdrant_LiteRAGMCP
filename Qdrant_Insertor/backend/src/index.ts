@@ -1,4 +1,5 @@
-import { loadDocuments } from './loader.js';
+import { glob } from 'glob';
+import { LocalFileLoader } from './infrastructure/LocalFileLoader.js';
 import { MarkdownSplitter } from './infrastructure/MarkdownSplitter.js';
 import { QdrantRepo } from './infrastructure/QdrantRepo.js';
 import { info, error } from './logger.js';
@@ -14,6 +15,7 @@ async function main() {
   const qdrantRepo = new QdrantRepo(config);
   const embeddingProvider = createOpenAIEmbeddingProviderFromConfig();
   const splitter = new MarkdownSplitter();
+  const fileLoader = new LocalFileLoader();
 
   info('程序启动，开始处理文档...');
 
@@ -33,15 +35,27 @@ async function main() {
 
   while (true) {
     try {
-      info('开始加载文档...');
+      info('开始扫描文档...');
       const documentSource = './docs'; // 硬编码文档源
-      const documents = await loadDocuments(documentSource);
+      const filePaths = await glob('**/*.{md,txt}', {
+        cwd: documentSource,
+        nodir: true,
+        absolute: true,
+      });
 
-      if (documents.length === 0) {
-        info('没有新文档可加载，等待下一轮...');
+      if (filePaths.length === 0) {
+        info('没有找到文档，等待下一轮...');
         await new Promise(resolve => setTimeout(resolve, pollingInterval));
         continue;
       }
+
+      info(`找到 ${filePaths.length} 个文档，开始加载...`);
+      const documents = await Promise.all(
+        filePaths.map(async (filePath) => ({
+          ...(await fileLoader.load(filePath)),
+          path: filePath,
+        }))
+      );
 
       info(`加载了 ${documents.length} 份文档，开始分割...`);
       const collectionId = makeCollectionId() as CollectionId;
