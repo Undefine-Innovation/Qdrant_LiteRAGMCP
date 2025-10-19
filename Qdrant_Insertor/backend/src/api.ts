@@ -1,285 +1,270 @@
-import express, { Request, Response, NextFunction } from 'express';
-import Database from 'better-sqlite3';
-import { SQLiteRepo } from './infrastructure/SQLiteRepo.js';
-import { runSearch } from './search.js';
-import { AppError } from '../contracts/error.js';
-import { CollectionId, DocId, PointId } from '../../share/type.js';
-import { QdrantRepo } from './infrastructure/QdrantRepo.js';
-import { makeDocId } from '../../share/utils/id.js';
-import { validateConfig } from './config.js';
-import { IEmbeddingProvider } from './domain/embedding.js';
-import { createOpenAIEmbeddingProviderFromConfig } from './infrastructure/OpenAIEmbeddingProvider.js';
-import { MarkdownSplitter } from './infrastructure/MarkdownSplitter.js';
+import express from 'express';
+import { CollectionId, DocId } from '@domain/types.js';
+import { IImportService } from './domain/IImportService.js';
+import { ISearchService } from './domain/ISearchService.js';
+import { IGraphService } from './domain/graph.js';
+import { ICollectionService } from './domain/ICollectionService.js';
+import { IDocumentService } from './domain/IDocumentService.js';
+// TODO: Re-enable validation once schemas are defined
+// import { validate } from './middlewares/validate.js';
+// import { CreateCollectionSchema, SearchSchema, UploadDocumentSchema } from '../contracts/schemas.js';
 
 /**
- * API Application Factory
- *
- * This module creates and exports an Express application that encapsulates all backend REST routes.
- * It handles dependency injection for the database and provides centralized error handling.
- *
- * @param deps Optional dependency injection object, currently supporting { db?: SQLiteRepo }.
- * @returns A configured Express application instance.
+ * @interface ApiServices
+ * @description API 层所需的应用服务接口集合
  */
-export function createApp(deps?: { db?: SQLiteRepo, embeddingProvider?: IEmbeddingProvider }) {
-  const app = express();
-  app.use(express.json());
-
-  // Initialize the database connection and repository
-  const dbInstance = new Database(cfg.db.path);
-  const db = deps?.db ?? new SQLiteRepo(dbInstance);
-  const qdrantRepo = new QdrantRepo(cfg);
-  const embeddingProvider = deps?.embeddingProvider ?? createOpenAIEmbeddingProviderFromConfig();
-  const splitter = new MarkdownSplitter();
-
-  route(app, db, qdrantRepo, embeddingProvider, splitter);
-
-  return app;
+interface ApiServices {
+  importService: IImportService;
+  searchService: ISearchService;
+  graphService: IGraphService;
+  collectionService: ICollectionService;
+  documentService: IDocumentService;
 }
 
-function route(
-  app: express.Express,
-  db: SQLiteRepo,
-  qdrantRepo: QdrantRepo,
-  embeddingProvider: IEmbeddingProvider,
-  splitter: MarkdownSplitter,
-) {
-  // Health check endpoint
-  app.get('/health', (_req, res) => res.json({ ok: true }));
+/**
+ * @function createApiRouter
+ * @description 创建并配置 Express API 路由。
+ *   此函数作为 Express 控制器层，负责接收请求、解构参数、调用应用服务、封装响应。
+ *   它不包含任何业务逻辑，也不应包含 try...catch 块，错误将由全局错误处理中间件统一处理。
+ * @param {ApiServices} services - 包含所有必要应用服务实例的对象。
+ * @returns {express.Router} 配置好的 Express 路由实例。
+ */
+export function createApiRouter(services: ApiServices): express.Router {
+  const { importService, searchService, graphService, collectionService, documentService } = services;
+  const router = express.Router();
 
-  // -------------------- Collections Routes --------------------
-  app.post('/collections', (req, res, next) => {
-    try {
-      const { name, description } = req.body || {};
-      if (!name || typeof name !== 'string') {
-        return res.status(400).json({ error: 'BadRequest: name is required' });
-      }
-      const collectionId = db.collections.create({ name, description });
-      const newCollection = db.collections.getById(collectionId);
-      res.status(201).json(newCollection);
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {get} /health 健康检查
+   * @apiGroup Common
+   * @apiDescription 检查 API 服务的健康状态。
+   * @apiSuccess {boolean} ok - 表示服务是否正常运行。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     {
+   *       "ok": true
+   *     }
+   */
+  router.get('/health', (_req, res) => res.json({ ok: true }));
+
+  // -------------------- Collection 路由 --------------------
+
+  /**
+   * @api {post} /collections 创建新的 Collection
+   * @apiGroup Collections
+   * @apiDescription 创建一个新的 Collection。
+   * @apiBody {string} name - Collection 的名称。
+   * @apiBody {string} [description] - Collection 的描述。
+   * @apiSuccess {Collection} collection - 创建成功的 Collection 对象。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 201 Created
+   *     {
+   *       "id": "coll-xxxx",
+   *       "name": "My New Collection",
+   *       "description": "A collection of documents."
+   *     }
+   */
+  router.post('/collections', async (req, res) => {
+    // TODO: 添加验证中间件
+    const { name, description } = req.body;
+    const newCollection = collectionService.createCollection(name, description);
+    res.status(201).json(newCollection);
   });
 
-  app.get('/collections', (_req, res, next) => {
-    try {
-      const cols = db.collections.listAll();
-      res.status(200).json(cols);
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {get} /collections 列出所有 Collections
+   * @apiGroup Collections
+   * @apiDescription 获取所有 Collections 的列表。
+   * @apiSuccess {Collection[]} collections - 所有 Collection 对象的数组。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     [
+   *       { "id": "coll-xxxx", "name": "Collection 1" },
+   *       { "id": "coll-yyyy", "name": "Collection 2" }
+   *     ]
+   */
+  router.get('/collections', async (_req, res) => {
+    const collections = collectionService.listAllCollections();
+    res.status(200).json(collections);
   });
 
-  app.get('/collections/:collectionId', (req, res, next) => {
-    try {
-      const col = db.collections.getById(req.params.collectionId as CollectionId);
-      if (!col) return res.status(404).json({ error: 'Collection not found' });
-      res.status(200).json(col);
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {get} /collections/:collectionId 获取指定的 Collection
+   * @apiGroup Collections
+   * @apiDescription 根据 Collection ID 获取单个 Collection。
+   * @apiParam {string} collectionId - 要获取的 Collection 的唯一标识符。
+   * @apiSuccess {Collection} collection - 找到的 Collection 对象。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     {
+   *       "id": "coll-xxxx",
+   *       "name": "My Collection",
+   *       "description": "Description of my collection."
+   *     }
+   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给定 ID 的 Collection。
+   */
+  router.get('/collections/:collectionId', async (req, res) => {
+    const { collectionId } = req.params;
+    const collection = collectionService.getCollectionById(collectionId as CollectionId);
+    // 统一错误处理中间件将处理未找到的情况
+    res.status(200).json(collection);
   });
 
-  app.delete('/collections/:collectionId', (req, res, next) => {
-    try {
-      const collectionId = req.params.collectionId as CollectionId;
-      const col = db.collections.getById(collectionId);
-      if (!col) {
-        return res.status(404).json({ error: 'Collection not found' });
-      }
-      db.deleteCollection(collectionId);
-      res.status(204).end();
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {delete} /collections/:collectionId 删除 Collection
+   * @apiGroup Collections
+   * @apiDescription 根据 Collection ID 删除一个 Collection 及其所有相关文档和块。
+   * @apiParam {string} collectionId - 要删除的 Collection 的唯一标识符。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 204 No Content
+   */
+  router.delete('/collections/:collectionId', async (req, res) => {
+    const { collectionId } = req.params;
+    await collectionService.deleteCollection(collectionId as CollectionId);
+    res.status(204).end();
   });
 
-  // -------------------- Docs Routes --------------------
-  app.get('/docs', async (req, res, next) => {
-    try {
-      const docs = db.docs.listAll();
-      res.json(docs);
-    } catch (err) {
-      next(err);
-    }
+  // -------------------- Document 路由 --------------------
+
+  /**
+   * @api {post} /docs 导入新文档
+   * @apiGroup Documents
+   * @apiDescription 从文件路径导入一个新文档到指定的 Collection。
+   * @apiBody {string} filePath - 文档源文件的路径。
+   * @apiBody {string} collectionId - 文档所属 Collection 的 ID。
+   * @apiSuccess {Doc} document - 导入成功的文档对象。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 201 Created
+   *     {
+   *       "id": "doc-xxxx",
+   *       "name": "My Document",
+   *       "collectionId": "coll-xxxx"
+   *     }
+   */
+  router.post('/docs', async (req, res) => {
+    // TODO: 添加验证中间件
+    const { filePath, collectionId } = req.body;
+    const doc = await importService.importDocument(
+      filePath,
+      collectionId as CollectionId,
+    );
+    res.status(201).json(doc);
   });
 
-  app.get('/docs/:docId', async (req, res, next) => {
-    try {
-      const { docId } = req.params;
-      const doc = db.docs.getById(docId as DocId);
-      if (!doc) return res.status(404).json({ error: 'Document not found' });
-      res.json(doc);
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {get} /docs 列出所有文档
+   * @apiGroup Documents
+   * @apiDescription 获取所有文档的列表。
+   * @apiSuccess {Doc[]} documents - 所有文档对象的数组。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     [
+   *       { "id": "doc-xxxx", "name": "Document 1" },
+   *       { "id": "doc-yyyy", "name": "Document 2" }
+   *     ]
+   */
+  router.get('/docs', async (_req, res) => {
+    const docs = documentService.listAllDocuments();
+    res.status(200).json(docs);
   });
 
-  app.post('/docs', async (req, res, next) => {
-    const { content, collectionId, key, name, mimeType } = req.body;
-    if (!content || !collectionId || !key) {
-      return res.status(400).json({
-        error: 'BadRequest: content, collectionId, and key are required',
-      });
-    }
-    try {
-      const docId = db.docs.create({
-        collectionId: collectionId as CollectionId,
-        key,
-        content,
-        name: name ?? '',
-        mime: mimeType || 'text/plain',
-        size_bytes: new TextEncoder().encode(content).length,
-      });
-      const doc = db.docs.getById(docId);
-      if (!doc) throw new Error('Failed to create document');
-
-      const chunks = splitter.split(content, { docPath: key });
-
-      const metas = chunks.map((chunk, index) => ({
-        pointId: `${doc.docId}#${index}` as PointId,
-        docId: doc.docId,
-        collectionId: doc.collectionId,
-        chunkIndex: index,
-        titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: makeDocId(chunk.content),
-      }));
-      db.chunkMeta.createBatch(metas);
-
-      await qdrantRepo.ensureCollection();
-      const vectors = await embeddingProvider.generate(chunks.map((ch) => ch.content));
-
-      const upserts = chunks.map((chunk, index) => ({
-        collectionId: doc.collectionId,
-        docId: doc.docId,
-        chunkIndex: index,
-        content: chunk.content,
-        titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: makeDocId(chunk.content),
-        vector: (vectors as number[][])[index] ?? new Array(cfg.qdrant.vectorSize).fill(0),
-        pointId: `${doc.docId}#${index}`,
-      }));
-      await qdrantRepo.upsertChunks(upserts);
-
-      res.status(201).json(doc);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.put('/docs/:docId', async (req, res, next) => {
+  /**
+   * @api {get} /docs/:docId 获取指定的文档
+   * @apiGroup Documents
+   * @apiDescription 根据文档 ID 获取单个文档。
+   * @apiParam {string} docId - 要获取的文档的唯一标识符。
+   * @apiSuccess {Doc} document - 找到的文档对象。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     {
+   *       "id": "doc-xxxx",
+   *       "name": "My Document",
+   *       "collectionId": "coll-xxxx"
+   *     }
+   * @apiError (404 Not Found) DocumentNotFound - 如果找不到具有给定 ID 的文档。
+   */
+  router.get('/docs/:docId', async (req, res) => {
     const { docId } = req.params;
-    const { content, name, mimeType } = req.body;
-    if (!content) {
-      return res.status(400).json({ error: 'BadRequest: content is required' });
-    }
-    const doc = db.docs.getById(docId as DocId);
-    if (!doc) return res.status(404).json({ error: 'Document not found' });
-
-    try {
-      const updated = db.updateDoc(
-        docId as DocId,
-        content,
-        name || doc.name,
-        mimeType || doc.mime,
-      );
-      if (!updated) throw new Error('Document update failed');
-
-      const chunks = splitter.split(content, { docPath: doc.key });
-
-      const metas = chunks.map((chunk, index) => ({
-        pointId: `${updated.docId}#${index}` as PointId,
-        docId: updated.docId,
-        collectionId: updated.collectionId,
-        chunkIndex: index,
-        titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: makeDocId(chunk.content),
-      }));
-      db.chunkMeta.createBatch(metas);
-
-      await qdrantRepo.deletePointsByDoc(docId as DocId);
-      await qdrantRepo.ensureCollection();
-      const vectors = await embeddingProvider.generate(chunks.map((ch) => ch.content));
-
-      const upserts = chunks.map((chunk, index) => ({
-        collectionId: updated.collectionId,
-        docId: updated.docId,
-        chunkIndex: index,
-        content: chunk.content,
-        titleChain: chunk.titleChain ? chunk.titleChain.join(' > ') : '',
-        contentHash: makeDocId(chunk.content),
-        vector: (vectors as number[][])[index] ?? new Array(cfg.qdrant.vectorSize).fill(0),
-        pointId: `${updated.docId}#${index}`,
-      }));
-      await qdrantRepo.upsertChunks(upserts);
-
-      res.json(updated);
-    } catch (err) {
-      next(err);
-    }
+    const doc = documentService.getDocumentById(docId as DocId);
+    // 统一错误处理中间件将处理未找到的情况
+    res.status(200).json(doc);
   });
 
-  app.delete('/docs/:docId', async (req, res, next) => {
-    try {
-      const { docId } = req.params;
-      const ok = db.deleteDoc(docId as DocId);
-      if (!ok) return res.status(404).json({ error: 'Document not found' });
-      await qdrantRepo.deletePointsByDoc(docId as DocId);
-      res.status(204).end();
-    } catch (e) {
-      next(e);
-    }
+  /**
+   * @api {put} /docs/:docId/resync 重新同步文档
+   * @apiGroup Documents
+   * @apiDescription 根据文档 ID 重新同步文档内容（从其源文件）。
+   * @apiParam {string} docId - 要重新同步的文档的唯一标识符。
+   * @apiSuccess {Doc} document - 更新后的文档对象。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     {
+   *       "id": "doc-xxxx",
+   *       "name": "My Document (Updated)",
+   *       "collectionId": "coll-xxxx"
+   *     }
+   */
+  router.put('/docs/:docId/resync', async (req, res) => {
+    const { docId } = req.params;
+    const updatedDoc = await documentService.resyncDocument(docId as DocId);
+    res.status(200).json(updatedDoc);
+  });
+
+  /**
+   * @api {delete} /docs/:docId 删除文档
+   * @apiGroup Documents
+   * @apiDescription 根据文档 ID 删除文档。
+   * @apiParam {string} docId - 要删除的文档的唯一标识符。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 204 No Content
+   */
+  router.delete('/docs/:docId', async (req, res) => {
+    const { docId } = req.params;
+    await documentService.deleteDocument(docId as DocId);
+    res.status(204).end();
+  });
+
+  // -------------------- Graph 路由 --------------------
+
+  /**
+   * @api {post} /docs/:docId/extract-graph 提取并存储文档图谱
+   * @apiGroup Graph
+   * @apiDescription 为指定的文档触发知识图谱的提取和存储过程。
+   * @apiParam {string} docId - 要提取图谱的文档的唯一标识符。
+   * @apiSuccess {object} message - 描述操作状态的消息。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 202 Accepted
+   *     {
+   *       "message": "Graph extraction initiated for document ID: doc-xxxx"
+   *     }
+   */
+  router.post('/docs/:docId/extract-graph', async (req, res) => {
+    const { docId } = req.params;
+    await graphService.extractAndStoreGraph(docId as DocId);
+    res.status(202).json({ message: `Graph extraction initiated for document ID: ${docId}` });
   });
 
   // -------------------- Search 路由 --------------------
+
   /**
-   * 向量检索接口
-   * 请求体: { query: string, collectionId: string, limit?: number, filters?: any, latestOnly?: boolean }
-   * 返回: runSearch 的结果（已经封装好的相似度和元数据）
+   * @api {post} /search 执行向量搜索
+   * @apiGroup Search
+   * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索。
+   * @apiBody {string} query - 搜索查询字符串。
+   * @apiBody {string} [collectionId] - 可选的 Collection ID，用于限制搜索范围。
+   * @apiBody {number} [limit=10] - 返回结果的最大数量。
+   * @apiSuccess {RetrievalResult[]} results - 搜索结果数组。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     [
+   *       { "type": "chunk", "id": "chunk-xxxx", "text": "..." }
+   *     ]
    */
-  app.post('/search', async (req, res, next) => {
-    const { query, collectionId, limit, latestOnly } = req.body ?? {};
-    if (!query)
-      return res.status(400).json({ error: 'BadRequest: query required' });
-    if (!collectionId)
-      return res
-        .status(400)
-        .json({ error: 'BadRequest: collectionId required' });
-
-    const safeLimit =
-      Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 10;
-    const onlyLatest = Boolean(latestOnly);
-
-    try {
-      const results = await runSearch(
-        embeddingProvider,
-        query,
-        collectionId,
-        safeLimit,
-        onlyLatest,
-      );
-      res.json(results);
-    } catch (err) {
-      console.error('Search error:', err);
-      next(err);
-    }
+  router.post('/search', async (req, res) => {
+    // TODO: 添加验证中间件
+    const { query, collectionId, limit } = req.body;
+    const results = await searchService.search(query, collectionId, { limit });
+    res.status(200).json(results);
   });
 
-  // 统一错误处理（把 500 变成可读 JSON）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
-    if (err instanceof AppError) {
-      console.error(`AppError: [${err.code}] ${err.message}`, err.details);
-      res.status(err.httpStatus).json(err.toJSON());
-    } else {
-      console.error('API Internal Server Error:', err);
-      const internalError = AppError.createInternalServerError(
-        'An unexpected internal server error occurred.',
-        { stack: err.stack, message: err.message },
-      );
-      res.status(internalError.httpStatus).json(internalError.toJSON());
-    }
-  });
+  return router;
 }
-
-const cfg = validateConfig();
