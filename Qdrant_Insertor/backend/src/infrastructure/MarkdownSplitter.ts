@@ -1,5 +1,5 @@
 import { ISplitter } from '../domain/splitter.js';
-import { DocumentChunk, SplitOptions } from '../../../share/type.js';
+import { DocumentChunk, SplitOptions } from '@domain/types.js';
 
 type HeadingEvt = { index: number; level: number; text: string };
 
@@ -88,6 +88,7 @@ export class MarkdownSplitter implements ISplitter {
     content: string,
     options?: {
       docPath?: string;
+      name?: string; // 允许 name 为 string | undefined
     },
   ): DocumentChunk[] {
     const docPath = options?.docPath;

@@ -1,4 +1,4 @@
-import { DocumentChunk } from '../../../share/type.js';
+import { DocumentChunk } from '@domain/types.js';
 
 /**
  * 定义文档分割器的接口。

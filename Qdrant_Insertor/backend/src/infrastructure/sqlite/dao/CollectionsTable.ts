@@ -7,27 +7,27 @@ import {
   UPDATE_COLLECTION,
   DELETE_COLLECTION_BY_ID,
 } from '../sql/collections.sql.js';
-import type { Collection, CollectionId } from '../../../../../share/type.js';
-import { makeCollectionId } from '../../../../../share/utils/id.js';
+import type { Collection, CollectionId } from '@domain/types.js';
+import { makeCollectionId } from '@domain/utils/id.js';
 
 /**
- * Data Access Object for the `collections` table.
- * Encapsulates all SQL interactions for collections.
+ * `collections` 表的数据访问对象 (DAO)。
+ * 封装了所有集合的 SQL 交互。
  */
 export class CollectionsTable {
   private db: Database;
 
   /**
-   * @param db The database instance.
+   * @param db - 数据库实例。
    */
   constructor(db: Database) {
     this.db = db;
   }
 
   /**
-   * Creates a new collection record.
-   * @param data - The data for the new collection.
-   * @returns The ID of the newly created collection.
+   * 创建一个新的集合记录。
+   * @param data - 新集合的数据。
+   * @returns 新创建集合的 ID。
    */
   create(data: Omit<Collection, 'collectionId' | 'created_at'>): CollectionId {
     const collectionId = makeCollectionId() as CollectionId;
@@ -38,9 +38,9 @@ export class CollectionsTable {
   }
 
   /**
-   * Retrieves a collection by its ID.
-   * @param collectionId - The ID of the collection to retrieve.
-   * @returns The collection object, or undefined if not found.
+   * 根据 ID 检索集合。
+   * @param collectionId - 要检索的集合 ID。
+   * @returns 集合对象，如果未找到则返回 undefined。
    */
   getById(collectionId: CollectionId): Collection | undefined {
     const stmt = this.db.prepare(SELECT_COLLECTION_BY_ID);
@@ -49,9 +49,9 @@ export class CollectionsTable {
   }
 
   /**
-   * Retrieves a collection by its name.
-   * @param name - The name of the collection to retrieve.
-   * @returns The collection object, or undefined if not found.
+   * 根据名称检索集合。
+   * @param name - 要检索的集合名称。
+   * @returns 集合对象，如果未找到则返回 undefined。
    */
   getByName(name: string): Collection | undefined {
     const stmt = this.db.prepare(SELECT_COLLECTION_BY_NAME);
@@ -60,8 +60,8 @@ export class CollectionsTable {
   }
 
   /**
-   * Retrieves all collections from the database.
-   * @returns An array of all collections.
+   * 从数据库中检索所有集合。
+   * @returns 所有集合的数组。
    */
   listAll(): Collection[] {
     const stmt = this.db.prepare(SELECT_ALL_COLLECTIONS);
@@ -69,9 +69,9 @@ export class CollectionsTable {
   }
 
   /**
-   * Updates an existing collection.
-   * @param collectionId - The ID of the collection to update.
-   * @param data - The data to update. Only provided fields will be updated.
+   * 更新现有集合。
+   * @param collectionId - 要更新的集合 ID。
+   * @param data - 要更新的数据。只有提供的字段会被更新。
    */
   update(collectionId: CollectionId, data: Partial<Omit<Collection, 'collectionId' | 'created_at'>>): void {
     const stmt = this.db.prepare(UPDATE_COLLECTION);
@@ -79,11 +79,25 @@ export class CollectionsTable {
   }
 
   /**
-   * Deletes a collection by its ID.
-   * @param collectionId - The ID of the collection to delete.
+   * 根据 ID 删除集合。
+   * @param collectionId - 要删除的集合 ID。
    */
   delete(collectionId: CollectionId): void {
     const stmt = this.db.prepare(DELETE_COLLECTION_BY_ID);
     stmt.run(collectionId);
+  }
+
+  /**
+   * 检查数据库连接是否存活。
+   * @returns 如果连接响应正常则返回 true，否则返回 false。
+   */
+  ping(): boolean {
+    try {
+      this.db.prepare('SELECT 1').get();
+      return true;
+    } catch (e) {
+      console.error('Database ping failed:', e);
+      return false;
+    }
   }
 }

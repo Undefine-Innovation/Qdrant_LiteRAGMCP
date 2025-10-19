@@ -1,10 +1,10 @@
 import type { Database } from 'better-sqlite3';
-import type { PointId, DocId, CollectionId, SearchResult } from '../../../../../share/type.js';
+import type { PointId, DocId, CollectionId, SearchResult } from '@domain/types.js';
 import {
-  INSERT_CHUNKS_FTS5_BATCH,
   SEARCH_CHUNKS_FTS5_BY_COLLECTION,
   DELETE_CHUNKS_FTS5_BY_DOC_ID,
   DELETE_CHUNKS_FTS5_BY_COLLECTION_ID,
+  DELETE_CHUNKS_FTS5_BATCH,
 } from '../sql/chunks_fts5.sql.js';
 
 /**
@@ -16,51 +16,31 @@ import {
 export type FtsResult = SearchResult;
 
 /**
- * Data Access Object for the `chunks_fts5` virtual table.
- * Encapsulates all SQL interactions for Full-Text Search on chunks.
+ * `chunks_fts5` 虚拟表的数据访问对象 (DAO)。
+ * 封装了所有块全文搜索的 SQL 交互。
  */
 export class ChunksFts5Table {
   private db: Database;
 
   /**
-   * @param db The database instance.
+   * @param db - 数据库实例。
    */
   constructor(db: Database) {
     this.db = db;
   }
 
   /**
-   * Inserts a batch of chunk contents into the FTS index within a single transaction.
-   * Note: This method is for manual indexing. The default setup uses triggers
-   * to automatically keep the FTS table in sync with the `chunks` table.
-   * This might be useful for initial data population or re-indexing scenarios.
+   * 在特定集合中执行全文搜索。
    *
-   * @param data - An array of objects, each containing the pointId, content, and title chain for FTS indexing.
-   */
-  createBatch(data: { pointId: PointId; content: string; title_chain: string }[]): void {
-    const insert = this.db.prepare(INSERT_CHUNKS_FTS5_BATCH);
-
-    const insertMany = this.db.transaction((items: { pointId: PointId; content: string; title_chain: string }[]) => {
-      for (const item of items) {
-        insert.run(item.pointId, item.content, item.title_chain);
-      }
-    });
-
-    insertMany(data);
-  }
-
-  /**
-   * Performs a full-text search within a specific collection.
-   *
-   * @param query - The FTS query string.
-   * @param collectionId - The ID of the collection to search within.
-   * @param limit - The maximum number of results to return.
-   * @returns An array of search results.
+   * @param query - FTS 查询字符串。
+   * @param collectionId - 要搜索的集合 ID。
+   * @param limit - 返回结果的最大数量。
+   * @returns 搜索结果数组。
    */
   search(query: string, collectionId: CollectionId, limit: number): FtsResult[] {
     const stmt = this.db.prepare(SEARCH_CHUNKS_FTS5_BY_COLLECTION);
-    // FTS queries handle their own parameterization within the MATCH string,
-    // so we don't need to worry about SQL injection from the query text itself.
+    // FTS 查询处理其自身在 MATCH 字符串中的参数化，
+    // 因此我们无需担心查询文本本身的 SQL 注入。
     const results = stmt.all(query, collectionId, limit) as {
       point_id: PointId;
       doc_id: DocId;
@@ -78,16 +58,16 @@ export class ChunksFts5Table {
       chunkIndex: row.chunk_index,
       titleChain: row.title_chain,
       content: row.content,
-      title: row.doc_name, // Map doc_name to title for SearchResult compatibility
-      // Note: score (rank) is implicitly used for ordering in SQL but not returned here.
-      // It can be added if needed by selecting the 'rank' column.
+      title: row.doc_name, // 将 doc_name 映射到 title 以兼容 SearchResult
+      // 注意：score (rank) 在 SQL 中隐式用于排序，但此处不返回。
+      // 如果需要，可以通过选择“rank”列来添加。
     }));
   }
 
   /**
-   * Deletes all FTS index entries associated with a specific document.
+   * 删除与特定文档关联的所有 FTS 索引条目。
    *
-   * @param docId - The ID of the document whose FTS records are to be deleted.
+   * @param docId - 要删除其 FTS 记录的文档 ID。
    */
   deleteByDocId(docId: DocId): void {
     const stmt = this.db.prepare(DELETE_CHUNKS_FTS5_BY_DOC_ID);
@@ -95,12 +75,37 @@ export class ChunksFts5Table {
   }
 
   /**
-   * Deletes all FTS index entries associated with a specific collection.
+   * 删除与特定集合关联的所有 FTS 索引条目。
    *
-   * @param collectionId - The ID of the collection whose FTS records are to be deleted.
+   * @param collectionId - 要删除其 FTS 记录的集合 ID。
    */
   deleteByCollectionId(collectionId: CollectionId): void {
     const stmt = this.db.prepare(DELETE_CHUNKS_FTS5_BY_COLLECTION_ID);
     stmt.run(collectionId);
+  }
+  createBatch(data: Array<{ pointId: PointId; docId: DocId; collectionId: CollectionId; content: string }>): void {
+    const insert = this.db.prepare(`
+      INSERT INTO chunks_fts5 (point_id, doc_id, collection_id, content)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    this.db.transaction((items: Array<{ pointId: PointId; docId: DocId; collectionId: CollectionId; content: string }>) => {
+      for (const item of items) {
+        insert.run(item.pointId, item.docId, item.collectionId, item.content);
+      }
+    })(data);
+  }
+
+  /**
+   * 根据 pointId 批量删除 FTS 索引条目。
+   * @param pointIds - 要删除的 pointId 数组。
+   */
+  deleteBatch(pointIds: PointId[]): void {
+    if (pointIds.length === 0) {
+      return;
+    }
+    const placeholders = pointIds.map(() => '?').join(',');
+    const stmt = this.db.prepare(DELETE_CHUNKS_FTS5_BATCH.replace('(?)', `(${placeholders})`));
+    stmt.run(...pointIds);
   }
 }

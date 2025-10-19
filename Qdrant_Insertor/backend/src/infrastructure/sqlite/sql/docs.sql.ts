@@ -78,7 +78,21 @@ WHERE docId = ?
  * 软删除文档的 SQL 语句
  */
 export const DELETE_DOC_BY_ID = `
-DELETE FROM docs WHERE docId = ?
+ DELETE FROM docs WHERE docId = ?
+ `;
+
+/**
+ * 软删除文档的 SQL 语句
+ */
+export const SOFT_DELETE_DOC_BY_ID = `
+UPDATE docs SET is_deleted = 1, updated_at = ? WHERE docId = ?
+`;
+
+/**
+ * 根据集合 ID 查询文档的 SQL 语句
+ */
+export const SELECT_DOCS_BY_COLLECTION_ID = `
+SELECT * FROM docs WHERE collectionId = ? AND is_deleted = 0 ORDER BY created_at DESC
 `;
 
 /**
@@ -105,4 +119,11 @@ SELECT COUNT(*) FROM docs WHERE is_deleted = 0
  */
 export const SELECT_DOC_IDS_BY_COLLECTION_ID = `
 SELECT docId FROM docs WHERE versionId IN (SELECT versionId FROM versions WHERE collectionId = ?)
+`;
+
+/**
+ * 查询所有已软删除文档的 SQL 语句
+ */
+export const SELECT_DELETED_DOCS = `
+SELECT * FROM docs WHERE is_deleted = 1 ORDER BY updated_at DESC
 `;

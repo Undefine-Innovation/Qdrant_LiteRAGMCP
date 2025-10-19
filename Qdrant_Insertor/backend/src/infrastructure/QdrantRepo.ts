@@ -1,38 +1,29 @@
-import { QdrantClient, Schemas } from '@qdrant/js-client-rest';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import type { Schemas } from '@qdrant/js-client-rest';
 import { AppConfig } from '../config.js';
-import * as logger from '../logger.js';
-
-/**
- * Interface for a chunk of text with its vector representation.
- */
-export interface ChunkWithVector {
-  collectionId: string;
-  docId: string;
-  chunkIndex: number;
-  content: string;
-  titleChain?: string | string[];
-  vector: number[];
-  pointId?: string;
-  source?: string;
-  contentHash?: string;
-}
+import { Logger } from '../logger.js'; // 导入 Logger 类型
+import { IQdrantRepo, Point } from '../domain/IQdrantRepo.js';
+import { PointId, DocId, CollectionId, SearchResult } from '@domain/types.js';
 
 /**
  * A repository class for interacting with the Qdrant vector database.
  * It encapsulates all Qdrant-related operations.
  */
-export class QdrantRepo {
+export class QdrantRepo implements IQdrantRepo {
   private client: QdrantClient;
   private config: AppConfig['qdrant'];
   private collectionName: string;
+  private logger: Logger; // 添加 logger 成员变量
 
   /**
    * Creates an instance of QdrantRepo.
    * @param {AppConfig} appConfig - The application configuration.
+   * @param {Logger} logger - The logger instance.
    */
-  constructor(appConfig: AppConfig) {
+  constructor(appConfig: AppConfig, logger: Logger) {
     this.config = appConfig.qdrant;
     this.collectionName = this.config.collection;
+    this.logger = logger; // 初始化 logger
     this.client = new QdrantClient({
       url: this.config.url ?? 'http://localhost:6333',
       checkCompatibility: false,
@@ -71,7 +62,7 @@ export class QdrantRepo {
         );
       }
     } catch (err) {
-      logger.error('Failed to ensure Qdrant collection', {
+      this.logger.error('Failed to ensure Qdrant collection', {
         error: err,
         collectionName: this.collectionName,
       });
@@ -110,39 +101,24 @@ export class QdrantRepo {
    * Upserts a batch of chunks into the Qdrant collection.
    * @param {ChunkWithVector[]} chunks - An array of chunks to upsert.
    */
-  async upsertChunks(chunks: ChunkWithVector[]) {
-    if (!chunks?.length) {
-      logger.info('No chunks to upsert.');
+  async upsertCollection(collectionId: CollectionId, points: Point[]) {
+    if (!points?.length) {
+      this.logger.info('No points to upsert.');
       return;
     }
 
     const BATCH_SIZE = 100;
-    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-      const batch = chunks.slice(i, i + BATCH_SIZE);
-      const points = batch.map((c) => ({
-        id: c.pointId ?? `${c.docId}#${c.chunkIndex}`,
-        vector: c.vector,
-        payload: {
-          content: c.content,
-          titleChain: Array.isArray(c.titleChain)
-            ? c.titleChain.join(' > ')
-            : c.titleChain,
-          source: c.source,
-          contentHash: c.contentHash,
-          docId: c.docId,
-          collectionId: c.collectionId,
-          chunkIndex: c.chunkIndex,
-        },
-      }));
+    for (let i = 0; i < points.length; i += BATCH_SIZE) {
+      const batch = points.slice(i, i + BATCH_SIZE);
 
       try {
-        await this.client.upsert(this.collectionName, {
+        await this.client.upsert(collectionId, {
           wait: true,
           ordering: 'medium',
-          points,
+          points: batch,
         });
       } catch (e) {
-        logger.error(`Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`, {
+        this.logger.error(`Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`, {
           error: e,
         });
       }
@@ -155,20 +131,20 @@ export class QdrantRepo {
    * @param {object} opts - The search options.
    * @param {number[]} opts.vector - The vector to search for.
    * @param {number} [opts.limit=10] - The maximum number of results to return.
-   * @param {Schemas.Filter} [opts.filter] - The filter to apply to the search.
-   * @returns {Promise<any[]>} A promise that resolves to an array of search results.
+   * @param {Schemas['Filter']} [opts.filter] - The filter to apply to the search.
+   * @returns {Promise<SearchResult[]>} A promise that resolves to an array of search results.
    */
   async search(
-    collectionId: string, // Note: collectionId is kept for API compatibility but this repo instance targets one collection.
+    collectionId: CollectionId, // Changed to CollectionId type
     opts: {
       vector: number[];
       limit?: number;
       filter?: Schemas['Filter'];
     },
-  ) {
+  ): Promise<SearchResult[]> { // Explicitly set return type
     const { vector, limit = 10, filter } = opts;
     if (!vector?.length) {
-      logger.error('Cannot search with an empty vector.');
+      this.logger.error('Cannot search with an empty vector.');
       return [];
     }
 
@@ -180,16 +156,16 @@ export class QdrantRepo {
         with_payload: true,
       });
       return res.map((item) => ({
-        pointId: item.id as string,
+        pointId: item.id as PointId,
         score: item.score,
-        content: item.payload?.content,
-        titleChain: item.payload?.titleChain,
-        docId: item.payload?.docId,
-        collectionId: item.payload?.collectionId,
-        chunkIndex: item.payload?.chunkIndex,
-      }));
+        content: item.payload?.content as string,
+        titleChain: item.payload?.titleChain as string,
+        docId: item.payload?.docId as DocId,
+        collectionId: item.payload?.collectionId as CollectionId,
+        chunkIndex: item.payload?.chunkIndex as number,
+      })) as SearchResult[]; // Cast to SearchResult array
     } catch (e) {
-      logger.error('Error searching Qdrant:', { error: e });
+      this.logger.error('Error searching Qdrant:', { error: e });
       return [];
     }
   }
@@ -209,7 +185,73 @@ export class QdrantRepo {
         filter: { must: [{ key: 'docId', match: { value: docId } }] },
       });
     } catch (e) {
-      logger.warn('deletePointsByDoc: failed to delete points', { docId, error: e });
+      this.logger.warn('deletePointsByDoc: failed to delete points', { docId, error: e });
+    }
+  }
+
+  /**
+   * Deletes all points associated with a specific collection ID from the Qdrant collection.
+   * @param {string} collectionId - The ID of the collection whose points should be deleted.
+   */
+  async deletePointsByCollection(collectionId: string) {
+    if (!collectionId) return;
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
+
+    try {
+      await this.client.delete(this.collectionName, {
+        wait: true,
+        filter: { must: [{ key: 'collectionId', match: { value: collectionId } }] },
+      });
+    } catch (e) {
+      this.logger.warn('deletePointsByCollection: failed to delete points', { collectionId, error: e });
+    }
+  }
+
+  /**
+   * 获取指定集合中的所有点 ID。
+   * @param collectionId - 集合的 ID。
+   * @returns 包含点 ID 数组的 Promise。
+   */
+  async getAllPointIdsInCollection(collectionId: CollectionId): Promise<PointId[]> {
+    try {
+      const { points } = await this.client.scroll(collectionId, {
+        limit: 10000, // 根据需要调整限制，或者为非常大的集合实现分页
+        with_payload: false,
+      });
+      return points.map(point => point.id as PointId);
+    } catch (e) {
+      this.logger.error('从 Qdrant 获取所有点 ID 时出错:', { collectionId, error: e });
+      return [];
+    }
+  }
+
+  /**
+   * 根据点 ID 批量删除指定集合中的点。
+   * @param collectionId - 集合的 ID。
+   * @param pointIds - 要删除的点 ID 数组。
+   */
+  async deletePoints(collectionId: CollectionId, pointIds: PointId[]): Promise<void> {
+    if (!pointIds?.length) {
+      this.logger.info('没有要删除的点。');
+      return;
+    }
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
+
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < pointIds.length; i += BATCH_SIZE) {
+      const batch = pointIds.slice(i, i + BATCH_SIZE);
+      try {
+        await this.client.delete(collectionId, {
+          wait: true,
+          points: batch,
+        });
+      } catch (e) {
+        this.logger.warn(`从 Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`, {
+          collectionId,
+          pointIds: batch,
+          error: e,
+        });
+      }
     }
   }
 }

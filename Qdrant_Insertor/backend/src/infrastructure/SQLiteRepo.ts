@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
-import { makeDocId } from '../../../share/utils/id.js';
-import { Doc, SearchResult, CollectionId, DocId } from '../../../share/type.js';
+import { makeDocId, hashContent, makePointId } from '../domain/utils/id.js';
+import { Doc, SearchResult, CollectionId, DocId, PointId, DocumentChunk, ChunkMeta } from '@domain/types.js';
 
 // Import DAOs
 import { CollectionsTable } from './sqlite/dao/CollectionsTable.js';
@@ -8,22 +8,10 @@ import { DocsTable } from './sqlite/dao/DocsTable.js';
 import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
 import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
 
-// Import SQL for schema creation and complex queries
-import { CREATE_TABLE_COLLECTIONS } from './sqlite/sql/collections.sql.js';
-import { CREATE_TABLE_DOCS } from './sqlite/sql/docs.sql.js';
-import { CREATE_TABLE_CHUNK_META } from './sqlite/sql/chunk_meta.sql.js';
-import {
-  CREATE_TABLE_CHUNKS,
-  CREATE_VIRTUAL_TABLE_CHUNKS_FTS5,
-  SELECT_CHUNKS_BY_POINT_IDS as SELECT_CHUNKS_CONTENT_BY_POINT_IDS,
-  SELECT_CHUNKS_DETAILS_BY_POINT_IDS_BASE,
-} from './sqlite/sql/chunks.sql.js';
-import { SELECT_ONE } from './sqlite/sql/common.sql.js';
-
 /**
- * SQLiteRepo acts as a coordinator for Data Access Objects (DAOs).
- * It manages the database connection, provides access to DAOs,
- * and encapsulates complex, transactional operations that span multiple tables.
+ * SQLiteRepo 作为数据访问对象 (DAO) 的协调器。
+ * 它管理数据库连接，提供对 DAO 的访问，
+ * 并封装跨多个表的复杂事务操作。
  */
 export class SQLiteRepo {
   public readonly collections: CollectionsTable;
@@ -32,7 +20,7 @@ export class SQLiteRepo {
   public readonly chunksFts5: ChunksFts5Table;
 
   /**
-   * @param db A `better-sqlite3` database instance.
+   * @param db `better-sqlite3` 数据库实例。
    */
   constructor(private db: Database.Database) {
     this.collections = new CollectionsTable(db);
@@ -43,52 +31,35 @@ export class SQLiteRepo {
   }
 
   /**
-   * Initializes the database, ensuring the schema exists.
-   */
-  public init() {
-    this.bootstrap();
-  }
-
-  /**
-   * Sets up the database schema and PRAGMA settings.
+   * 设置数据库模式和 PRAGMA 设置。
+   * 假设数据库模式已通过迁移脚本创建。
    */
   private bootstrap() {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('synchronous = NORMAL');
     this.db.pragma('foreign_keys = ON');
-
-    const tx = this.db.transaction(() => {
-      this.db.exec(`
-        ${CREATE_TABLE_COLLECTIONS}
-        ${CREATE_TABLE_DOCS}
-        ${CREATE_TABLE_CHUNK_META}
-        ${CREATE_TABLE_CHUNKS}
-        ${CREATE_VIRTUAL_TABLE_CHUNKS_FTS5}
-      `);
-    });
-    tx();
   }
 
   /**
-   * Executes a function within a database transaction.
-   * @param fn The function containing database operations.
-   * @returns The return value of the transactional function.
+   * 在数据库事务中执行一个函数。
+   * @param fn 包含数据库操作的函数。
+   * @returns 事务函数的返回值。
    */
   transaction<T>(fn: () => T): T {
     return this.db.transaction(fn)();
   }
 
   /**
-   * Closes the database connection.
+   * 关闭数据库连接。
    */
   public close() {
     this.db.close();
   }
 
   /**
-   * Deletes a collection and all its associated documents and chunks.
-   * This is a transactional operation.
-   * @param collectionId The ID of the collection to delete.
+   * 删除一个集合及其所有关联的文档和块。
+   * 这是一个事务性操作。
+   * @param collectionId 要删除的集合 ID。
    */
   deleteCollection(collectionId: CollectionId): void {
     const collection = this.collections.getById(collectionId);
@@ -98,17 +69,17 @@ export class SQLiteRepo {
     }
 
     this.transaction(() => {
-      // First, delete all chunks and their metadata associated with the collection.
+      // 首先，删除与集合关联的所有块及其元数据。
       this.chunkMeta.deleteByCollectionId(collectionId);
       this.chunksFts5.deleteByCollectionId(collectionId);
 
-      // Then, delete all documents in the collection.
+      // 然后，删除集合中的所有文档。
       const docsInCollection = this.docs.listByCollection(collectionId);
       for (const doc of docsInCollection) {
         this.docs.hardDelete(doc.docId);
       }
 
-      // Finally, delete the collection itself.
+      // 最后，删除集合本身。
       this.collections.delete(collectionId);
     });
 
@@ -118,10 +89,13 @@ export class SQLiteRepo {
   }
 
   /**
-   * Updates a document's content and metadata.
-   * If the content changes, the old document and its chunks are deleted,
-   * and a new document is created.
-   * @returns The updated Doc object, or null if the original doc was not found.
+   * 更新文档的内容和元数据。
+   * 如果内容发生变化，旧文档及其块将被删除，并创建一个新文档。
+   * @param docId - 要更新的文档 ID。
+   * @param content - 新的文档内容。
+   * @param name - 可选的文档名称。
+   * @param mime - 可选的 MIME 类型。
+   * @returns 更新后的 Doc 对象，如果未找到原始文档则返回 null。
    */
   updateDoc(
     docId: DocId,
@@ -137,19 +111,19 @@ export class SQLiteRepo {
 
     const newDocId = makeDocId(content);
 
-    // Case 1: Content has not changed, only update metadata.
+    // 情况 1: 内容未改变，只更新元数据。
     if (newDocId === docId) {
       this.docs.update(docId, { name, mime });
       return this.docs.getById(docId) ?? null;
     }
 
-    // Case 2: Content has changed, replace the document.
+    // 情况 2: 内容已改变，替换文档。
     const { collectionId, key } = existingDoc;
     this.transaction(() => {
-      this.deleteDoc(docId); // Hard delete the old doc and its chunks
+      this.deleteDoc(docId); // 硬删除旧文档及其块
     });
 
-    // Create the new document.
+    // 创建新文档。
     const newId = this.docs.create({
       collectionId,
       key,
@@ -163,10 +137,10 @@ export class SQLiteRepo {
   }
 
   /**
-   * Deletes a document and all its associated chunks.
-   * This is a hard delete operation performed within a transaction.
-   * @param docId The ID of the document to delete.
-   * @returns True if the document was found and deleted, false otherwise.
+   * 删除一个文档及其所有关联的块。
+   * 这是一个在事务中执行的硬删除操作。
+   * @param docId - 要删除的文档 ID。
+   * @returns 如果找到并删除了文档，则返回 true，否则返回 false。
    */
   deleteDoc(docId: DocId): boolean {
     const doc = this.docs.getById(docId);
@@ -184,37 +158,30 @@ export class SQLiteRepo {
   }
 
   /**
-   * Retrieves the text content for a list of chunk point IDs.
-   * @param pointIds An array of chunk IDs.
-   * @returns A record mapping each pointId to its content and title.
+   * 检索块点 ID 列表的文本内容。
+   * @param pointIds - 块 ID 数组。
+   * @returns 一个记录，将每个 pointId 映射到其内容和标题。
    */
   getChunkTexts(
-    pointIds: string[],
+    pointIds: PointId[],
   ): Record<string, { content: string; title?: string }> | null {
     if (pointIds.length === 0) {
       return {};
     }
 
-    const placeholders = pointIds.map(() => '?').join(',');
-    const stmt = this.db.prepare(
-      SELECT_CHUNKS_CONTENT_BY_POINT_IDS.replace('?', placeholders),
-    );
-    const rows = stmt.all(...pointIds) as Array<{
-      pointId: string;
-      content: string;
-      title?: string;
-    }>;
+    // 使用 ChunkMetaTable 和 ChunksTable 获取块内容
+    const chunks = this.chunkMeta.getChunksAndContentByPointIds(pointIds);
 
-    if (rows.length === 0) {
+    if (chunks.length === 0) {
       console.warn('getChunkTexts: no chunks found');
       return {};
     }
 
-    return rows.reduce(
-      (acc, row) => {
-        acc[row.pointId] = {
-          content: row.content,
-          title: row.title ?? undefined,
+    return chunks.reduce(
+      (acc: Record<string, { content: string; title?: string }>, chunk) => {
+        acc[chunk.pointId] = {
+          content: chunk.content,
+          title: chunk.title ?? undefined,
         };
         return acc;
       },
@@ -223,33 +190,23 @@ export class SQLiteRepo {
   }
 
   /**
-   * Retrieves detailed information for a list of chunk point IDs.
-   * @param pointIds An array of chunk IDs.
-   * @param collectionId The ID of the collection.
-   * @returns An array of search results.
+   * 检索块点 ID 列表的详细信息。
+   * @param pointIds - 块 ID 数组。
+   * @param collectionId - 集合的 ID。
+   * @returns 搜索结果数组。
    */
   getChunksByPointIds(
-    pointIds: string[],
-    collectionId: string,
+    pointIds: PointId[],
+    collectionId: CollectionId,
   ): SearchResult[] {
     if (pointIds.length === 0) {
       return [];
     }
 
-    const placeholders = pointIds.map(() => '?').join(',');
-    const baseSql = SELECT_CHUNKS_DETAILS_BY_POINT_IDS_BASE.replace(
-      '?',
-      placeholders,
-    );
-    const sql = `
-      ${baseSql}
-      ORDER BY cm.chunkIndex ASC
-    `;
+    // 使用 ChunkMetaTable 获取块详细信息
+    const chunks = this.chunkMeta.getChunksDetailsByPointIds(pointIds, collectionId);
 
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...pointIds, collectionId) as SearchResult[];
-
-    return rows.map((row) => ({
+    return chunks.map((row) => ({
       ...row,
       docId: row.docId as DocId,
       pointId: row.pointId,
@@ -258,16 +215,56 @@ export class SQLiteRepo {
   }
 
   /**
-   * Checks if the database connection is alive.
-   * @returns True if the connection is responsive, false otherwise.
+   * 检查数据库连接是否存活。
+   * @returns 如果连接响应正常则返回 true，否则返回 false。
    */
   ping(): boolean {
-    try {
-      this.db.prepare(SELECT_ONE).get();
-      return true;
-    } catch (e) {
-      console.error('Database ping failed:', e);
-      return false;
+    return this.collections.ping();
+  }
+  public async getDoc(docId: DocId): Promise<Doc | undefined> {
+    return this.docs.getById(docId) ?? undefined;
+  }
+
+  public async getChunkMetasByDocId(docId: DocId): Promise<ChunkMeta[]> {
+    return this.chunkMeta.listByDocId(docId);
+  }
+
+  public async addChunks(docId: DocId, documentChunks: DocumentChunk[]): Promise<void> {
+    const doc = this.docs.getById(docId);
+    if (!doc) {
+      throw new Error(`Document ${docId} not found`);
     }
+
+    const chunkMetas: Omit<ChunkMeta, 'created_at'>[] = documentChunks.map((dc, index) => ({
+      pointId: makePointId(docId, index) as PointId,
+      docId: docId,
+      collectionId: doc.collectionId,
+      chunkIndex: index,
+      titleChain: dc.titleChain?.join(' > '),
+      contentHash: hashContent(dc.content),
+    }));
+
+    this.transaction(() => {
+      this.chunkMeta.createBatch(chunkMetas);
+      this.chunksFts5.createBatch(chunkMetas.map(cm => ({
+        pointId: cm.pointId,
+        docId: cm.docId,
+        collectionId: cm.collectionId,
+        content: documentChunks[cm.chunkIndex].content,
+      })));
+    });
+  }
+
+  public async markDocAsSynced(docId: DocId): Promise<void> {
+    this.docs.update(docId, { updated_at: Date.now() });
+  }
+
+  /**
+   * 获取所有集合的 ID。
+   * @returns 包含所有集合 ID 的数组。
+   */
+  public async getAllCollectionIds(): Promise<CollectionId[]> {
+    const collections = this.collections.listAll();
+    return collections.map(c => c.collectionId);
   }
 }
