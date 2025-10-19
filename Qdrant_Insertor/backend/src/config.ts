@@ -8,12 +8,15 @@ export type AppConfig = {
   db: { path: string };
   qdrant: { url: string; collection: string; vectorSize: number };
   embedding: { batchSize: number };
+  api: { port: number };
+  log: { level: string };
+  gc: { intervalHours: number };
 };
 
 /**
  * 校验字符串参数，确保非空，并去除可能的引号
  */
-function validateString(value: any, name: string): string {
+function validateString(value: unknown, name: string): string {
   if (!value || String(value).trim() === "") {
     throw new Error(`validateConfig: Missing ${name}`);
   }
@@ -25,7 +28,7 @@ function validateString(value: any, name: string): string {
 /**
  * 校验数值参数，确保为正整数
  */
-function validateNumber(value: any, name: string, defaultValue: number): number {
+function validateNumber(value: unknown, name: string, defaultValue: number): number {
   const num = Number(value ?? defaultValue);
   if (isNaN(num) || !Number.isInteger(num) || num <= 0) {
     throw new Error(`validateConfig: Invalid ${name}`);
@@ -56,10 +59,16 @@ export function validateConfig(env = process.env): AppConfig {
     200
   );
 
+  const API_PORT = validateNumber(env.API_PORT, "API_PORT", 3000);
+  const GC_INTERVAL_HOURS = validateNumber(env.GC_INTERVAL_HOURS, "GC_INTERVAL_HOURS", 24);
+
   return {
     openai: { baseUrl: OPENAI_BASE_URL, apiKey: OPENAI_API_KEY, model: OPENAI_MODEL },
     db: { path: DB_PATH },
     qdrant: { url: QDRANT_URL, collection: QDRANT_COLLECTION, vectorSize: VECTOR_SIZE },
     embedding: { batchSize: EMBEDDING_BATCH_SIZE },
+    api: { port: API_PORT },
+    log: { level: env.LOG_LEVEL || "info" },
+    gc: { intervalHours: GC_INTERVAL_HOURS },
   };
 }

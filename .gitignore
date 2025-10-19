@@ -58,3 +58,7 @@ Thumbs.db
 .now/
 *.tmp
 *.temp
+
+*.db
+*.db-shm
+*.db-wal
