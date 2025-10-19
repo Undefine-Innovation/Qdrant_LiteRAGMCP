@@ -9,6 +9,8 @@
 *   **ImportService**
 *   **SearchService**
 *   **GraphService**
+*   **CollectionService**
+*   **DocumentService**
 *   **SyncStateMachine**
 *   **AutoGC**
 
@@ -88,7 +90,65 @@
 *   **性能考量**：
     *   优化检索请求的响应时间，考虑缓存机制。
 
-### 2.3.3 GraphService (长期目标)
+### 2.3.3 CollectionService
+
+#### 2.3.3.1 职责
+
+*   **Collection 管理**：负责 Collection 的所有 CRUD 操作（创建、列出、获取、删除）。
+*   **协调基础设施层**：协调 `SQLiteRepo` 来进行实际的数据库操作。
+
+#### 2.3.3.2 接口与数据流
+
+*   **对外接口**：由 API 层调用，接收 Collection 管理请求。
+*   **对内接口**：调用 `SQLiteRepo` 进行 Collection 相关的数据库操作。
+*   **数据流**：API Layer -> CollectionService -> SQLiteRepo。
+
+#### 2.3.3.3 关键实现与技术栈
+
+*   **流程编排**：协调 Collection 的创建、查询和删除。
+
+#### 2.3.3.4 开发需求与约定
+
+*   **编码规范**：
+    *   保持 Collection 管理逻辑的清晰性。
+*   **错误处理**：
+    *   捕获底层数据库操作的异常，并返回友好的错误信息。
+*   **测试策略**：
+    *   对 `CollectionService` 进行集成测试，模拟 Collection 的 CRUD 操作，验证数据是否正确。
+*   **性能考量**：
+    *   优化数据库查询和写入操作的性能。
+
+### 2.3.4 DocumentService
+
+#### 2.3.4.1 职责
+
+*   **Document 管理**：负责 Document 的所有非导入/删除相关的 CRUD 操作（列出、获取、更新）。
+*   **协调基础设施层和 ImportService**：协调 `SQLiteRepo` 进行数据库操作，并调用 `ImportService` 的 `resyncDocument` 方法进行文档重新同步。
+
+#### 2.3.4.2 接口与数据流
+
+*   **对外接口**：由 API 层调用，接收 Document 管理请求。
+*   **对内接口**：
+    *   调用 `SQLiteRepo` 进行 Document 相关的数据库操作。
+    *   调用 `ImportService` 进行文档重新同步。
+*   **数据流**：API Layer -> DocumentService -> SQLiteRepo / ImportService。
+
+#### 2.3.4.3 关键实现与技术栈
+
+*   **流程编排**：协调 Document 的查询、更新和删除。
+
+#### 2.3.4.4 开发需求与约定
+
+*   **编码规范**：
+    *   保持 Document 管理逻辑的清晰性。
+*   **错误处理**：
+    *   捕获底层数据库操作或 `ImportService` 抛出的异常。
+*   **测试策略**：
+    *   对 `DocumentService` 进行集成测试，模拟 Document 的 CRUD 操作，验证数据是否正确。
+*   **性能考量**：
+    *   优化数据库查询和写入操作的性能。
+
+### 2.3.5 GraphService (长期目标)
 
 #### 2.3.3.1 职责
 

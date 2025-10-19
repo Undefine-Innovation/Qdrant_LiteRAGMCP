@@ -4,17 +4,24 @@
   "description": "A simple Qdrant insertor",
   "type": "module",
   "scripts": {
-    "start": "ts-node src/api.ts",
+    "start": "ts-node --esm --prefer-ts-exts backend/src/index.ts",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+  },
+  "ts-node": {
+    "preferTsExts": true
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.15.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/winston": "^2.4.4",
     "better-sqlite3": "^12.2.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "glob": "^11.0.3",
+    "node-cron": "^4.2.1",
     "openai": "^5.16.0",
     "uuid": "^11.1.0",
+    "winston": "^3.18.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -24,6 +31,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^24.3.0",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
@@ -37,6 +45,7 @@
     "prettier": "^3.6.2",
     "supertest": "^7.1.4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0"
   }

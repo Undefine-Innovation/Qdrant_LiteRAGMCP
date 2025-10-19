@@ -1,66 +1,48 @@
-# Collection API 契约
+# Collection Contracts
 
-## CreateCollectionRequestSchema
+此文件定义了 Collection 相关的 API 请求和响应的数据传输对象 (DTO) 及其 Zod 验证模式。
 
-### 用途
-用于验证创建 Collection 的请求体。
+## `CreateCollectionRequestSchema`
 
-### 字段
+*   **用途**：创建 Collection 的请求体。
+*   **字段列表**：
+    *   `name`: 字符串，必填，Collection 的名称。
+    *   `description`: 字符串，可选，Collection 的描述。
 
-#### `name`
-*   **数据类型**: 字符串
-*   **是否必填**: 是
-*   **描述**: Collection 的名称。
+```typescript
+export const CreateCollectionRequestSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+});
+```
 
-#### `description`
-*   **数据类型**: 字符串
-*   **是否必填**: 否
-*   **描述**: Collection 的描述。
+## `UpdateCollectionRequestSchema`
 
----
+*   **用途**：更新 Collection 的请求体。
+*   **字段列表**：
+    *   `name`: 字符串，可选，Collection 的新名称。
+    *   `description`: 字符串，可选，Collection 的新描述。
 
-## UpdateCollectionRequestSchema
+```typescript
+export const UpdateCollectionRequestSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+});
+```
 
-### 用途
-用于验证更新 Collection 的请求体。
+## `CollectionResponseSchema`
 
-### 字段
+*   **用途**：Collection 响应的数据结构。
+*   **字段列表**：
+    *   `collectionId`: 字符串，必填，Collection 的唯一标识符。
+    *   `name`: 字符串，必填，Collection 的名称。
+    *   `description`: 字符串，可选，Collection 的描述。
+    *   `createdAt`: 数字，必填，Collection 的创建时间戳。
 
-#### `name`
-*   **数据类型**: 字符串
-*   **是否必填**: 否
-*   **描述**: Collection 的新名称。
-
-#### `description`
-*   **数据类型**: 字符串
-*   **是否必填**: 否
-*   **描述**: Collection 的新描述。
-
----
-
-## CollectionResponseSchema
-
-### 用途
-用于定义 Collection 响应的数据结构。
-
-### 字段
-
-#### `collectionId`
-*   **数据类型**: 字符串
-*   **是否必填**: 是
-*   **描述**: Collection 的唯一标识符。
-
-#### `name`
-*   **数据类型**: 字符串
-*   **是否必填**: 是
-*   **描述**: Collection 的名称。
-
-#### `description`
-*   **数据类型**: 字符串
-*   **是否必填**: 否
-*   **描述**: Collection 的描述。
-
-#### `createdAt`
-*   **数据类型**: 数字
-*   **是否必填**: 是
-*   **描述**: Collection 的创建时间戳（Unix 时间）。
+```typescript
+export const CollectionResponseSchema = z.object({
+  collectionId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  createdAt: z.number(),
+});

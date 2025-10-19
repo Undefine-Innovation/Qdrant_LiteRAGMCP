@@ -10,7 +10,8 @@
     "baseUrl": ".",
     "paths": {
       "config": ["src/config.ts"], // 暂时保留，后续再看是否需要调整
-      "share/*": ["share/*"]
+      "share/*": ["share/*"],
+      "@domain/*": ["backend/src/domain/*"]
     }
   },
   "include": ["backend", "share"],

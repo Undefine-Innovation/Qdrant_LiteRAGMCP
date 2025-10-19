@@ -46,13 +46,20 @@ graph TD
     GraphSvc[GraphService]
     AutoGC[Auto GC Service]
     SyncSM[Sync StateMachine]
+    CollectionSvc[CollectionService]
+    DocumentSvc[DocumentService]
   end
   Controller --> ImportSvc
   Controller --> SearchSvc
+  Controller --> CollectionSvc
+  Controller --> DocumentSvc
   ImportSvc --> SyncSM
   ImportSvc --> GraphSvc
   AutoGC --> SQLiteRepo
   AutoGC --> QdrantRepo
+  CollectionSvc --> SQLiteRepo
+  DocumentSvc --> SQLiteRepo
+  DocumentSvc --> ImportSvc
   %% ==== Domain ====
   subgraph Domain [领域层]
     Retriever
@@ -163,6 +170,8 @@ graph TD
 - `ImportService`：处理文件导入全流程
 - `SearchService`：封装检索逻辑调用
 - `GraphService`：构建和查询图谱信息
+- `CollectionService`：管理 Collection 的 CRUD 操作
+- `DocumentService`：管理 Document 的 CRUD 操作（非导入/删除）
 - `SyncStateMachine`：驱动向量与元数据同步流程
 - `AutoGC`：负责兜底、修补及清理历史垃圾
   - 采用 **Level-2：双端比对（推荐）**
