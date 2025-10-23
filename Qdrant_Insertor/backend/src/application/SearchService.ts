@@ -6,6 +6,8 @@ import {
   PointId,
   Chunk,
   SearchResult as UniversalSearchResult,
+  RetrievalResultDTO,
+  RetrievalResultType,
 } from '@domain/types.js';
 import { FtsResult } from '../infrastructure/sqlite/dao/ChunksFts5Table.js';
 import { IQdrantRepo } from '../domain/IQdrantRepo.js'; // Import IQdrantRepo
@@ -29,7 +31,8 @@ interface FusedResult {
   score: number; // RRF score
 }
 
-export class SearchService implements ISearchService { // Implement ISearchService
+export class SearchService implements ISearchService {
+  // Implement ISearchService
   constructor(
     private readonly embeddingProvider: IEmbeddingProvider,
     private readonly sqliteRepo: SQLiteRepo,
@@ -72,7 +75,7 @@ export class SearchService implements ISearchService { // Implement ISearchServi
     query: string,
     collectionId: CollectionId,
     options: { limit?: number } = {},
-  ): Promise<UniversalSearchResult[]> {
+  ): Promise<RetrievalResultDTO[]> {
     const { limit = 10 } = options;
 
     this.logger.info(
@@ -87,11 +90,27 @@ export class SearchService implements ISearchService { // Implement ISearchServi
           'Failed to generate embedding for query. Semantic search will be skipped.',
         );
         // Fallback to keyword search only
-        const kwResults = this.sqliteRepo.chunksFts5.search(query, collectionId, limit);
+        const kwResults = this.sqliteRepo.chunksFts5.search(
+          query,
+          collectionId,
+          limit,
+        );
         if (!kwResults) return [];
 
-        // If semantic search fails, return keyword results with a default score
-        return kwResults.map(r => ({ ...r, score: 0 }));
+        // If semantic search fails, return keyword results as RetrievalResultDTO
+        return kwResults.map((r) => ({
+          type: 'chunkResult' as RetrievalResultType,
+          score: 0,
+          content: r.content,
+          metadata: {
+            pointId: r.pointId,
+            docId: r.docId,
+            collectionId: r.collectionId,
+            chunkIndex: r.chunkIndex,
+            titleChain: r.titleChain,
+            title: r.title,
+          },
+        }));
       }
 
       // 2. Parallel search
@@ -134,27 +153,41 @@ export class SearchService implements ISearchService { // Implement ISearchServi
       );
       const chunksMap = new Map(chunks.map((c) => [c.pointId, c]));
 
-      // 5. Format and return
-      const finalResults: UniversalSearchResult[] = fused
-        .map((fusedResult) => {
-          const chunk = chunksMap.get(fusedResult.pointId);
-          if (!chunk) return null;
-          return {
-            ...chunk,
-            score: fusedResult.score, // score is guaranteed by _reciprocalRankFusion
-          };
-        })
-        .filter((r): r is Chunk & { score: number } => r !== null)
-        .map(r => ({...r, score: r.score}));
+      // 5. Format and return as RetrievalResultDTO
+      const finalResults: RetrievalResultDTO[] = [];
+      for (const fusedResult of fused) {
+        const chunk = chunksMap.get(fusedResult.pointId);
+        if (!chunk) continue;
 
-      this.logger.info(`Found ${finalResults.length} results for query "${query}".`);
+        // Convert chunk to RetrievalResultDTO format
+        finalResults.push({
+          type: 'chunkResult' as RetrievalResultType,
+          score: fusedResult.score,
+          content: chunk.content,
+          metadata: {
+            pointId: chunk.pointId,
+            docId: chunk.docId,
+            collectionId: chunk.collectionId,
+            chunkIndex: chunk.chunkIndex,
+            titleChain: chunk.titleChain,
+            title: chunk.title,
+          },
+        });
+      }
+
+      this.logger.info(
+        `Found ${finalResults.length} results for query "${query}".`,
+      );
       return finalResults.slice(0, limit);
     } catch (err) {
-      this.logger.error(`An error occurred during search for query "${query}":`, {
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-        collectionId,
-      });
+      this.logger.error(
+        `An error occurred during search for query "${query}":`,
+        {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          collectionId,
+        },
+      );
       throw err; // Re-throw to be handled by the API error middleware
     }
   }

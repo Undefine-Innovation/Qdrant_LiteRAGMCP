@@ -30,15 +30,15 @@ export enum ErrorCode {
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly httpStatus: number;
-   
+
   public readonly details?: Record<string, unknown>;
 
   constructor(
     code: ErrorCode,
     message: string,
     httpStatus: number = 500,
-     
-    details?: Record<string, unknown>
+
+    details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'AppError';
@@ -71,7 +71,7 @@ export class AppError extends Error {
       ErrorCode.INTERNAL_SERVER_ERROR,
       error.message || 'An unexpected internal server error occurred.',
       500,
-      { stack: error.stack }
+      { stack: error.stack },
     );
   }
 
@@ -81,8 +81,11 @@ export class AppError extends Error {
    * @param message 可选的错误信息，默认为 'Validation failed.'。
    * @returns AppError 实例
    */
-   
-  public static createValidationError(details: Record<string, unknown>, message: string = 'Validation failed.'): AppError {
+
+  public static createValidationError(
+    details: Record<string, unknown>,
+    message: string = 'Validation failed.',
+  ): AppError {
     return new AppError(ErrorCode.VALIDATION_ERROR, message, 422, details);
   }
 
@@ -92,8 +95,11 @@ export class AppError extends Error {
    * @param details 可选的错误详细信息。
    * @returns AppError 实例
    */
-   
-  public static createInternalServerError(message: string = 'Internal server error.', details?: Record<string, unknown>): AppError {
+
+  public static createInternalServerError(
+    message: string = 'Internal server error.',
+    details?: Record<string, unknown>,
+  ): AppError {
     return new AppError(ErrorCode.INTERNAL_SERVER_ERROR, message, 500, details);
   }
 
@@ -102,7 +108,9 @@ export class AppError extends Error {
    * @param message - The error message.
    * @returns A new AppError instance.
    */
-  public static createNotFoundError(message: string = 'Resource not found.'): AppError {
+  public static createNotFoundError(
+    message: string = 'Resource not found.',
+  ): AppError {
     return new AppError(ErrorCode.NOT_FOUND, message, 404);
   }
 }

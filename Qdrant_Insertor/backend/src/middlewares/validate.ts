@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodSchema } from 'zod';
-import { AppError, ErrorCode } from '../../contracts/error.js';
+import { AppError, ErrorCode } from '../api/contracts/error.js';
 
 // 定义一个类型，用于扩展 Express 的 Request 接口
-type ValidatedRequest<
+export type ValidatedRequest<
   Body = unknown,
   Query = unknown,
   Params = unknown,
@@ -24,40 +24,38 @@ type ValidatedRequest<
  * @param schema Zod Schema 对象，包含 body, query, params 的可选 schema。
  * @returns Express 中间件函数。
  */
-export const validate = (schema: {
-  body?: ZodSchema;
-  query?: ZodSchema;
-  params?: ZodSchema;
-}) => async (req: ValidatedRequest, res: Response, next: NextFunction) => {
-  try {
-    req.validated = {};
+export const validate =
+  (schema: { body?: ZodSchema; query?: ZodSchema; params?: ZodSchema }) =>
+  async (req: ValidatedRequest, res: Response, next: NextFunction) => {
+    try {
+      req.validated = {};
 
-    if (schema.body) {
-      req.validated.body = await schema.body.parseAsync(req.body);
-    }
+      if (schema.body) {
+        req.validated.body = await schema.body.parseAsync(req.body);
+      }
 
-    if (schema.query) {
-      req.validated.query = await schema.query.parseAsync(req.query);
-    }
+      if (schema.query) {
+        req.validated.query = await schema.query.parseAsync(req.query);
+      }
 
-    if (schema.params) {
-      req.validated.params = await schema.params.parseAsync(req.params);
-    }
+      if (schema.params) {
+        req.validated.params = await schema.params.parseAsync(req.params);
+      }
 
-    next();
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationErrors = error.errors.map(err => ({
-        path: err.path.join('.'),
-        message: err.message,
-      }));
-      return next(
-        AppError.createValidationError(
-          { issues: validationErrors },
-          `Validation failed for fields: ${validationErrors.map(e => e.path).join(', ')}`,
-        ),
-      );
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationErrors = error.errors.map((err) => ({
+          path: err.path.join('.'),
+          message: err.message,
+        }));
+        return next(
+          AppError.createValidationError(
+            { issues: validationErrors },
+            `Validation failed for fields: ${validationErrors.map((e) => e.path).join(', ')}`,
+          ),
+        );
+      }
+      next(error);
     }
-    next(error);
-  }
-};
+  };

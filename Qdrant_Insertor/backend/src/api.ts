@@ -1,13 +1,14 @@
 import express from 'express';
+import multer from 'multer';
+import { z } from 'zod';
 import { CollectionId, DocId } from '@domain/types.js';
 import { IImportService } from './domain/IImportService.js';
 import { ISearchService } from './domain/ISearchService.js';
 import { IGraphService } from './domain/graph.js';
 import { ICollectionService } from './domain/ICollectionService.js';
 import { IDocumentService } from './domain/IDocumentService.js';
-// TODO: Re-enable validation once schemas are defined
-// import { validate } from './middlewares/validate.js';
-// import { CreateCollectionSchema, SearchSchema, UploadDocumentSchema } from '../contracts/schemas.js';
+import { validate, ValidatedRequest } from './middlewares/validate.js';
+import { SearchQuerySchema } from './api/contracts/search.js';
 
 /**
  * @interface ApiServices
@@ -30,8 +31,22 @@ interface ApiServices {
  * @returns {express.Router} 配置好的 Express 路由实例。
  */
 export function createApiRouter(services: ApiServices): express.Router {
-  const { importService, searchService, graphService, collectionService, documentService } = services;
+  const {
+    importService,
+    searchService,
+    graphService,
+    collectionService,
+    documentService,
+  } = services;
   const router = express.Router();
+
+  // 配置multer用于文件上传
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB限制
+    },
+  });
 
   /**
    * @api {get} /health 健康检查
@@ -104,7 +119,9 @@ export function createApiRouter(services: ApiServices): express.Router {
    */
   router.get('/collections/:collectionId', async (req, res) => {
     const { collectionId } = req.params;
-    const collection = collectionService.getCollectionById(collectionId as CollectionId);
+    const collection = collectionService.getCollectionById(
+      collectionId as CollectionId,
+    );
     // 统一错误处理中间件将处理未找到的情况
     res.status(200).json(collection);
   });
@@ -126,9 +143,47 @@ export function createApiRouter(services: ApiServices): express.Router {
   // -------------------- Document 路由 --------------------
 
   /**
-   * @api {post} /docs 导入新文档
+   * @api {post} /upload 上传文档
    * @apiGroup Documents
-   * @apiDescription 从文件路径导入一个新文档到指定的 Collection。
+   * @apiDescription 上传一个新文档，使用multipart/form-data格式。
+   * @apiParam (FormData) {File} file - 要上传的文档文件。
+   * @apiSuccess {string} docId - 上传成功后返回的文档 ID。
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 201 Created
+   *     {
+   *       "docId": "doc-xxxx"
+   *     }
+   */
+  router.post('/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'No file uploaded'
+        }
+      });
+    }
+
+    // 根据OpenAPI规范，不需要collectionId，使用默认集合
+    // 先尝试获取或创建默认集合
+    const collections = await collectionService.listAllCollections();
+    let defaultCollection = collections.find(c => c.name === 'default');
+    
+    if (!defaultCollection) {
+      defaultCollection = collectionService.createCollection('default', 'Default collection for uploads');
+    }
+    
+    const doc = await importService.importUploadedFile(
+      req.file,
+      defaultCollection.collectionId,
+    );
+    res.status(201).json({ docId: doc.docId });
+  });
+
+  /**
+   * @api {post} /docs 导入新文档 (已弃用)
+   * @apiGroup Documents
+   * @apiDescription 从文件路径导入一个新文档到指定的 Collection。此端点已弃用，请使用 /upload。
    * @apiBody {string} filePath - 文档源文件的路径。
    * @apiBody {string} collectionId - 文档所属 Collection 的 ID。
    * @apiSuccess {Doc} document - 导入成功的文档对象。
@@ -240,31 +295,51 @@ export function createApiRouter(services: ApiServices): express.Router {
   router.post('/docs/:docId/extract-graph', async (req, res) => {
     const { docId } = req.params;
     await graphService.extractAndStoreGraph(docId as DocId);
-    res.status(202).json({ message: `Graph extraction initiated for document ID: ${docId}` });
+    res.status(202).json({
+      message: `Graph extraction initiated for document ID: ${docId}`,
+    });
   });
 
   // -------------------- Search 路由 --------------------
 
   /**
-   * @api {post} /search 执行向量搜索
+   * @api {get} /search 执行向量搜索
    * @apiGroup Search
    * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索。
-   * @apiBody {string} query - 搜索查询字符串。
-   * @apiBody {string} [collectionId] - 可选的 Collection ID，用于限制搜索范围。
-   * @apiBody {number} [limit=10] - 返回结果的最大数量。
-   * @apiSuccess {RetrievalResult[]} results - 搜索结果数组。
+   * @apiParam {string} q - 搜索查询字符串。
+   * @apiParam {string} collectionId - 要在其中执行搜索的集合的 ID。
+   * @apiParam {number} [limit=10] - 返回结果的最大数量。
+   * @apiSuccess {SearchResult[]} results - 搜索结果数组。
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
-   *     [
-   *       { "type": "chunk", "id": "chunk-xxxx", "text": "..." }
-   *     ]
+   *     {
+   *       "results": [
+   *         { "pointId": "chunk-xxxx", "content": "...", "score": 0.95 }
+   *       ]
+   *     }
    */
-  router.post('/search', async (req, res) => {
-    // TODO: 添加验证中间件
-    const { query, collectionId, limit } = req.body;
-    const results = await searchService.search(query, collectionId, { limit });
-    res.status(200).json(results);
-  });
+  router.get(
+    '/search',
+    validate({ query: SearchQuerySchema }),
+    async (
+      req: ValidatedRequest<unknown, z.infer<typeof SearchQuerySchema>>,
+      res,
+    ) => {
+      const validatedQuery = req.validated!.query;
+      if (!validatedQuery) {
+        // This should not happen with validation middleware, but TypeScript needs it
+        return res.status(400).json({ error: 'Invalid query parameters' });
+      }
+      const { q: query, collectionId, limit } = validatedQuery;
+      const results = await searchService.search(
+        query,
+        collectionId as CollectionId,
+        { limit },
+      );
+      // 根据OpenAPI规范，直接返回RetrievalResultDTO数组
+      res.status(200).json(results);
+    },
+  );
 
   return router;
 }

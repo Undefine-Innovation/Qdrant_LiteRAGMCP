@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ChunkResponseSchema } from './document.js';
+import { RetrievalResultType } from '@domain/types.js';
 
 /**
  * 用于 `GET /search` API 的查询参数 Schema。
@@ -19,15 +20,18 @@ export const SearchQuerySchema = z.object({
 });
 
 /**
- * 单个搜索结果项的 Schema。
+ * 单个搜索结果项的 Schema - 符合RetrievalResultDTO规范。
  */
-const SearchResultItemSchema = ChunkResponseSchema.extend({
+const RetrievalResultDTOSchema = z.object({
+  type: z.enum(['chunkResult', 'graphResult']).describe('结果类型。'),
   score: z.number().describe('此结果的相关性得分。'),
+  content: z.string().describe('结果内容。'),
+  metadata: z.record(z.unknown()).describe('结果的元数据。'),
 });
 
 /**
- * `GET /search` API 的响应体 Schema。
+ * `GET /search` API 的响应体 Schema - 直接返回RetrievalResultDTO数组。
  */
-export const SearchResponseSchema = z.object({
-  results: z.array(SearchResultItemSchema).describe('搜索结果列表。'),
-});
+export const SearchResponseSchema = z
+  .array(RetrievalResultDTOSchema)
+  .describe('搜索结果列表。');

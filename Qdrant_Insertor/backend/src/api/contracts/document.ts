@@ -42,7 +42,9 @@ export const DocumentResponseSchema = z.object({
  * 文本块（Chunk）信息的响应 Schema。
  */
 export const ChunkResponseSchema = z.object({
-  pointId: z.string().describe('Qdrant 中的向量点 ID，格式为 `docId#chunkIndex`。'),
+  pointId: z
+    .string()
+    .describe('Qdrant 中的向量点 ID，格式为 `docId#chunkIndex`。'),
   docId: z.string().describe('所属文档的 ID。'),
   chunkIndex: z.number().int().describe('文本块在文档中的顺序索引。'),
   content: z.string().describe('文本块的内容。'),
