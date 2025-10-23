@@ -4,20 +4,28 @@
   "description": "A simple Qdrant insertor",
   "type": "module",
   "scripts": {
-    "start": "ts-node --esm --prefer-ts-exts backend/src/index.ts",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "start": "tsx backend/src/index.ts",
+    "dev": "tsx watch backend/src/index.ts",
+    "build": "tsc",
+    "build-exec": "pkg . -t node18-win-x64,node18-linux-x64 -o dist/seo-manager",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "npx eslint ."
   },
   "ts-node": {
     "preferTsExts": true
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.15.0",
+    "@types/multer": "^2.0.0",
     "@types/node-cron": "^3.0.11",
     "@types/winston": "^2.4.4",
     "better-sqlite3": "^12.2.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "formdata-node": "^6.0.3",
     "glob": "^11.0.3",
+    "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "openai": "^5.16.0",
     "uuid": "^11.1.0",
