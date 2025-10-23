@@ -32,8 +32,9 @@ export class CollectionsTable {
   create(data: Omit<Collection, 'collectionId' | 'created_at'>): CollectionId {
     const collectionId = makeCollectionId() as CollectionId;
     const createdAt = Date.now();
+    const updatedAt = createdAt;
     const stmt = this.db.prepare(INSERT_COLLECTION);
-    stmt.run(collectionId, data.name, data.description, createdAt);
+    stmt.run(collectionId, data.name, data.description, createdAt, updatedAt);
     return collectionId;
   }
 
@@ -73,7 +74,10 @@ export class CollectionsTable {
    * @param collectionId - 要更新的集合 ID。
    * @param data - 要更新的数据。只有提供的字段会被更新。
    */
-  update(collectionId: CollectionId, data: Partial<Omit<Collection, 'collectionId' | 'created_at'>>): void {
+  update(
+    collectionId: CollectionId,
+    data: Partial<Omit<Collection, 'collectionId' | 'created_at'>>,
+  ): void {
     const stmt = this.db.prepare(UPDATE_COLLECTION);
     stmt.run(data.name, data.description, collectionId);
   }

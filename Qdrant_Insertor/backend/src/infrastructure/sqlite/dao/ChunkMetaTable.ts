@@ -40,7 +40,7 @@ export class ChunkMetaTable {
       data.chunkIndex,
       data.titleChain,
       data.contentHash,
-      now
+      now,
     );
   }
 
@@ -50,24 +50,93 @@ export class ChunkMetaTable {
    * @param data - 要插入的块元数据对象数组。
    */
   createBatch(data: Omit<ChunkMeta, 'created_at'>[]): void {
+    console.log(`[ChunkMetaTable.createBatch] 开始批量插入chunkMeta，数量: ${data.length}`);
+    
+    if (data.length > 0) {
+      console.log(`[ChunkMetaTable.createBatch] 第一条数据示例:`, {
+        pointId: data[0].pointId,
+        pointIdType: typeof data[0].pointId,
+        docId: data[0].docId,
+        docIdType: typeof data[0].docId,
+        collectionId: data[0].collectionId,
+        collectionIdType: typeof data[0].collectionId,
+        chunkIndex: data[0].chunkIndex,
+        chunkIndexType: typeof data[0].chunkIndex,
+        titleChain: data[0].titleChain,
+        titleChainType: typeof data[0].titleChain,
+        contentHash: data[0].contentHash,
+        contentHashType: typeof data[0].contentHash
+      });
+    }
+
     const insert = this.db.prepare(INSERT_CHUNK_META);
 
-    const insertMany = this.db.transaction((items: Omit<ChunkMeta, 'created_at'>[]) => {
-      const now = Date.now();
-      for (const item of items) {
-        insert.run(
-          item.pointId,
-          item.docId,
-          item.collectionId,
-          item.chunkIndex,
-          item.titleChain,
-          item.contentHash,
-          now
-        );
-      }
-    });
+    const insertMany = this.db.transaction(
+      (items: Omit<ChunkMeta, 'created_at'>[]) => {
+        const now = Date.now();
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          console.log(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据:`, {
+            pointId: item.pointId,
+            pointIdType: typeof item.pointId,
+            docId: item.docId,
+            docIdType: typeof item.docId,
+            collectionId: item.collectionId,
+            collectionIdType: typeof item.collectionId,
+            chunkIndex: item.chunkIndex,
+            chunkIndexType: typeof item.chunkIndex,
+            titleChain: item.titleChain,
+            titleChainType: typeof item.titleChain,
+            titleChainValue: item.titleChain,
+            contentHash: item.contentHash,
+            contentHashType: typeof item.contentHash
+          });
+          
+          try {
+            insert.run(
+              item.pointId,
+              item.docId,
+              item.collectionId,
+              item.chunkIndex,
+              item.titleChain,
+              item.contentHash,
+              now,
+            );
+          } catch (insertError) {
+            console.error(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`, {
+              error: (insertError as Error).message,
+              stack: (insertError as Error).stack,
+              pointId: item.pointId,
+              pointIdType: typeof item.pointId,
+              docId: item.docId,
+              docIdType: typeof item.docId,
+              collectionId: item.collectionId,
+              collectionIdType: typeof item.collectionId,
+              chunkIndex: item.chunkIndex,
+              chunkIndexType: typeof item.chunkIndex,
+              titleChain: item.titleChain,
+              titleChainType: typeof item.titleChain,
+              titleChainValue: item.titleChain,
+              contentHash: item.contentHash,
+              contentHashType: typeof item.contentHash
+            });
+            throw insertError;
+          }
+        }
+      },
+    );
 
-    insertMany(data);
+    try {
+      insertMany(data);
+      console.log(`[ChunkMetaTable.createBatch] 批量插入chunkMeta完成`);
+    } catch (error) {
+      console.error(`[ChunkMetaTable.createBatch] 批量插入chunkMeta失败:`, {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        dataCount: data.length
+      });
+      throw error;
+    }
   }
 
   /**
@@ -122,13 +191,24 @@ export class ChunkMetaTable {
    * @param pointIds - 块 ID 数组。
    * @returns 包含块元数据和内容的数组。
    */
-  getChunksAndContentByPointIds(pointIds: PointId[]): Array<{ pointId: PointId; content: string; title?: string }> {
+  getChunksAndContentByPointIds(
+    pointIds: PointId[],
+  ): Array<{ pointId: PointId; content: string; title?: string }> {
     if (pointIds.length === 0) {
       return [];
     }
     const placeholders = pointIds.map(() => '?').join(',');
-    const stmt = this.db.prepare(SELECT_CHUNKS_AND_CONTENT_BY_POINT_IDS.replace('(?)', `(${placeholders})`));
-    return stmt.all(...pointIds) as Array<{ pointId: PointId; content: string; title?: string }>;
+    const stmt = this.db.prepare(
+      SELECT_CHUNKS_AND_CONTENT_BY_POINT_IDS.replace(
+        '(?)',
+        `(${placeholders})`,
+      ),
+    );
+    return stmt.all(...pointIds) as Array<{
+      pointId: PointId;
+      content: string;
+      title?: string;
+    }>;
   }
 
   /**
@@ -137,7 +217,10 @@ export class ChunkMetaTable {
    * @param collectionId - 集合 ID。
    * @returns 包含块详细信息的数组。
    */
-  getChunksDetailsByPointIds(pointIds: PointId[], collectionId: CollectionId): Array<{
+  getChunksDetailsByPointIds(
+    pointIds: PointId[],
+    collectionId: CollectionId,
+  ): Array<{
     pointId: PointId;
     collectionId: CollectionId;
     content: string;
@@ -150,7 +233,9 @@ export class ChunkMetaTable {
       return [];
     }
     const placeholders = pointIds.map(() => '?').join(',');
-    const stmt = this.db.prepare(SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace('(?)', `(${placeholders})`));
+    const stmt = this.db.prepare(
+      SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace('(?)', `(${placeholders})`),
+    );
     return stmt.all(...pointIds, collectionId) as Array<{
       pointId: PointId;
       collectionId: CollectionId;
@@ -171,7 +256,9 @@ export class ChunkMetaTable {
       return;
     }
     const placeholders = pointIds.map(() => '?').join(',');
-    const stmt = this.db.prepare(DELETE_CHUNKS_META_BATCH.replace('(?)', `(${placeholders})`));
+    const stmt = this.db.prepare(
+      DELETE_CHUNKS_META_BATCH.replace('(?)', `(${placeholders})`),
+    );
     stmt.run(...pointIds);
   }
 }

@@ -61,14 +61,11 @@ SELECT
   cm.pointId,
   cm.collectionId AS collectionId,
   cm.titleChain AS titleChain,
-  cm.versionId,
   cm.docId,
-  cm.chunkIndex,
-  v.is_current
+  cm.chunkIndex
 FROM chunk_meta cm
-JOIN versions v ON cm.versionId = v.versionId
 JOIN docs d ON cm.docId = d.docId
-WHERE cm.pointId IN (?) 
+WHERE cm.pointId IN (?)
   AND d.is_deleted = 0
 ORDER BY cm.chunkIndex ASC
 `;
@@ -88,21 +85,18 @@ SELECT
   cm.pointId,
   cm.collectionId,
   cm.titleChain,
-  cm.versionId,
   cm.docId,
-  cm.chunkIndex,
-  v.is_current
+  cm.chunkIndex
 FROM chunk_meta cm
-JOIN versions v ON cm.versionId = v.versionId
 JOIN docs d ON cm.docId = d.docId
-WHERE cm.collectionId = ? 
+WHERE cm.collectionId = ?
   AND d.is_deleted = 0
 ORDER BY cm.chunkIndex ASC
 `;
 
 /**
-* 根据 pointIds 批量查询块元数据和内容的 SQL 语句
-*/
+ * 根据 pointIds 批量查询块元数据和内容的 SQL 语句
+ */
 export const SELECT_CHUNKS_AND_CONTENT_BY_POINT_IDS = `
 SELECT
  cm.pointId,
@@ -114,8 +108,8 @@ WHERE cm.pointId IN (?)
 `;
 
 /**
-* 根据 pointIds 批量查询块详细信息的 SQL 语句
-*/
+ * 根据 pointIds 批量查询块详细信息的 SQL 语句
+ */
 export const SELECT_CHUNKS_DETAILS_BY_POINT_IDS = `
 SELECT
  cm.pointId,

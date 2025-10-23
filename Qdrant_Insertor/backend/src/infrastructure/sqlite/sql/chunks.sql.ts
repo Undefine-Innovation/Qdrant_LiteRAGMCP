@@ -8,9 +8,13 @@
 export const CREATE_TABLE_CHUNKS = `
 CREATE TABLE IF NOT EXISTS chunks (
   pointId TEXT PRIMARY KEY,
-  content TEXT NOT NULL,
+  docId TEXT NOT NULL,
+  collectionId TEXT NOT NULL,
+  chunkIndex INTEGER NOT NULL,
   title TEXT,
-  FOREIGN KEY(pointId) REFERENCES chunk_meta(pointId) ON DELETE CASCADE
+  content TEXT NOT NULL,
+  FOREIGN KEY (docId) REFERENCES docs(docId) ON DELETE CASCADE,
+  FOREIGN KEY (collectionId) REFERENCES collections(collectionId) ON DELETE CASCADE
 );
 `;
 
@@ -19,9 +23,8 @@ CREATE TABLE IF NOT EXISTS chunks (
  */
 export const INSERT_CHUNKS_BATCH = `
 INSERT INTO chunks (
-  content, title , pointId
-) VALUES (?, ?, ?)
-ON CONFLICT(pointId) DO UPDATE SET content=excluded.content, title=excluded.title
+  content, title, pointId, docId, collectionId, chunkIndex
+) VALUES (?, ?, ?, ?, ?, ?)
 `;
 
 /**

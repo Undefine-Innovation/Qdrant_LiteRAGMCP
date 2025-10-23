@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS collections (
  * 插入新集合的 SQL 语句
  */
 export const INSERT_COLLECTION = `
-INSERT INTO collections (collectionId, name, description, created_at)
-VALUES (?, ?, ?, ?)
+INSERT INTO collections (collectionId, name, description, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?)
 `;
 
 /**

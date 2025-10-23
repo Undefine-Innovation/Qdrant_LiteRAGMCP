@@ -11,7 +11,6 @@ import {
   SELECT_DELETED_DOCS,
 } from '../sql/docs.sql.js';
 
-
 /**
  * `docs` 表的数据访问对象 (DAO)。
  * 封装了所有文档的 SQL 交互。
@@ -31,7 +30,12 @@ export class DocsTable {
    * @param data - 新文档的数据。
    * @returns 新创建文档的 ID。
    */
-  create(data: Omit<Doc, 'docId' | 'created_at' | 'updated_at' | 'is_deleted' | 'content'> & { content: string }): DocId {
+  create(
+    data: Omit<
+      Doc,
+      'docId' | 'created_at' | 'updated_at' | 'is_deleted' | 'content'
+    > & { content: string },
+  ): DocId {
     const docId = makeDocId(data.content);
     const now = Date.now();
     const stmt = this.db.prepare(INSERT_DOC);
@@ -45,7 +49,7 @@ export class DocsTable {
       data.mime,
       now,
       now,
-      0 // is_deleted
+      0, // is_deleted
     );
     return docId as DocId;
   }
@@ -72,9 +76,9 @@ export class DocsTable {
   listByCollection(collectionId: CollectionId): Doc[] {
     const stmt = this.db.prepare(SELECT_DOCS_BY_COLLECTION_ID);
     const rows = stmt.all(collectionId) as Doc[];
-    return rows.map(row => ({
+    return rows.map((row) => ({
       ...row,
-      is_deleted: Boolean(row.is_deleted)
+      is_deleted: Boolean(row.is_deleted),
     }));
   }
 
@@ -83,11 +87,13 @@ export class DocsTable {
    * @returns 所有文档的数组。
    */
   listAll(): Doc[] {
-    const stmt = this.db.prepare('SELECT * FROM docs WHERE is_deleted = 0 ORDER BY created_at DESC');
+    const stmt = this.db.prepare(
+      'SELECT * FROM docs WHERE is_deleted = 0 ORDER BY created_at DESC',
+    );
     const rows = stmt.all() as Doc[];
-    return rows.map(row => ({
+    return rows.map((row) => ({
       ...row,
-      is_deleted: Boolean(row.is_deleted)
+      is_deleted: Boolean(row.is_deleted),
     }));
   }
 
@@ -96,15 +102,13 @@ export class DocsTable {
    * @param docId - 要更新的文档 ID。
    * @param data - 要更新的数据。只有“name”和“mime”会被更新。
    */
-  update(docId: DocId, data: Partial<Omit<Doc, 'docId' | 'collectionId' | 'createdAt'>>): void {
+  update(
+    docId: DocId,
+    data: Partial<Omit<Doc, 'docId' | 'collectionId' | 'createdAt'>>,
+  ): void {
     const updatedAt = Date.now();
     const stmt = this.db.prepare(UPDATE_DOC);
-    stmt.run(
-      data.name,
-      data.mime,
-      updatedAt,
-      docId
-    );
+    stmt.run(data.name, data.mime, updatedAt, docId);
   }
 
   /**
@@ -132,9 +136,9 @@ export class DocsTable {
   listDeletedDocs(): Doc[] {
     const stmt = this.db.prepare(SELECT_DELETED_DOCS);
     const rows = stmt.all() as Doc[];
-    return rows.map(row => ({
+    return rows.map((row) => ({
       ...row,
-      is_deleted: Boolean(row.is_deleted)
+      is_deleted: Boolean(row.is_deleted),
     }));
   }
 }
