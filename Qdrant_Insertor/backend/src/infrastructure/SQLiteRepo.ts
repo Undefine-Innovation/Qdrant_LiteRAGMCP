@@ -1,12 +1,21 @@
 import Database from 'better-sqlite3';
 import { makeDocId, hashContent, makePointId } from '../domain/utils/id.js';
-import { Doc, SearchResult, CollectionId, DocId, PointId, DocumentChunk, ChunkMeta } from '@domain/types.js';
+import {
+  Doc,
+  SearchResult,
+  CollectionId,
+  DocId,
+  PointId,
+  DocumentChunk,
+  ChunkMeta,
+} from '@domain/types.js';
 
 // Import DAOs
 import { CollectionsTable } from './sqlite/dao/CollectionsTable.js';
 import { DocsTable } from './sqlite/dao/DocsTable.js';
 import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
 import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
+import { ChunksTable } from './sqlite/dao/ChunksTable.js';
 
 /**
  * SQLiteRepo 作为数据访问对象 (DAO) 的协调器。
@@ -18,6 +27,7 @@ export class SQLiteRepo {
   public readonly docs: DocsTable;
   public readonly chunkMeta: ChunkMetaTable;
   public readonly chunksFts5: ChunksFts5Table;
+  public readonly chunks: ChunksTable;
 
   /**
    * @param db `better-sqlite3` 数据库实例。
@@ -27,6 +37,7 @@ export class SQLiteRepo {
     this.docs = new DocsTable(db);
     this.chunkMeta = new ChunkMetaTable(db);
     this.chunksFts5 = new ChunksFts5Table(db);
+    this.chunks = new ChunksTable(db);
     this.bootstrap();
   }
 
@@ -127,8 +138,14 @@ export class SQLiteRepo {
     const newId = this.docs.create({
       collectionId,
       key,
-      content: typeof content === 'string' ? content : new TextDecoder().decode(content),
-      size_bytes: typeof content === 'string' ? new TextEncoder().encode(content).length : content.byteLength,
+      content:
+        typeof content === 'string'
+          ? content
+          : new TextDecoder().decode(content),
+      size_bytes:
+        typeof content === 'string'
+          ? new TextEncoder().encode(content).length
+          : content.byteLength,
       name: name ?? existingDoc.name,
       mime,
     });
@@ -204,7 +221,10 @@ export class SQLiteRepo {
     }
 
     // 使用 ChunkMetaTable 获取块详细信息
-    const chunks = this.chunkMeta.getChunksDetailsByPointIds(pointIds, collectionId);
+    const chunks = this.chunkMeta.getChunksDetailsByPointIds(
+      pointIds,
+      collectionId,
+    );
 
     return chunks.map((row) => ({
       ...row,
@@ -229,30 +249,88 @@ export class SQLiteRepo {
     return this.chunkMeta.listByDocId(docId);
   }
 
-  public async addChunks(docId: DocId, documentChunks: DocumentChunk[]): Promise<void> {
+  public async addChunks(
+    docId: DocId,
+    documentChunks: DocumentChunk[],
+  ): Promise<void> {
     const doc = this.docs.getById(docId);
     if (!doc) {
       throw new Error(`Document ${docId} not found`);
     }
 
-    const chunkMetas: Omit<ChunkMeta, 'created_at'>[] = documentChunks.map((dc, index) => ({
-      pointId: makePointId(docId, index) as PointId,
-      docId: docId,
+    console.log(`[SQLiteRepo.addChunks] 开始处理文档 ${docId}，chunks数量: ${documentChunks.length}`);
+    console.log(`[SQLiteRepo.addChunks] 文档信息:`, {
+      docId: doc.docId,
       collectionId: doc.collectionId,
-      chunkIndex: index,
-      titleChain: dc.titleChain?.join(' > '),
-      contentHash: hashContent(dc.content),
-    }));
-
-    this.transaction(() => {
-      this.chunkMeta.createBatch(chunkMetas);
-      this.chunksFts5.createBatch(chunkMetas.map(cm => ({
-        pointId: cm.pointId,
-        docId: cm.docId,
-        collectionId: cm.collectionId,
-        content: documentChunks[cm.chunkIndex].content,
-      })));
+      collectionIdType: typeof doc.collectionId
     });
+
+    const chunkMetas: Omit<ChunkMeta, 'created_at'>[] = documentChunks.map(
+      (dc, index) => {
+        const pointId = makePointId(docId, index) as PointId;
+        console.log(`[SQLiteRepo.addChunks] 生成chunkMeta ${index}:`, {
+          pointId,
+          pointIdType: typeof pointId,
+          docId,
+          docIdType: typeof docId,
+          collectionId: doc.collectionId,
+          collectionIdType: typeof doc.collectionId,
+          chunkIndex: index,
+          chunkIndexType: typeof index
+        });
+        return {
+          pointId,
+          docId: docId,
+          collectionId: doc.collectionId,
+          chunkIndex: index,
+          titleChain: dc.titleChain?.join(' > ') || undefined,
+          contentHash: hashContent(dc.content),
+        };
+      },
+    );
+
+    try {
+      this.transaction(() => {
+        console.log(`[SQLiteRepo.addChunks] 开始执行chunkMeta.createBatch`);
+        this.chunkMeta.createBatch(chunkMetas);
+        
+        console.log(`[SQLiteRepo.addChunks] 开始执行chunks.createBatch`);
+        const chunksData = chunkMetas.map((cm, index) => ({
+          pointId: cm.pointId,
+          docId: cm.docId,
+          collectionId: cm.collectionId,
+          chunkIndex: cm.chunkIndex,
+          title: cm.titleChain || undefined,
+          content: documentChunks[index].content,
+        }));
+        console.log(`[SQLiteRepo.addChunks] chunksData示例:`, chunksData[0]);
+        // 确保 title 字段正确处理 null/undefined
+        const processedChunksData = chunksData.map(chunk => ({
+          ...chunk,
+          title: chunk.title === undefined ? null : chunk.title
+        }));
+        this.chunks.createBatch(processedChunksData);
+        
+        console.log(`[SQLiteRepo.addChunks] 开始执行chunksFts5.createBatch`);
+        const fts5Data = chunkMetas.map((cm, index) => ({
+          pointId: cm.pointId,
+          content: documentChunks[index].content,
+          titleChain: cm.titleChain,
+        }));
+        console.log(`[SQLiteRepo.addChunks] fts5Data示例:`, fts5Data[0]);
+        this.chunksFts5.createBatch(fts5Data);
+      });
+      console.log(`[SQLiteRepo.addChunks] 所有数据库操作完成`);
+    } catch (error) {
+      console.error(`[SQLiteRepo.addChunks] 数据库操作失败:`, {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        docId,
+        chunksCount: documentChunks.length,
+        chunkMetaExample: chunkMetas[0]
+      });
+      throw error;
+    }
   }
 
   public async markDocAsSynced(docId: DocId): Promise<void> {
@@ -265,6 +343,6 @@ export class SQLiteRepo {
    */
   public async getAllCollectionIds(): Promise<CollectionId[]> {
     const collections = this.collections.listAll();
-    return collections.map(c => c.collectionId);
+    return collections.map((c) => c.collectionId);
   }
 }

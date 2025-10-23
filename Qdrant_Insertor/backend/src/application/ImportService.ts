@@ -1,9 +1,5 @@
 import path from 'path';
-import {
-  CollectionId,
-  Doc,
-  DocId,
-} from '@domain/types.js';
+import { CollectionId, Doc, DocId } from '@domain/types.js';
 import { IEmbeddingProvider } from '../domain/embedding.js';
 import { IFileLoader } from '../domain/loader.js';
 import { ISplitter } from '../domain/splitter.js';
@@ -69,6 +65,69 @@ export class ImportService implements IImportService {
     }
   }
 
+  public async importUploadedFile(
+    file: Express.Multer.File,
+    collectionId: CollectionId,
+  ): Promise<Doc> {
+    this.logger.info(`Starting uploaded file import for: ${file.originalname}`);
+    try {
+      let collection = this.sqliteRepo.collections.getById(collectionId);
+      if (!collection) {
+        // 如果集合不存在，自动创建默认集合
+        this.logger.info(`Collection ${collectionId} not found, creating it...`);
+        const newCollectionId = this.sqliteRepo.collections.create({
+          name: collectionId,
+          description: `Auto-created collection for ${collectionId}`,
+        });
+        collection = this.sqliteRepo.collections.getById(newCollectionId);
+        if (!collection) {
+          throw AppError.createInternalServerError(
+            `Failed to create or retrieve collection: ${collectionId}`,
+          );
+        }
+        this.logger.info(`Collection created with ID: ${collection.collectionId}`);
+      }
+
+      // 将上传的文件转换为与文件加载器兼容的格式
+      const loadedFile = {
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        content: file.buffer.toString('utf-8'),
+      };
+      this.logger.info(`File loaded: ${loadedFile.fileName}`);
+
+      // 为了避免相同内容导致的docId冲突，我们在内容前添加时间戳
+      const uniqueContent = `${Date.now()}_${loadedFile.content}`;
+      const docId = this.sqliteRepo.docs.create({
+        collectionId,
+        key: `uploaded_${file.originalname}_${Date.now()}`,
+        name: file.originalname,
+        mime: file.mimetype,
+        size_bytes: file.size,
+        content: uniqueContent,
+      });
+      this.logger.info(`Document record created with id: ${docId}`);
+
+      // 触发同步状态机
+      await this.syncStateMachine.triggerSync(docId);
+
+      const doc = this.sqliteRepo.docs.getById(docId);
+      if (!doc) {
+        throw AppError.createInternalServerError(
+          `Failed to retrieve created doc with id: ${docId}`,
+        );
+      }
+      return doc;
+    } catch (error) {
+      this.logger.error('Error during uploaded file import process.', {
+        error,
+        fileName: file.originalname,
+        collectionId,
+      });
+      throw error;
+    }
+  }
+
   public async resyncDocument(docId: DocId): Promise<Doc> {
     this.logger.info(`Resyncing document: ${docId}`);
     const doc = this.sqliteRepo.docs.getById(docId);
@@ -88,7 +147,9 @@ export class ImportService implements IImportService {
     this.logger.info(`Deleting document: ${docId}`);
     const doc = this.sqliteRepo.docs.getById(docId);
     if (!doc) {
-      this.logger.warn(`Document with id ${docId} not found. Nothing to delete.`);
+      this.logger.warn(
+        `Document with id ${docId} not found. Nothing to delete.`,
+      );
       return; // Idempotent deletion
     }
 
@@ -107,8 +168,6 @@ export class ImportService implements IImportService {
 
     await this.qdrantRepo.deletePointsByCollection(collectionId);
     this.sqliteRepo.deleteCollection(collectionId); // 使用协调的 deleteCollection 方法
-    this.logger.info(
-      `成功删除集合 ${collectionId} 及其关联的向量点。`,
-    );
+    this.logger.info(`成功删除集合 ${collectionId} 及其关联的向量点。`);
   }
 }

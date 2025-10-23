@@ -1,4 +1,14 @@
-import { CollectionId, Doc, DocId } from '../../../share/type.js';
+import { CollectionId, Doc, DocId } from './types.js';
+
+// Multer file interface
+interface ExpressFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
 
 /**
  * 定义导入服务的接口。
@@ -13,6 +23,15 @@ export interface IImportService {
    * @returns 导入的文档对象。
    */
   importDocument(filePath: string, collectionId: CollectionId): Promise<Doc>;
+
+  /**
+   * 导入上传的文件。
+   *
+   * @param file - 上传的文件对象。
+   * @param collectionId - 文档所属的集合 ID。
+   * @returns 导入的文档对象。
+   */
+  importUploadedFile(file: ExpressFile, collectionId: CollectionId): Promise<Doc>;
 
   /**
    * 重新同步（更新）一个文档。

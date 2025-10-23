@@ -37,7 +37,9 @@ export const errorHandler = (
       ErrorCode.INTERNAL_SERVER_ERROR,
       'An unexpected internal server error occurred.',
       500,
-      { stack: process.env.NODE_ENV === 'development' ? err.stack : undefined },
+      {
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      },
     ).toJSON(),
   );
 };

@@ -2,8 +2,8 @@
  * @file 日志模块，基于 Winston 实现结构化、分级别的日志输出。
  */
 
-import winston from "winston";
-import { AppConfig } from "./config.js";
+import winston from 'winston';
+import { AppConfig } from './config.js';
 
 /**
  * @interface Logger
@@ -58,7 +58,7 @@ export function createLogger(config: AppConfig): Logger {
         format: combine(colorize(), simple()), // 控制台输出带颜色和简洁格式
       }),
       // 配置文件传输器，日志写入 logs/app.log
-      new winston.transports.File({ filename: "logs/app.log" }),
+      new winston.transports.File({ filename: 'logs/app.log' }),
     ],
   });
 
@@ -73,11 +73,11 @@ export function createLogger(config: AppConfig): Logger {
  *              其配置是最小化的，仅为满足 AppConfig 接口要求。
  */
 export const logger: Logger = createLogger({
-  log: { level: "info" },
+  log: { level: 'info' },
   // 为满足 AppConfig 接口，提供模拟值。在实际应用中，应使用完整配置创建 Logger。
-  openai: { baseUrl: "", apiKey: "", model: "" },
-  db: { path: "" },
-  qdrant: { url: "", collection: "", vectorSize: 0 },
+  openai: { baseUrl: '', apiKey: '', model: '' },
+  db: { path: '' },
+  qdrant: { url: '', collection: '', vectorSize: 0 },
   embedding: { batchSize: 0 },
   api: { port: 0 },
   gc: { intervalHours: 0 }, // 新增 gc 属性以符合 AppConfig 接口

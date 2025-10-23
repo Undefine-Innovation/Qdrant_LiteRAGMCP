@@ -20,10 +20,14 @@ export class AutoGCService {
     this.logger.info('AutoGCService: 开始执行垃圾回收...');
     try {
       const collectionIds = await this.sqliteRepo.getAllCollectionIds();
-      this.logger.info(`AutoGCService: 发现 ${collectionIds.length} 个集合进行垃圾回收。`);
+      this.logger.info(
+        `AutoGCService: 发现 ${collectionIds.length} 个集合进行垃圾回收。`,
+      );
 
       for (const collectionId of collectionIds) {
-        this.logger.info(`AutoGCService: 处理集合 ${collectionId} 的垃圾回收。`);
+        this.logger.info(
+          `AutoGCService: 处理集合 ${collectionId} 的垃圾回收。`,
+        );
         await this.processCollectionGC(collectionId);
       }
 
@@ -31,7 +35,10 @@ export class AutoGCService {
 
       this.logger.info('AutoGCService: 垃圾回收完成。');
     } catch (error) {
-      this.logger.error(`AutoGCService: 垃圾回收过程中发生错误: ${(error as Error).message}`, { error });
+      this.logger.error(
+        `AutoGCService: 垃圾回收过程中发生错误: ${(error as Error).message}`,
+        { error },
+      );
       throw error;
     }
   }
@@ -44,13 +51,22 @@ export class AutoGCService {
     this.logger.info(`AutoGCService: 对集合 ${collectionId} 执行双端比对。`);
 
     // 1. 从 SQLite 获取所有 pointId
-    const sqliteChunkMetas = this.sqliteRepo.chunkMeta.listByCollectionId(collectionId);
-    const sqlitePointIds = new Set(sqliteChunkMetas.map((cm: ChunkMeta) => cm.pointId));
-    this.logger.info(`AutoGCService: SQLite 中集合 ${collectionId} 有 ${sqlitePointIds.size} 个块元数据。`);
+    const sqliteChunkMetas =
+      this.sqliteRepo.chunkMeta.listByCollectionId(collectionId);
+    const sqlitePointIds = new Set(
+      sqliteChunkMetas.map((cm: ChunkMeta) => cm.pointId),
+    );
+    this.logger.info(
+      `AutoGCService: SQLite 中集合 ${collectionId} 有 ${sqlitePointIds.size} 个块元数据。`,
+    );
 
     // 2. 从 Qdrant 获取所有 pointId
-    const qdrantPointIds = new Set(await this.qdrantRepo.getAllPointIdsInCollection(collectionId));
-    this.logger.info(`AutoGCService: Qdrant 中集合 ${collectionId} 有 ${qdrantPointIds.size} 个向量。`);
+    const qdrantPointIds = new Set(
+      await this.qdrantRepo.getAllPointIdsInCollection(collectionId),
+    );
+    this.logger.info(
+      `AutoGCService: Qdrant 中集合 ${collectionId} 有 ${qdrantPointIds.size} 个向量。`,
+    );
 
     // 3. 比对并识别孤儿数据
     const orphanQdrantPointIds: PointId[] = []; // Qdrant 中有，SQLite 中没有
@@ -69,14 +85,18 @@ export class AutoGCService {
 
     // 4. 执行清理操作
     if (orphanQdrantPointIds.length > 0) {
-      this.logger.info(`AutoGCService: 发现 ${orphanQdrantPointIds.length} 个孤儿向量，正在从 Qdrant 删除。`);
+      this.logger.info(
+        `AutoGCService: 发现 ${orphanQdrantPointIds.length} 个孤儿向量，正在从 Qdrant 删除。`,
+      );
       await this.qdrantRepo.deletePoints(collectionId, orphanQdrantPointIds);
     } else {
       this.logger.info('AutoGCService: 未发现孤儿向量。');
     }
 
     if (orphanSqlitePointIds.length > 0) {
-      this.logger.info(`AutoGCService: 发现 ${orphanSqlitePointIds.length} 个无关元数据，正在从 SQLite 删除。`);
+      this.logger.info(
+        `AutoGCService: 发现 ${orphanSqlitePointIds.length} 个无关元数据，正在从 SQLite 删除。`,
+      );
       this.sqliteRepo.transaction(() => {
         this.sqliteRepo.chunkMeta.deleteBatch(orphanSqlitePointIds);
         this.sqliteRepo.chunksFts5.deleteBatch(orphanSqlitePointIds);
@@ -101,18 +121,27 @@ export class AutoGCService {
       this.logger.info(`AutoGCService: 清理文档 ${doc.docId} (已删除)。`);
       try {
         const chunkMetas = this.sqliteRepo.chunkMeta.listByDocId(doc.docId);
-        const pointIdsToDelete = chunkMetas.map(cm => cm.pointId);
+        const pointIdsToDelete = chunkMetas.map((cm) => cm.pointId);
 
         if (pointIdsToDelete.length > 0) {
-          this.logger.info(`AutoGCService: 从 Qdrant 删除文档 ${doc.docId} 的 ${pointIdsToDelete.length} 个向量。`);
-          await this.qdrantRepo.deletePoints(doc.collectionId, pointIdsToDelete);
+          this.logger.info(
+            `AutoGCService: 从 Qdrant 删除文档 ${doc.docId} 的 ${pointIdsToDelete.length} 个向量。`,
+          );
+          await this.qdrantRepo.deletePoints(
+            doc.collectionId,
+            pointIdsToDelete,
+          );
         } else {
-          this.logger.info(`AutoGCService: 文档 ${doc.docId} 没有关联的块元数据，跳过 Qdrant 删除。`);
+          this.logger.info(
+            `AutoGCService: 文档 ${doc.docId} 没有关联的块元数据，跳过 Qdrant 删除。`,
+          );
         }
 
         this.sqliteRepo.transaction(() => {
           if (pointIdsToDelete.length > 0) {
-            this.logger.info(`AutoGCService: 从 SQLite 删除文档 ${doc.docId} 的 ${pointIdsToDelete.length} 个块元数据和 FTS 索引。`);
+            this.logger.info(
+              `AutoGCService: 从 SQLite 删除文档 ${doc.docId} 的 ${pointIdsToDelete.length} 个块元数据和 FTS 索引。`,
+            );
             this.sqliteRepo.chunkMeta.deleteBatch(pointIdsToDelete);
             this.sqliteRepo.chunksFts5.deleteBatch(pointIdsToDelete);
           }
@@ -121,7 +150,10 @@ export class AutoGCService {
         });
         this.logger.info(`AutoGCService: 文档 ${doc.docId} 清理完成。`);
       } catch (error) {
-        this.logger.error(`AutoGCService: 清理文档 ${doc.docId} 时发生错误: ${(error as Error).message}`, { docId: doc.docId, error });
+        this.logger.error(
+          `AutoGCService: 清理文档 ${doc.docId} 时发生错误: ${(error as Error).message}`,
+          { docId: doc.docId, error },
+        );
       }
     }
     this.logger.info('AutoGCService: 已删除文档清理完成。');

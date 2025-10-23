@@ -1,4 +1,4 @@
-import { DocId } from '../../../share/type.js';
+import { DocId } from '../domain/types.js';
 import { IGraphService } from '../domain/graph.js';
 
 /**
@@ -15,7 +15,9 @@ export class GraphService implements IGraphService {
    * @returns {Promise<void>} - 表示操作完成的 Promise。
    */
   async extractAndStoreGraph(docId: DocId): Promise<void> {
-    console.log(`GraphService: Extracting and storing graph for document ID: ${docId}`);
+    console.log(
+      `GraphService: Extracting and storing graph for document ID: ${docId}`,
+    );
     // TODO: 未来在此处添加图谱提取和存储的实际逻辑
   }
 }

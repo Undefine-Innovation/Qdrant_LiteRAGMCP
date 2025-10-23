@@ -66,7 +66,9 @@ export class QdrantRepo implements IQdrantRepo {
         error: err,
         collectionName: this.collectionName,
       });
-      throw new Error(`Failed to ensure Qdrant collection: ${this.collectionName}`);
+      throw new Error(
+        `Failed to ensure Qdrant collection: ${this.collectionName}`,
+      );
     }
   }
 
@@ -118,9 +120,12 @@ export class QdrantRepo implements IQdrantRepo {
           points: batch,
         });
       } catch (e) {
-        this.logger.error(`Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`, {
-          error: e,
-        });
+        this.logger.error(
+          `Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`,
+          {
+            error: e,
+          },
+        );
       }
     }
   }
@@ -141,7 +146,8 @@ export class QdrantRepo implements IQdrantRepo {
       limit?: number;
       filter?: Schemas['Filter'];
     },
-  ): Promise<SearchResult[]> { // Explicitly set return type
+  ): Promise<SearchResult[]> {
+    // Explicitly set return type
     const { vector, limit = 10, filter } = opts;
     if (!vector?.length) {
       this.logger.error('Cannot search with an empty vector.');
@@ -185,7 +191,10 @@ export class QdrantRepo implements IQdrantRepo {
         filter: { must: [{ key: 'docId', match: { value: docId } }] },
       });
     } catch (e) {
-      this.logger.warn('deletePointsByDoc: failed to delete points', { docId, error: e });
+      this.logger.warn('deletePointsByDoc: failed to delete points', {
+        docId,
+        error: e,
+      });
     }
   }
 
@@ -200,10 +209,15 @@ export class QdrantRepo implements IQdrantRepo {
     try {
       await this.client.delete(this.collectionName, {
         wait: true,
-        filter: { must: [{ key: 'collectionId', match: { value: collectionId } }] },
+        filter: {
+          must: [{ key: 'collectionId', match: { value: collectionId } }],
+        },
       });
     } catch (e) {
-      this.logger.warn('deletePointsByCollection: failed to delete points', { collectionId, error: e });
+      this.logger.warn('deletePointsByCollection: failed to delete points', {
+        collectionId,
+        error: e,
+      });
     }
   }
 
@@ -212,15 +226,20 @@ export class QdrantRepo implements IQdrantRepo {
    * @param collectionId - 集合的 ID。
    * @returns 包含点 ID 数组的 Promise。
    */
-  async getAllPointIdsInCollection(collectionId: CollectionId): Promise<PointId[]> {
+  async getAllPointIdsInCollection(
+    collectionId: CollectionId,
+  ): Promise<PointId[]> {
     try {
       const { points } = await this.client.scroll(collectionId, {
         limit: 10000, // 根据需要调整限制，或者为非常大的集合实现分页
         with_payload: false,
       });
-      return points.map(point => point.id as PointId);
+      return points.map((point) => point.id as PointId);
     } catch (e) {
-      this.logger.error('从 Qdrant 获取所有点 ID 时出错:', { collectionId, error: e });
+      this.logger.error('从 Qdrant 获取所有点 ID 时出错:', {
+        collectionId,
+        error: e,
+      });
       return [];
     }
   }
@@ -230,7 +249,10 @@ export class QdrantRepo implements IQdrantRepo {
    * @param collectionId - 集合的 ID。
    * @param pointIds - 要删除的点 ID 数组。
    */
-  async deletePoints(collectionId: CollectionId, pointIds: PointId[]): Promise<void> {
+  async deletePoints(
+    collectionId: CollectionId,
+    pointIds: PointId[],
+  ): Promise<void> {
     if (!pointIds?.length) {
       this.logger.info('没有要删除的点。');
       return;
@@ -246,11 +268,14 @@ export class QdrantRepo implements IQdrantRepo {
           points: batch,
         });
       } catch (e) {
-        this.logger.warn(`从 Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`, {
-          collectionId,
-          pointIds: batch,
-          error: e,
-        });
+        this.logger.warn(
+          `从 Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`,
+          {
+            collectionId,
+            pointIds: batch,
+            error: e,
+          },
+        );
       }
     }
   }

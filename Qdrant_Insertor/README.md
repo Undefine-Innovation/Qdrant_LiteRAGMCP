@@ -4,8 +4,8 @@
 
 ### 1. 前提条件
 
-*   **Node.js**: 确保您的系统安装了 Node.js (推荐 18+ 版本)。
-*   **Docker**: Qdrant 向量数据库通常通过 Docker 运行，请确保您的系统安装了 Docker。
+- **Node.js**: 确保您的系统安装了 Node.js (推荐 18+ 版本)。
+- **Docker**: Qdrant 向量数据库通常通过 Docker 运行，请确保您的系统安装了 Docker。
 
 ### 2. 配置环境变量
 
@@ -50,9 +50,9 @@ docker run -p 6333:6333 -p 6334:6334 \
     qdrant/qdrant
 ```
 
-*   `-p 6333:6333`: 将容器的 gRPC 端口映射到主机的 6333 端口。
-*   `-p 6334:6334`: 将容器的 REST API 端口映射到主机的 6334 端口 (可选，但推荐)。
-*   `-v $(pwd)/qdrant_data:/qdrant/storage`: 将主机当前目录下的 `qdrant_data` 文件夹挂载到容器内部作为 Qdrant 的数据存储目录，确保数据持久化。
+- `-p 6333:6333`: 将容器的 gRPC 端口映射到主机的 6333 端口。
+- `-p 6334:6334`: 将容器的 REST API 端口映射到主机的 6334 端口 (可选，但推荐)。
+- `-v $(pwd)/qdrant_data:/qdrant/storage`: 将主机当前目录下的 `qdrant_data` 文件夹挂载到容器内部作为 Qdrant 的数据存储目录，确保数据持久化。
 
 ### 5. 启动后端服务
 

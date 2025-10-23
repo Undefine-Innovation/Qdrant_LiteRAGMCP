@@ -71,7 +71,8 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
     // In test environment, return zero vectors to avoid API calls.
     // 判断是否处于测试环境，如果是，则返回零向量以避免实际的 API 调用
     const isTestEnv =
-      process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+      process.env.NODE_ENV === 'test' ||
+      process.env.JEST_WORKER_ID !== undefined;
     if (isTestEnv) {
       const zeroLength = 1536; // text-embedding-ada-002 模型的默认嵌入维度
       const makeZeroVector = () => new Array(zeroLength).fill(0); // 创建一个指定长度的零向量
@@ -116,10 +117,10 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
  * @returns An instance of OpenAIEmbeddingProvider.
  */
 export function createOpenAIEmbeddingProviderFromConfig(): OpenAIEmbeddingProvider {
-    const cfg: AppConfig = validateConfig(); // 验证并获取应用程序配置
-    return new OpenAIEmbeddingProvider({
-        apiKey: cfg.openai.apiKey, // 从配置中获取 OpenAI API 密钥
-        baseUrl: cfg.openai.baseUrl, // 从配置中获取 OpenAI API 基础 URL
-        model: cfg.openai.model, // 从配置中获取 OpenAI 模型名称
-    });
+  const cfg: AppConfig = validateConfig(); // 验证并获取应用程序配置
+  return new OpenAIEmbeddingProvider({
+    apiKey: cfg.openai.apiKey, // 从配置中获取 OpenAI API 密钥
+    baseUrl: cfg.openai.baseUrl, // 从配置中获取 OpenAI API 基础 URL
+    model: cfg.openai.model, // 从配置中获取 OpenAI 模型名称
+  });
 }

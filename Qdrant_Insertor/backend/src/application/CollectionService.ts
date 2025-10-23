@@ -6,7 +6,10 @@ export class CollectionService implements ICollectionService {
   constructor(private sqliteRepo: SQLiteRepo) {}
 
   createCollection(name: string, description?: string): Collection {
-    const collectionId = this.sqliteRepo.collections.create({ name, description });
+    const collectionId = this.sqliteRepo.collections.create({
+      name,
+      description,
+    });
     return this.sqliteRepo.collections.getById(collectionId)!;
   }
 

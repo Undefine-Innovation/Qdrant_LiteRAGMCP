@@ -75,7 +75,9 @@ export class MarkdownSplitter implements ISplitter {
   /**
    * @param options 默认的分割选项。/ Default splitting options.
    */
-  constructor(private readonly options: SplitOptions = { strategy: 'markdown_headings' }) {}
+  constructor(
+    private readonly options: SplitOptions = { strategy: 'markdown_headings' },
+  ) {}
 
   /**
    * 将给定的 Markdown 内容分割成文档块数组。

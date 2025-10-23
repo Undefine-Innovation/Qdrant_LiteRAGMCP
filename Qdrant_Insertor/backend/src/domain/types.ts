@@ -188,6 +188,16 @@ export type UpdateDocResponse = Doc;
 // Search
 export type SearchResponse = UnifiedSearchResult[];
 
+// RetrievalResultDTO - 符合OpenAPI规范的搜索结果结构
+export type RetrievalResultType = 'chunkResult' | 'graphResult';
+
+export interface RetrievalResultDTO {
+  type: RetrievalResultType;
+  score: number;
+  content: string;
+  metadata: Record<string, unknown>;
+}
+
 // ---------------------------------------------
 // 分页/通用响应（如需）
 // ---------------------------------------------
