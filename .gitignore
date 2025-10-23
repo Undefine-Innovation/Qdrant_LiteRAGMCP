@@ -5,6 +5,7 @@ build/
 .env
 .roo/
 .vscode/
+package-lock.json
 
 # ── 2. 非 docs/ 目录下的 *.md（保留 docs/ 内所有 *.md 以及任何目录下的 README.md）──
 # 2-1 先全局忽略所有 *.md
@@ -23,6 +24,10 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# ── 8. TypeScript 编译输出 ──
+**/*.js
+!**/*.js.map
 
 # ── 4. 日志与调试 ──
 logs/
