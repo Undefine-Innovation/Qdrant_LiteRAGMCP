@@ -50,8 +50,10 @@ export class ChunkMetaTable {
    * @param data - 要插入的块元数据对象数组。
    */
   createBatch(data: Omit<ChunkMeta, 'created_at'>[]): void {
-    console.log(`[ChunkMetaTable.createBatch] 开始批量插入chunkMeta，数量: ${data.length}`);
-    
+    console.log(
+      `[ChunkMetaTable.createBatch] 开始批量插入chunkMeta，数量: ${data.length}`,
+    );
+
     if (data.length > 0) {
       console.log(`[ChunkMetaTable.createBatch] 第一条数据示例:`, {
         pointId: data[0].pointId,
@@ -65,7 +67,7 @@ export class ChunkMetaTable {
         titleChain: data[0].titleChain,
         titleChainType: typeof data[0].titleChain,
         contentHash: data[0].contentHash,
-        contentHashType: typeof data[0].contentHash
+        contentHashType: typeof data[0].contentHash,
       });
     }
 
@@ -89,9 +91,9 @@ export class ChunkMetaTable {
             titleChainType: typeof item.titleChain,
             titleChainValue: item.titleChain,
             contentHash: item.contentHash,
-            contentHashType: typeof item.contentHash
+            contentHashType: typeof item.contentHash,
           });
-          
+
           try {
             insert.run(
               item.pointId,
@@ -103,23 +105,26 @@ export class ChunkMetaTable {
               now,
             );
           } catch (insertError) {
-            console.error(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`, {
-              error: (insertError as Error).message,
-              stack: (insertError as Error).stack,
-              pointId: item.pointId,
-              pointIdType: typeof item.pointId,
-              docId: item.docId,
-              docIdType: typeof item.docId,
-              collectionId: item.collectionId,
-              collectionIdType: typeof item.collectionId,
-              chunkIndex: item.chunkIndex,
-              chunkIndexType: typeof item.chunkIndex,
-              titleChain: item.titleChain,
-              titleChainType: typeof item.titleChain,
-              titleChainValue: item.titleChain,
-              contentHash: item.contentHash,
-              contentHashType: typeof item.contentHash
-            });
+            console.error(
+              `[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`,
+              {
+                error: (insertError as Error).message,
+                stack: (insertError as Error).stack,
+                pointId: item.pointId,
+                pointIdType: typeof item.pointId,
+                docId: item.docId,
+                docIdType: typeof item.docId,
+                collectionId: item.collectionId,
+                collectionIdType: typeof item.collectionId,
+                chunkIndex: item.chunkIndex,
+                chunkIndexType: typeof item.chunkIndex,
+                titleChain: item.titleChain,
+                titleChainType: typeof item.titleChain,
+                titleChainValue: item.titleChain,
+                contentHash: item.contentHash,
+                contentHashType: typeof item.contentHash,
+              },
+            );
             throw insertError;
           }
         }
@@ -133,7 +138,7 @@ export class ChunkMetaTable {
       console.error(`[ChunkMetaTable.createBatch] 批量插入chunkMeta失败:`, {
         error: (error as Error).message,
         stack: (error as Error).stack,
-        dataCount: data.length
+        dataCount: data.length,
       });
       throw error;
     }

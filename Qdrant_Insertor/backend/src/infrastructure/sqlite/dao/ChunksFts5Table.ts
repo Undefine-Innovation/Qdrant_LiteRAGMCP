@@ -99,19 +99,17 @@ export class ChunksFts5Table {
       titleChain?: string;
     }>,
   ): void {
-
     // 重新创建 FTS5 表，不使用 content_rowid 参数
     try {
       // 删除现有的 FTS5 表
       this.db.exec('DROP TABLE IF EXISTS chunks_fts5');
-      
+
       // 重新创建 FTS5 表，不使用 content_rowid
       this.db.exec(`
         CREATE VIRTUAL TABLE chunks_fts5
         USING fts5(content, title, tokenize='porter')
       `);
-      
-      
+
       // 使用原始 SQL 执行插入，避免 better-sqlite3 的参数绑定问题
       this.db.transaction(
         (
@@ -123,44 +121,46 @@ export class ChunksFts5Table {
         ) => {
           for (let i = 0; i < items.length; i++) {
             const item = items[i];
-            
+
             try {
               // 正确处理换行符和特殊字符
               const escapedContent = item.content
                 .replace(/'/g, "''")
-                .replace(/\r\n/g, "\\n")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\n");
-              
+                .replace(/\r\n/g, '\\n')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\n');
+
               const escapedTitle = (item.titleChain || '')
                 .replace(/'/g, "''")
-                .replace(/\r\n/g, "\\n")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\n");
-              
+                .replace(/\r\n/g, '\\n')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\n');
+
               // 不指定 rowid，让 FTS5 自动分配
               const rawSql = `INSERT INTO chunks_fts5 (content, title) VALUES ('${escapedContent}', '${escapedTitle}')`;
-              
+
               this.db.exec(rawSql);
             } catch (insertError) {
-              console.error(`[ChunksFts5Table.createBatch] 插入第${i + 1}条数据失败:`, {
-                error: (insertError as Error).message,
-                pointId: item.pointId,
-                pointIdType: typeof item.pointId,
-                contentLength: item.content.length,
-                titleChain: item.titleChain || ''
-              });
+              console.error(
+                `[ChunksFts5Table.createBatch] 插入第${i + 1}条数据失败:`,
+                {
+                  error: (insertError as Error).message,
+                  pointId: item.pointId,
+                  pointIdType: typeof item.pointId,
+                  contentLength: item.content.length,
+                  titleChain: item.titleChain || '',
+                },
+              );
               throw insertError;
             }
           }
         },
       )(data);
-      
     } catch (error) {
       console.error(`[ChunksFts5Table.createBatch] 批量插入FTS5数据失败:`, {
         error: (error as Error).message,
         stack: (error as Error).stack,
-        dataCount: data.length
+        dataCount: data.length,
       });
       throw error;
     }
