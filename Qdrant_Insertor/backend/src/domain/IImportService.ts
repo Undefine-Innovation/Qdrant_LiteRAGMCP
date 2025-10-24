@@ -31,7 +31,10 @@ export interface IImportService {
    * @param collectionId - 文档所属的集合 ID。
    * @returns 导入的文档对象。
    */
-  importUploadedFile(file: ExpressFile, collectionId: CollectionId): Promise<Doc>;
+  importUploadedFile(
+    file: ExpressFile,
+    collectionId: CollectionId,
+  ): Promise<Doc>;
 
   /**
    * 重新同步（更新）一个文档。

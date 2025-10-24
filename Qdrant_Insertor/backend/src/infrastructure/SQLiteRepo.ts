@@ -16,6 +16,11 @@ import { DocsTable } from './sqlite/dao/DocsTable.js';
 import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
 import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
 import { ChunksTable } from './sqlite/dao/ChunksTable.js';
+import { SyncJobsTable } from './sqlite/dao/SyncJobsTable.js';
+import { SystemMetricsTable } from './sqlite/dao/SystemMetricsTable.js';
+import { AlertRulesTable } from './sqlite/dao/AlertRulesTable.js';
+import { SystemHealthTable } from './sqlite/dao/SystemHealthTable.js';
+import { AlertHistoryTable } from './sqlite/dao/AlertHistoryTable.js';
 
 /**
  * SQLiteRepo 作为数据访问对象 (DAO) 的协调器。
@@ -28,6 +33,11 @@ export class SQLiteRepo {
   public readonly chunkMeta: ChunkMetaTable;
   public readonly chunksFts5: ChunksFts5Table;
   public readonly chunks: ChunksTable;
+  public readonly syncJobs: SyncJobsTable;
+  public readonly systemMetrics: SystemMetricsTable;
+  public readonly alertRules: AlertRulesTable;
+  public readonly systemHealth: SystemHealthTable;
+  public readonly alertHistory: AlertHistoryTable;
 
   /**
    * @param db `better-sqlite3` 数据库实例。
@@ -38,6 +48,11 @@ export class SQLiteRepo {
     this.chunkMeta = new ChunkMetaTable(db);
     this.chunksFts5 = new ChunksFts5Table(db);
     this.chunks = new ChunksTable(db);
+    this.syncJobs = new SyncJobsTable(db);
+    this.systemMetrics = new SystemMetricsTable(db);
+    this.alertRules = new AlertRulesTable(db);
+    this.systemHealth = new SystemHealthTable(db);
+    this.alertHistory = new AlertHistoryTable(db);
     this.bootstrap();
   }
 
@@ -258,11 +273,13 @@ export class SQLiteRepo {
       throw new Error(`Document ${docId} not found`);
     }
 
-    console.log(`[SQLiteRepo.addChunks] 开始处理文档 ${docId}，chunks数量: ${documentChunks.length}`);
+    console.log(
+      `[SQLiteRepo.addChunks] 开始处理文档 ${docId}，chunks数量: ${documentChunks.length}`,
+    );
     console.log(`[SQLiteRepo.addChunks] 文档信息:`, {
       docId: doc.docId,
       collectionId: doc.collectionId,
-      collectionIdType: typeof doc.collectionId
+      collectionIdType: typeof doc.collectionId,
     });
 
     const chunkMetas: Omit<ChunkMeta, 'created_at'>[] = documentChunks.map(
@@ -276,7 +293,7 @@ export class SQLiteRepo {
           collectionId: doc.collectionId,
           collectionIdType: typeof doc.collectionId,
           chunkIndex: index,
-          chunkIndexType: typeof index
+          chunkIndexType: typeof index,
         });
         return {
           pointId,
@@ -293,7 +310,7 @@ export class SQLiteRepo {
       this.transaction(() => {
         console.log(`[SQLiteRepo.addChunks] 开始执行chunkMeta.createBatch`);
         this.chunkMeta.createBatch(chunkMetas);
-        
+
         console.log(`[SQLiteRepo.addChunks] 开始执行chunks.createBatch`);
         const chunksData = chunkMetas.map((cm, index) => ({
           pointId: cm.pointId,
@@ -305,12 +322,12 @@ export class SQLiteRepo {
         }));
         console.log(`[SQLiteRepo.addChunks] chunksData示例:`, chunksData[0]);
         // 确保 title 字段正确处理 null/undefined
-        const processedChunksData = chunksData.map(chunk => ({
+        const processedChunksData = chunksData.map((chunk) => ({
           ...chunk,
-          title: chunk.title === undefined ? null : chunk.title
+          title: chunk.title === undefined ? null : chunk.title,
         }));
         this.chunks.createBatch(processedChunksData);
-        
+
         console.log(`[SQLiteRepo.addChunks] 开始执行chunksFts5.createBatch`);
         const fts5Data = chunkMetas.map((cm, index) => ({
           pointId: cm.pointId,
@@ -327,7 +344,7 @@ export class SQLiteRepo {
         stack: (error as Error).stack,
         docId,
         chunksCount: documentChunks.length,
-        chunkMetaExample: chunkMetas[0]
+        chunkMetaExample: chunkMetas[0],
       });
       throw error;
     }

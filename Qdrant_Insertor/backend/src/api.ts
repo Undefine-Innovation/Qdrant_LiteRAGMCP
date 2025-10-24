@@ -9,6 +9,8 @@ import { ICollectionService } from './domain/ICollectionService.js';
 import { IDocumentService } from './domain/IDocumentService.js';
 import { validate, ValidatedRequest } from './middlewares/validate.js';
 import { SearchQuerySchema } from './api/contracts/search.js';
+import { createMonitoringRoutes } from './api/monitoring.js';
+import { MonitoringApiService } from './application/MonitoringApiService.js';
 
 /**
  * @interface ApiServices
@@ -20,6 +22,7 @@ interface ApiServices {
   graphService: IGraphService;
   collectionService: ICollectionService;
   documentService: IDocumentService;
+  monitoringApiService?: MonitoringApiService;
 }
 
 /**
@@ -37,6 +40,7 @@ export function createApiRouter(services: ApiServices): express.Router {
     graphService,
     collectionService,
     documentService,
+    monitoringApiService,
   } = services;
   const router = express.Router();
 
@@ -159,20 +163,23 @@ export function createApiRouter(services: ApiServices): express.Router {
       return res.status(422).json({
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'No file uploaded'
-        }
+          message: 'No file uploaded',
+        },
       });
     }
 
     // 根据OpenAPI规范，不需要collectionId，使用默认集合
     // 先尝试获取或创建默认集合
     const collections = await collectionService.listAllCollections();
-    let defaultCollection = collections.find(c => c.name === 'default');
-    
+    let defaultCollection = collections.find((c) => c.name === 'default');
+
     if (!defaultCollection) {
-      defaultCollection = collectionService.createCollection('default', 'Default collection for uploads');
+      defaultCollection = collectionService.createCollection(
+        'default',
+        'Default collection for uploads',
+      );
     }
-    
+
     const doc = await importService.importUploadedFile(
       req.file,
       defaultCollection.collectionId,
@@ -340,6 +347,11 @@ export function createApiRouter(services: ApiServices): express.Router {
       res.status(200).json(results);
     },
   );
+
+  // -------------------- 监控路由 --------------------
+  if (monitoringApiService) {
+    router.use('/monitoring', createMonitoringRoutes(monitoringApiService));
+  }
 
   return router;
 }

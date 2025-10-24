@@ -25,6 +25,10 @@ import { SyncStateMachine } from './application/SyncStateMachine.js';
 import { AutoGCService } from './application/AutoGCService.js';
 import { CollectionService } from './application/CollectionService.js';
 import { DocumentService } from './application/DocumentService.js';
+import { PersistentSyncStateMachine } from './application/PersistentSyncStateMachine.js';
+import { MonitoringService } from './application/MonitoringService.js';
+import { AlertService } from './application/AlertService.js';
+import { MonitoringApiService } from './application/MonitoringApiService.js';
 import { ISearchService } from './domain/ISearchService.js';
 import { IGraphService } from './domain/graph.js';
 import { ICollectionService } from './domain/ICollectionService.js';
@@ -53,7 +57,7 @@ async function main() {
   logger.info('基础设施组件已初始化。');
 
   // 3. 实例化应用服务，注入基础设施依赖
-  const syncStateMachine = new SyncStateMachine( // 同步状态机，管理文档同步流程
+  const persistentSyncStateMachine = new PersistentSyncStateMachine( // 持久化同步状态机，管理文档同步流程
     dbRepo,
     qdrantRepo,
     embeddingProvider,
@@ -68,7 +72,7 @@ async function main() {
     dbRepo,
     qdrantRepo,
     logger,
-    syncStateMachine,
+    persistentSyncStateMachine,
   );
   const searchService: ISearchService = new SearchService( // 搜索服务，负责处理搜索请求
     embeddingProvider,
@@ -86,6 +90,28 @@ async function main() {
     importService,
   ); // 文档服务，管理文档的生命周期，依赖导入服务
 
+  // 初始化持久化同步状态机
+  await persistentSyncStateMachine.initialize();
+  logger.info('持久化同步状态机已初始化。');
+
+  // 初始化监控服务
+  const monitoringService = new MonitoringService( // 监控服务，负责系统健康检查和指标收集
+    dbRepo,
+    persistentSyncStateMachine,
+    logger,
+  );
+
+  const alertService = new AlertService( // 告警服务，负责告警规则管理和通知
+    dbRepo,
+    logger,
+  );
+
+  const monitoringApiService = new MonitoringApiService( // 监控API服务，提供监控相关的API接口
+    monitoringService,
+    alertService,
+    dbRepo.syncJobs,
+  );
+
   logger.info('应用服务已初始化。');
 
   // 4. 创建和配置 Express 应用程序
@@ -101,6 +127,7 @@ async function main() {
     graphService,
     collectionService,
     documentService,
+    monitoringApiService,
   });
   app.use('/api', apiRouter); // 将路由器挂载到 /api 前缀下
 
@@ -114,7 +141,32 @@ async function main() {
     logger.info(`API 服务器正在运行于 http://localhost:${apiPort}`);
   });
 
-  // 7. 设置自动垃圾回收（AutoGC）定时任务
+  // 7. 启动监控服务
+  logger.info('启动监控服务...');
+  
+  // 启动健康检查定时任务（每5分钟）
+  cron.schedule('*/5 * * * *', () => {
+    monitoringService.performHealthCheck().catch((err) => {
+      logger.error(`健康检查失败: ${(err as Error).message}`, err);
+    });
+  });
+
+  // 启动告警检查定时任务（每1分钟）
+  cron.schedule('* * * * *', () => {
+    alertService.checkAlerts().catch((err) => {
+      logger.error(`告警检查失败: ${(err as Error).message}`, err);
+    });
+  });
+
+  // 设置监控数据清理任务（每天凌晨2点）
+  cron.schedule('0 2 * * *', () => {
+    monitoringService.cleanup(30); // 清理30天前的数据
+    logger.info('监控数据清理任务完成');
+  });
+
+  logger.info('监控服务已启动。');
+
+  // 8. 设置自动垃圾回收（AutoGC）定时任务
   const gcIntervalHours = config.gc.intervalHours; // 垃圾回收间隔小时数
   logger.info(`AutoGC 定时任务已设置，每 ${gcIntervalHours} 小时运行一次。`);
 
@@ -134,6 +186,22 @@ async function main() {
       logger.error(`定时垃圾回收失败: ${(err as Error).message}`, err);
     });
   });
+
+  // 9. 优雅关闭处理
+  const gracefulShutdown = () => {
+    logger.info('正在优雅关闭应用...');
+    
+    // 停止监控服务
+    monitoringService.stop();
+    alertService.stop();
+    
+    logger.info('应用已优雅关闭。');
+    process.exit(0);
+  };
+
+  // 监听关闭信号
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }
 
 main().catch((err) => {

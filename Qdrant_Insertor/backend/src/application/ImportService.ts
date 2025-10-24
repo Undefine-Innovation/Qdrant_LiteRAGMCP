@@ -9,6 +9,7 @@ import { Logger } from '../logger.js';
 import { AppError } from '../api/contracts/error.js';
 import { IImportService } from '../domain/IImportService.js';
 import { SyncStateMachine } from './SyncStateMachine.js';
+import { PersistentSyncStateMachine } from './PersistentSyncStateMachine.js';
 
 export class ImportService implements IImportService {
   constructor(
@@ -18,7 +19,7 @@ export class ImportService implements IImportService {
     private readonly sqliteRepo: SQLiteRepo,
     private readonly qdrantRepo: IQdrantRepo,
     private readonly logger: Logger,
-    private readonly syncStateMachine: SyncStateMachine,
+    private readonly syncStateMachine: SyncStateMachine | PersistentSyncStateMachine,
   ) {}
 
   public async importDocument(
@@ -74,7 +75,9 @@ export class ImportService implements IImportService {
       let collection = this.sqliteRepo.collections.getById(collectionId);
       if (!collection) {
         // 如果集合不存在，自动创建默认集合
-        this.logger.info(`Collection ${collectionId} not found, creating it...`);
+        this.logger.info(
+          `Collection ${collectionId} not found, creating it...`,
+        );
         const newCollectionId = this.sqliteRepo.collections.create({
           name: collectionId,
           description: `Auto-created collection for ${collectionId}`,
@@ -85,7 +88,9 @@ export class ImportService implements IImportService {
             `Failed to create or retrieve collection: ${collectionId}`,
           );
         }
-        this.logger.info(`Collection created with ID: ${collection.collectionId}`);
+        this.logger.info(
+          `Collection created with ID: ${collection.collectionId}`,
+        );
       }
 
       // 将上传的文件转换为与文件加载器兼容的格式
