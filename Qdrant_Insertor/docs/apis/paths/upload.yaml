@@ -1,0 +1,32 @@
+# Upload Path
+
+upload:
+  post:
+    summary: Upload a document
+    description: Upload a document file using multipart/form-data. The document will be automatically added to a default collection.
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+                description: The document file to upload.
+            required:
+              - file
+    responses:
+      '201':
+        description: Document uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/document.yaml#/UploadDocumentResponse'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '413':
+        $ref: '../components/responses/common.yaml#/FileTooLargeError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'

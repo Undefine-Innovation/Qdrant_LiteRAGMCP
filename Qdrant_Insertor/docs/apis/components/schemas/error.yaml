@@ -1,0 +1,25 @@
+# Error Schemas
+
+ErrorResponse:
+  type: object
+  properties:
+    error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The error code.
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable error message.
+          example: "field 'q' is required"
+        details:
+          type: object
+          description: Additional error details.
+          additionalProperties: true
+      required:
+        - code
+        - message
+  required:
+    - error

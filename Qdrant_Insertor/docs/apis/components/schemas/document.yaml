@@ -1,0 +1,100 @@
+# Document Schemas
+
+DocumentResponse:
+  type: object
+  properties:
+    docId:
+      type: string
+      description: The unique identifier of the document.
+    name:
+      type: string
+      description: The name of the document.
+      nullable: true
+    collectionId:
+      type: string
+      description: The ID of the collection this document belongs to.
+    key:
+      type: string
+      description: The key/path of the document.
+    sizeBytes:
+      type: integer
+      format: int64
+      description: The size of the document in bytes.
+      nullable: true
+    mime:
+      type: string
+      description: The MIME type of the document.
+      nullable: true
+    createdAt:
+      type: integer
+      format: int64
+      description: The creation timestamp in epoch milliseconds.
+    updatedAt:
+      type: integer
+      format: int64
+      description: The last update timestamp in epoch milliseconds.
+      nullable: true
+    isDeleted:
+      type: boolean
+      description: Whether the document is marked as deleted.
+      nullable: true
+  required:
+    - docId
+    - collectionId
+    - key
+    - createdAt
+
+UploadDocumentResponse:
+  type: object
+  properties:
+    docId:
+      type: string
+      description: The ID of the uploaded document.
+    name:
+      type: string
+      description: The name of the uploaded file.
+    collectionId:
+      type: string
+      description: The ID of the collection this document belongs to.
+  required:
+    - docId
+    - name
+    - collectionId
+
+ChunkDTO:
+  type: object
+  properties:
+    pointId:
+      type: string
+      description: The ID of the point in Qdrant, format: docId#chunkIndex.
+    docId:
+      type: string
+      description: The ID of the document this chunk belongs to.
+    chunkIndex:
+      type: integer
+      description: The index of this chunk within the document.
+    content:
+      type: string
+      description: The content of the chunk.
+    titleChain:
+      type: string
+      description: The title chain providing context for the chunk.
+      nullable: true
+    title:
+      type: string
+      description: The title of the chunk.
+      nullable: true
+    contentHash:
+      type: string
+      description: The hash of the chunk content.
+      nullable: true
+    createdAt:
+      type: integer
+      format: int64
+      description: The creation timestamp in epoch milliseconds.
+      nullable: true
+  required:
+    - pointId
+    - docId
+    - chunkIndex
+    - content

@@ -6,6 +6,7 @@ info:
 servers:
   - url: /api
     description: Local Development Server
+
 paths:
   /health:
     get:
@@ -22,6 +23,7 @@ paths:
                   ok:
                     type: boolean
                     example: true
+
   /healthz:
     get:
       summary: Detailed health check
@@ -45,6 +47,7 @@ paths:
                     enum: ['ok', 'unhealthy']
         '503':
           description: Service Unavailable
+
   /metrics:
     get:
       summary: Prometheus metrics endpoint
@@ -55,472 +58,59 @@ paths:
             text/plain:
               schema:
                 type: string
+
   /upload:
-    post:
-      summary: Upload a document
-      description: Upload a document file using multipart/form-data. The document will be automatically added to a default collection.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: The document file to upload.
-              required:
-                - file
-      responses:
-        '201':
-          description: Document uploaded successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UploadDocumentResponse'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/upload.yaml#/upload'
+
+  /collections/{collectionId}/docs:
+    $ref: './paths/documents.yaml#/uploadToCollection'
+
   /docs:
-    get:
-      summary: List all documents
-      description: Get a list of all documents in the system.
-      responses:
-        '200':
-          description: List of documents
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DocumentResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/documents.yaml#/listDocs'
+
   /docs/{docId}:
-    get:
-      summary: Get a document by ID
-      description: Retrieve a specific document by its ID.
-      parameters:
-        - in: path
-          name: docId
-          schema:
-            type: string
-          required: true
-          description: The ID of the document to retrieve.
-      responses:
-        '200':
-          description: Document details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    delete:
-      summary: Delete a document
-      description: Delete a document and all its associated chunks.
-      parameters:
-        - in: path
-          name: docId
-          schema:
-            type: string
-          required: true
-          description: The ID of the document to delete.
-      responses:
-        '204':
-          description: Document deleted successfully
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/documents.yaml#/docById'
+
   /docs/{docId}/resync:
-    put:
-      summary: Resync a document
-      description: Resynchronize a document from its original source file.
-      parameters:
-        - in: path
-          name: docId
-          schema:
-            type: string
-          required: true
-          description: The ID of the document to resync.
-      responses:
-        '200':
-          description: Document resynced successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/documents.yaml#/resyncDoc'
+
   /docs/{docId}/extract-graph:
-    post:
-      summary: Extract and store document graph
-      description: Trigger knowledge graph extraction and storage for a specific document.
-      parameters:
-        - in: path
-          name: docId
-          schema:
-            type: string
-          required: true
-          description: The ID of the document to extract graph from.
-      responses:
-        '202':
-          description: Graph extraction initiated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Graph extraction initiated for document ID: doc-xxxx"
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/documents.yaml#/extractGraph'
+
   /collections:
-    get:
-      summary: List all collections
-      description: Get a list of all collections in the system.
-      responses:
-        '200':
-          description: List of collections
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CollectionResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    post:
-      summary: Create a new collection
-      description: Create a new collection with the specified name and optional description.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCollectionRequest'
-      responses:
-        '201':
-          description: Collection created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CollectionResponse'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/collections.yaml#/collections'
+
   /collections/{collectionId}:
-    get:
-      summary: Get a collection by ID
-      description: Retrieve a specific collection by its ID.
-      parameters:
-        - in: path
-          name: collectionId
-          schema:
-            type: string
-          required: true
-          description: The ID of the collection to retrieve.
-      responses:
-        '200':
-          description: Collection details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CollectionResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    delete:
-      summary: Delete a collection
-      description: Delete a collection and all its associated documents and chunks.
-      parameters:
-        - in: path
-          name: collectionId
-          schema:
-            type: string
-          required: true
-          description: The ID of the collection to delete.
-      responses:
-        '204':
-          description: Collection deleted successfully
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/collections.yaml#/collectionById'
+
   /search:
-    get:
-      summary: Search for documents
-      description: Execute vector similarity search based on query and collection ID.
-      parameters:
-        - in: query
-          name: q
-          schema:
-            type: string
-          required: true
-          description: The search query.
-        - in: query
-          name: collectionId
-          schema:
-            type: string
-          required: true
-          description: The ID of the collection to search in.
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-          description: Maximum number of results to return.
-      responses:
-        '200':
-          description: Search results
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RetrievalResultDTO'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    $ref: './paths/search.yaml#/search'
+
 components:
   schemas:
     CollectionResponse:
-      type: object
-      properties:
-        collectionId:
-          type: string
-          description: The unique identifier of the collection.
-        name:
-          type: string
-          description: The name of the collection.
-        description:
-          type: string
-          description: The description of the collection.
-          nullable: true
-        createdAt:
-          type: integer
-          format: int64
-          description: The creation timestamp in epoch milliseconds.
-      required:
-        - collectionId
-        - name
-        - createdAt
+      $ref: './components/schemas/collection.yaml#/CollectionResponse'
     CreateCollectionRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the collection (must be unique).
-        description:
-          type: string
-          description: The optional description of the collection.
-      required:
-        - name
+      $ref: './components/schemas/collection.yaml#/CreateCollectionRequest'
+    UpdateCollectionRequest:
+      $ref: './components/schemas/collection.yaml#/UpdateCollectionRequest'
     DocumentResponse:
-      type: object
-      properties:
-        docId:
-          type: string
-          description: The unique identifier of the document.
-        name:
-          type: string
-          description: The name of the document.
-          nullable: true
-        collectionId:
-          type: string
-          description: The ID of the collection this document belongs to.
-        key:
-          type: string
-          description: The key/path of the document.
-        sizeBytes:
-          type: integer
-          format: int64
-          description: The size of the document in bytes.
-          nullable: true
-        mime:
-          type: string
-          description: The MIME type of the document.
-          nullable: true
-        createdAt:
-          type: integer
-          format: int64
-          description: The creation timestamp in epoch milliseconds.
-        updatedAt:
-          type: integer
-          format: int64
-          description: The last update timestamp in epoch milliseconds.
-          nullable: true
-        isDeleted:
-          type: boolean
-          description: Whether the document is marked as deleted.
-          nullable: true
-      required:
-        - docId
-        - collectionId
-        - key
-        - createdAt
+      $ref: './components/schemas/document.yaml#/DocumentResponse'
     UploadDocumentResponse:
-      type: object
-      properties:
-        docId:
-          type: string
-          description: The ID of the uploaded document.
-      required:
-        - docId
+      $ref: './components/schemas/document.yaml#/UploadDocumentResponse'
     ChunkDTO:
-      type: object
-      properties:
-        pointId:
-          type: string
-          description: The ID of the point in Qdrant, format: docId#chunkIndex.
-        docId:
-          type: string
-          description: The ID of the document this chunk belongs to.
-        chunkIndex:
-          type: integer
-          description: The index of this chunk within the document.
-        content:
-          type: string
-          description: The content of the chunk.
-        titleChain:
-          type: string
-          description: The title chain providing context for the chunk.
-          nullable: true
-        title:
-          type: string
-          description: The title of the chunk.
-          nullable: true
-        contentHash:
-          type: string
-          description: The hash of the chunk content.
-          nullable: true
-        createdAt:
-          type: integer
-          format: int64
-          description: The creation timestamp in epoch milliseconds.
-          nullable: true
-      required:
-        - pointId
-        - docId
-        - chunkIndex
-        - content
+      $ref: './components/schemas/document.yaml#/ChunkDTO'
     RetrievalResultDTO:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: ['chunkResult', 'graphResult']
-          description: The type of the result.
-        score:
-          type: number
-          format: float
-          description: The relevance score of this result.
-        content:
-          type: string
-          description: The content of the result.
-        metadata:
-          type: object
-          description: Additional metadata about the result.
-          properties:
-            pointId:
-              type: string
-              description: The ID of the point in Qdrant.
-              nullable: true
-            docId:
-              type: string
-              description: The ID of the document.
-              nullable: true
-            chunkIndex:
-              type: integer
-              description: The index of the chunk.
-              nullable: true
-            titleChain:
-              type: string
-              description: The title chain of the chunk.
-              nullable: true
-            title:
-              type: string
-              description: The title of the chunk.
-              nullable: true
-            collectionId:
-              type: string
-              description: The ID of the collection.
-              nullable: true
-          additionalProperties: true
-      required:
-        - type
-        - score
-        - content
-        - metadata
+      $ref: './components/schemas/search.yaml#/RetrievalResultDTO'
+    ErrorResponse:
+      $ref: './components/schemas/error.yaml#/ErrorResponse'
+
   responses:
     ValidationError:
-      description: Validation Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: VALIDATION_ERROR
-              message: "field 'q' is required"
-              details:
-                field: q
-                issue: required
+      $ref: './components/responses/common.yaml#/ValidationError'
     NotFoundError:
-      description: Resource Not Found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: NOT_FOUND
-              message: "Resource not found"
+      $ref: './components/responses/common.yaml#/NotFoundError'
     InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INTERNAL_SERVER_ERROR
-              message: 'An unexpected error occurred.'
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: The error code.
-              example: VALIDATION_ERROR
-            message:
-              type: string
-              description: Human-readable error message.
-              example: "field 'q' is required"
-            details:
-              type: object
-              description: Additional error details.
-              additionalProperties: true
-          required:
-            - code
-            - message
-      required:
-        - error
+      $ref: './components/responses/common.yaml#/InternalServerError'
+    FileTooLargeError:
+      $ref: './components/responses/common.yaml#/FileTooLargeError'

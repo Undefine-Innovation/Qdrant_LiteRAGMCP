@@ -1,0 +1,50 @@
+# Search Schemas
+
+RetrievalResultDTO:
+  type: object
+  properties:
+    type:
+      type: string
+      enum: ['chunkResult', 'graphResult']
+      description: The type of the result.
+    score:
+      type: number
+      format: float
+      description: The relevance score of this result.
+    content:
+      type: string
+      description: The content of the result.
+    metadata:
+      type: object
+      description: Additional metadata about the result.
+      properties:
+        pointId:
+          type: string
+          description: The ID of the point in Qdrant.
+          nullable: true
+        docId:
+          type: string
+          description: The ID of the document.
+          nullable: true
+        chunkIndex:
+          type: integer
+          description: The index of the chunk.
+          nullable: true
+        titleChain:
+          type: string
+          description: The title chain of the chunk.
+          nullable: true
+        title:
+          type: string
+          description: The title of the chunk.
+          nullable: true
+        collectionId:
+          type: string
+          description: The ID of the collection.
+          nullable: true
+      additionalProperties: true
+  required:
+    - type
+    - score
+    - content
+    - metadata

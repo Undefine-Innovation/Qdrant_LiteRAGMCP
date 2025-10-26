@@ -1,0 +1,135 @@
+# Collection Paths
+
+/collections:
+  get:
+    summary: List all collections
+    description: Get a list of all collections in the system.
+    responses:
+      '200':
+        description: List of collections
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+  post:
+    summary: Create a new collection
+    description: Create a new collection with the specified name and optional description.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/collection.yaml#/CreateCollectionRequest'
+    responses:
+      '201':
+        description: Collection created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+/collections/{collectionId}:
+  get:
+    summary: Get a collection by ID
+    description: Retrieve a specific collection by its ID.
+    parameters:
+      - in: path
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to retrieve.
+    responses:
+      '200':
+        description: Collection details
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+  put:
+    summary: Update a collection (full update)
+    description: Update a collection with new name and/or description. This operation replaces all fields.
+    parameters:
+      - in: path
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to update.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/collection.yaml#/UpdateCollectionRequest'
+    responses:
+      '200':
+        description: Collection updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+  patch:
+    summary: Update a collection (partial update)
+    description: Update specific fields of a collection. Only provided fields will be updated.
+    parameters:
+      - in: path
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to update.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/collection.yaml#/UpdateCollectionRequest'
+    responses:
+      '200':
+        description: Collection updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+  delete:
+    summary: Delete a collection
+    description: Delete a collection and all its associated documents and chunks.
+    parameters:
+      - in: path
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to delete.
+    responses:
+      '204':
+        description: Collection deleted successfully
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'

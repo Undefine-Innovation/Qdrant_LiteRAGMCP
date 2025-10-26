@@ -24,6 +24,7 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+data/
 
 # ── 8. TypeScript 编译输出 ──
 **/*.js

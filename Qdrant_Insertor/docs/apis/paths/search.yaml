@@ -1,0 +1,40 @@
+# Search Path
+
+search:
+  get:
+    summary: Search for documents
+    description: Execute vector similarity search based on query and collection ID.
+    parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        required: true
+        description: The search query.
+      - in: query
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to search in.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 10
+          minimum: 1
+          maximum: 100
+        description: Maximum number of results to return.
+    responses:
+      '200':
+        description: Search results
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/schemas/search.yaml#/RetrievalResultDTO'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'

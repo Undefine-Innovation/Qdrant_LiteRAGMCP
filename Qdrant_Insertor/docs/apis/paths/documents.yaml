@@ -1,0 +1,176 @@
+# Document Paths
+
+upload:
+  post:
+    summary: Upload a document
+    description: Upload a document file using multipart/form-data. The document will be automatically added to a default collection.
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+                description: The document file to upload.
+            required:
+              - file
+    responses:
+      '201':
+        description: Document uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/document.yaml#/UploadDocumentResponse'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '413':
+        $ref: '../components/responses/common.yaml#/FileTooLargeError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+uploadToCollection:
+  post:
+    summary: Upload a document to a specific collection
+    description: Upload a document file to a specific collection using multipart/form-data.
+    parameters:
+      - in: path
+        name: collectionId
+        schema:
+          type: string
+        required: true
+        description: The ID of the collection to upload the document to.
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+                description: The document file to upload.
+            required:
+              - file
+    responses:
+      '201':
+        description: Document uploaded successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/document.yaml#/UploadDocumentResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+listDocs:
+  get:
+    summary: List all documents
+    description: Get a list of all documents in the system.
+    responses:
+      '200':
+        description: List of documents
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/schemas/document.yaml#/DocumentResponse'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+docById:
+  get:
+    summary: Get a document by ID
+    description: Retrieve a specific document by its ID.
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: The ID of the document to retrieve.
+    responses:
+      '200':
+        description: Document details
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/document.yaml#/DocumentResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+  delete:
+    summary: Delete a document
+    description: Delete a document and all its associated chunks.
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: The ID of the document to delete.
+    responses:
+      '204':
+        description: Document deleted successfully
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+resyncDoc:
+  put:
+    summary: Resync a document
+    description: Resynchronize a document from its original source file.
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: The ID of the document to resync.
+    responses:
+      '200':
+        description: Document resynced successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/document.yaml#/DocumentResponse'
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+extractGraph:
+  post:
+    summary: Extract and store document graph
+    description: Trigger knowledge graph extraction and storage for a specific document.
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: The ID of the document to extract graph from.
+    responses:
+      '202':
+        description: Graph extraction initiated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Graph extraction initiated for document ID: doc-xxxx"
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
