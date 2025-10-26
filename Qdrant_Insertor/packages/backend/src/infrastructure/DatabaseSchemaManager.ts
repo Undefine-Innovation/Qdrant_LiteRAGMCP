@@ -1,0 +1,110 @@
+import type { Database } from 'better-sqlite3';
+import { Logger } from '../logger.js';
+import {
+  CREATE_INITIAL_SCHEMA,
+  CREATE_MONITORING_SCHEMA,
+} from './sqlite/sql/schema.sql.js';
+
+/**
+ * 数据库架构管理器
+ * 负责执行数据库架构初始化和更新
+ */
+export class DatabaseSchemaManager {
+  constructor(
+    private readonly db: Database,
+    private readonly logger: Logger,
+  ) {}
+
+  /**
+   * 检查是否为测试环境
+   */
+  private isTestEnvironment(): boolean {
+    return (
+      process.env.NODE_ENV === 'test' ||
+      process.env.JEST_WORKER_ID !== undefined ||
+      process.env.VITEST === 'true'
+    );
+  }
+
+  /**
+   * 检查是否需要应用监控架构更新
+   */
+  public async needsMonitoringSchemaUpdate(): Promise<boolean> {
+    // 测试环境中不需要监控架构更新
+    if (this.isTestEnvironment()) {
+      return false;
+    }
+
+    try {
+      // 检查 sync_jobs 表是否有新增的列
+      const pragmaSql = 'PRAGMA table_info(sync_jobs)';
+      const stmt = this.db.prepare(pragmaSql);
+      const columns = stmt.all() as Array<{ name: string }>;
+      const columnNames = columns.map((c) => c.name);
+
+      const requiredColumns = [
+        'started_at',
+        'completed_at',
+        'duration_ms',
+        'error_category',
+        'last_retry_strategy',
+        'progress',
+      ];
+      return !requiredColumns.every((col) => columnNames.includes(col));
+    } catch (error) {
+      this.logger.error('检查监控架构更新失败', error);
+      return true; // 出错时默认需要更新
+    }
+  }
+
+  /**
+   * 执行初始架构
+   */
+  public async executeInitialSchema(): Promise<void> {
+    await this.executeSqlScript(CREATE_INITIAL_SCHEMA, '初始架构');
+  }
+
+  /**
+   * 执行监控和持久化架构
+   */
+  public async executeMonitoringSchema(): Promise<void> {
+    await this.executeSqlScript(CREATE_MONITORING_SCHEMA, '监控和持久化架构');
+  }
+
+  /**
+   * 执行单个SQL脚本
+   */
+  private async executeSqlScript(
+    sql: string,
+    scriptName: string,
+  ): Promise<void> {
+    try {
+      this.logger.info(`执行${scriptName}脚本...`);
+
+      // 分割SQL语句并执行
+      const statements = sql
+        .split(';')
+        .map((stmt) => stmt.trim())
+        .filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'));
+
+      for (const statement of statements) {
+        if (statement.trim()) {
+          try {
+            this.db.exec(statement);
+          } catch (stmtError) {
+            this.logger.error(
+              `执行SQL语句失败: ${statement.substring(0, 100)}...`,
+              stmtError,
+            );
+            throw stmtError;
+          }
+        }
+      }
+
+      this.logger.info(`${scriptName}脚本执行完成`);
+    } catch (error) {
+      this.logger.error(`执行${scriptName}脚本失败`, error);
+      throw error;
+    }
+  }
+}

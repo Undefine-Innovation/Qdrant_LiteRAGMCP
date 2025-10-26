@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-200 text-secondary-800 hover:bg-secondary-300 focus:ring-secondary-500;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md border border-secondary-200 p-6;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  }
+
+  /* 分页组件样式 */
+  .pagination {
+    @apply flex flex-col space-y-4 p-4 bg-white rounded-lg shadow-sm border border-secondary-200;
+  }
+
+  .pagination-info {
+    @apply text-sm text-secondary-600;
+  }
+
+  .pagination-controls {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0;
+  }
+
+  .pagination-nav {
+    @apply flex items-center space-x-1;
+  }
+
+  .pagination-button {
+    @apply px-3 py-1 text-sm font-medium text-secondary-700 bg-white border border-secondary-300 rounded-md hover:bg-secondary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .pagination-pages {
+    @apply flex items-center space-x-1;
+  }
+
+  .pagination-page {
+    @apply px-3 py-1 text-sm font-medium text-secondary-700 bg-white border border-secondary-300 rounded-md hover:bg-secondary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .pagination-page.active {
+    @apply bg-primary-600 text-white border-primary-600 hover:bg-primary-700;
+  }
+
+  .pagination-ellipsis {
+    @apply px-2 py-1 text-secondary-500;
+  }
+
+  .pagination-options {
+    @apply flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4;
+  }
+
+  .pagination-jump,
+  .pagination-limit {
+    @apply flex items-center space-x-2 text-sm;
+  }
+
+  .pagination-input {
+    @apply w-16 px-2 py-1 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50;
+  }
+
+  .pagination-loading {
+    @apply flex justify-center py-2;
+  }
+
+  .pagination-loading .loading-spinner {
+    @apply w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin;
+  }
+}
