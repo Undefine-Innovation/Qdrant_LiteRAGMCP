@@ -81,3 +81,44 @@
   - `feat(api): add /upload endpoint`
   - `fix(search): resolve RRF fusion bug`
   - `docs(architecture): update domain models`
+
+## 7. OpenAPI 规范
+
+- **模块化结构**：
+  - 将主要的 OpenAPI 文件拆分成逻辑上独立的模块，按领域或按 OpenAPI 结构进行组织。
+  - 推荐目录结构：
+    ```
+    docs/apis/
+    ├── openapi.yaml              # 主文件，包含基本信息和 $ref 引用
+    ├── components/
+    │   ├── schemas/           # 数据模型定义
+    │   │   ├── collection.yaml
+    │   │   ├── document.yaml
+    │   │   ├── search.yaml
+    │   │   └── error.yaml
+    │   └── responses/          # 响应定义
+    │       └── common.yaml
+    └── paths/                  # 路径定义
+        ├── collections.yaml
+        ├── documents.yaml
+        ├── upload.yaml
+        └── search.yaml
+    ```
+
+- **$ref 关键字**：
+  - 在主 YAML 文件或其他模块文件中，使用 `$ref` 关键字来引用这些外部文件中的定义。
+  - 相对路径引用示例：`$ref: './components/schemas/collection.yaml#/CollectionResponse'`
+  - 绝对路径引用示例：`$ref: '#/components/schemas/CollectionResponse'`
+
+- **命名约定**：
+  - 文件名使用 `kebab-case`（烤串命名法）
+  - Schema 定义使用 `PascalCase`（大驼峰命名法）
+  - 路径定义使用描述性名称，如 `collections.yaml`、`documents.yaml`
+
+- **组织原则**：
+  - 按功能领域分组：集合、文档、搜索等
+  - 保持单一职责：每个文件只包含相关的定义
+  - 避免重复：通过 $ref 引用共享定义
+
+## 8. 长度规范
+通常任何文件的行数都应该在格式化后不超过400行，即使出于某些技术原因或者其他规范的限制，也不该超过500行。

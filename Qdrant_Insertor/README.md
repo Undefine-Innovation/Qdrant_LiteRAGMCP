@@ -1,83 +1,142 @@
-## 🚀 如何运行后端服务
+# Qdrant MCP RAG System
 
-要运行后端服务，请按照以下步骤操作：
+基于Qdrant向量数据库的MCP（Model Context Protocol）RAG（Retrieval-Augmented Generation）系统。
 
-### 1. 前提条件
+## 项目结构
 
-- **Node.js**: 确保您的系统安装了 Node.js (推荐 18+ 版本)。
-- **Docker**: Qdrant 向量数据库通常通过 Docker 运行，请确保您的系统安装了 Docker。
+这是一个monorepo项目，包含以下子项目：
 
-### 2. 配置环境变量
-
-在项目根目录下创建一个 `.env` 文件（如果尚未存在），并根据您的环境配置以下变量：
-
-```env
-# 数据库路径
-DB_PATH=./data/app.db
-
-# Qdrant 配置
-QDRANT_URL=http://localhost:6333 # 如果使用 Docker，通常是 http://localhost:6333
-QDRANT_COLLECTION_NAME=my_rag_collection # Qdrant 集合名称
-QDRANT_VECTOR_SIZE=1536 # 向量维度，例如 OpenAI text-embedding-ada-002 是 1536
-
-# OpenAI API 配置 (或兼容 OpenAI API 的服务)
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_API_KEY=sk-your_openai_api_key
-OPENAI_EMBEDDING_MODEL=text-embedding-ada-002
-
-# API 服务器配置
-API_PORT=3000
-
-# 自动垃圾回收配置 (小时)
-GC_INTERVAL_HOURS=24
+```
+qdrant-mcp-rag/
+├── packages/
+│   ├── backend/          # 后端服务
+│   └── frontend/         # 前端应用
+├── shared/              # 共享类型和工具
+├── docs/                # 项目文档
+└── scripts/             # 构建脚本
 ```
 
-### 3. 安装依赖
+## 快速开始
 
-在项目根目录（`d:/code/JS/Qdrant_MCP_RAG/Qdrant_Insertor`）下打开终端，运行以下命令安装所有 Node.js 依赖：
+### 环境要求
+
+- Node.js >= 18.0.0
+- npm >= 9.0.0
+- Qdrant服务器运行在 http://localhost:6333
+
+### 安装依赖
 
 ```bash
-npm install
+npm run install:all
 ```
 
-### 4. 启动 Qdrant 向量数据库 (使用 Docker)
+### 开发环境
 
-在终端中运行以下 Docker 命令来启动 Qdrant 服务：
-
-```bash
-docker run -p 6333:6333 -p 6334:6334 \
-    -v $(pwd)/qdrant_data:/qdrant/storage \
-    qdrant/qdrant
-```
-
-- `-p 6333:6333`: 将容器的 gRPC 端口映射到主机的 6333 端口。
-- `-p 6334:6334`: 将容器的 REST API 端口映射到主机的 6334 端口 (可选，但推荐)。
-- `-v $(pwd)/qdrant_data:/qdrant/storage`: 将主机当前目录下的 `qdrant_data` 文件夹挂载到容器内部作为 Qdrant 的数据存储目录，确保数据持久化。
-
-### 5. 启动后端服务
-
-在 Qdrant 启动并运行后，在项目根目录下打开一个新的终端，运行以下命令启动后端服务：
-
-```bash
-npm run start
-```
-
-或者，如果您想在开发模式下启动并进行文件更改时自动重启：
-
+1. 启动所有服务（前端+后端）：
 ```bash
 npm run dev
 ```
 
-成功启动后，您将在终端中看到类似以下输出：
-
-```
-[INFO] 配置已加载。
-[INFO] 基础设施组件已初始化。
-[INFO] 应用服务已初始化。
-[INFO] Express 应用程序已配置路由和错误处理。
-[INFO] API 服务器正在运行于 http://localhost:3000
-[INFO] AutoGC 定时任务已设置，每 24 小时运行一次。
-[INFO] 执行初始垃圾回收...
+2. 单独启动后端：
+```bash
+npm run dev:backend
 ```
 
-现在，后端服务应该已经在 `http://localhost:3000` 运行，您可以开始通过 API 接口进行交互了。
+3. 单独启动前端：
+```bash
+npm run dev:frontend
+```
+
+### 构建项目
+
+```bash
+# 构建所有项目
+npm run build
+
+# 单独构建
+npm run build:backend
+npm run build:frontend
+npm run build:shared
+```
+
+## 代码质量
+
+```bash
+# 代码检查
+npm run lint
+
+# 自动修复
+npm run lint:fix
+
+# 代码格式化
+npm run format
+
+# 类型检查
+npm run type-check
+```
+
+## 项目文档
+
+- [API文档](./docs/apis/openapi.yaml)
+- [架构设计](./docs/Architecture/)
+- [代码规范](./docs/notes/coding_style.md)
+- [重构计划](./project-restructure-plan.md)
+
+## 开发指南
+
+### 后端开发
+
+后端使用Node.js + TypeScript + Express，提供RESTful API接口。
+
+```bash
+cd packages/backend
+npm run dev
+```
+
+### 前端开发
+
+前端使用React + TypeScript + Vite，提供用户界面。
+
+```bash
+cd packages/frontend
+npm run dev
+```
+
+### 共享代码
+
+共享代码位于`shared/`目录，包含类型定义和工具函数。
+
+```bash
+cd shared
+npm run dev
+```
+
+## 部署
+
+### 后端部署
+
+```bash
+cd packages/backend
+npm run build
+npm start
+```
+
+### 前端部署
+
+```bash
+cd packages/frontend
+npm run build
+# 部署 dist/ 目录到静态文件服务器
+```
+
+## 贡献指南
+
+1. Fork项目
+2. 创建功能分支
+3. 提交更改
+4. 推送到分支
+5. 创建Pull Request
+
+## 许可证
+
+Apache License, Version 2.0
