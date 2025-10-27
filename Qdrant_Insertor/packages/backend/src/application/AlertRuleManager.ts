@@ -51,6 +51,32 @@ export class AlertRuleManager {
   }
 
   /**
+   * 获取告警规则总数
+   */
+  public getAlertRulesCount(activeOnly?: boolean): number {
+    return this.sqliteRepo.alertRules.getCount(activeOnly);
+  }
+
+  /**
+   * 分页获取告警规则
+   */
+  public getAlertRulesPaginated(
+    page: number,
+    limit: number,
+    sort: string = 'created_at',
+    order: 'asc' | 'desc' = 'desc',
+    activeOnly?: boolean,
+  ): AlertRule[] {
+    return this.sqliteRepo.alertRules.listPaginated(
+      page,
+      limit,
+      sort,
+      order,
+      activeOnly,
+    );
+  }
+
+  /**
    * 获取所有活跃告警规则
    */
   public getAllActiveRules(): AlertRule[] {

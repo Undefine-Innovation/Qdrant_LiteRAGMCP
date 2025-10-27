@@ -16,8 +16,8 @@ const CollectionList = ({
   onDelete,
 }: CollectionListProps) => {
   // 格式化日期
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN', {
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -94,7 +94,7 @@ const CollectionList = ({
           <tbody className="bg-white divide-y divide-secondary-200">
             {collections.map(collection => (
               <tr
-                key={collection.collectionId || collection.id}
+                key={collection.collectionId}
                 className="hover:bg-secondary-50"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -109,11 +109,11 @@ const CollectionList = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-secondary-900">
-                    {collection.documentCount || 0}
+                    {collection.docCount || 0}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">
-                  {formatDate(collection.created_at || collection.createdAt)}
+                  {formatDate(collection.createdAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
@@ -126,9 +126,9 @@ const CollectionList = ({
                     <button
                       onClick={() => onDelete(collection)}
                       className="text-red-600 hover:text-red-900"
-                      disabled={(collection.documentCount || 0) > 0}
+                      disabled={(collection.docCount || 0) > 0}
                       title={
-                        (collection.documentCount || 0) > 0
+                        (collection.docCount || 0) > 0
                           ? '集合中还有文档，无法删除'
                           : '删除集合'
                       }

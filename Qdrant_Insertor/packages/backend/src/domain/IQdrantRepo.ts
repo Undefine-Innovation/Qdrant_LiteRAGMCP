@@ -37,14 +37,14 @@ export interface IQdrantRepo {
    * @param collectionId - 集合ID
    */
   ensureCollection(collectionId: CollectionId): Promise<void>;
-  
+
   /**
    * 向集合中插入或更新向量点
    * @param collectionId - 集合ID
    * @param points - 要插入的向量点数组
    */
   upsertCollection(collectionId: CollectionId, points: Point[]): Promise<void>;
-  
+
   /**
    * 在集合中搜索相似的向量
    * @param collectionId - 集合ID
@@ -59,26 +59,26 @@ export interface IQdrantRepo {
       filter?: Schemas['Filter'];
     },
   ): Promise<SearchResult[]>;
-  
+
   /**
    * 删除指定文档的所有向量点
    * @param docId - 文档ID
    */
   deletePointsByDoc(docId: DocId): Promise<void>;
-  
+
   /**
    * 删除指定集合的所有向量点
    * @param collectionId - 集合ID
    */
   deletePointsByCollection(collectionId: CollectionId): Promise<void>;
-  
+
   /**
    * 获取集合中所有向量点的ID
    * @param collectionId - 集合ID
    * @returns 向量点ID数组
    */
   getAllPointIdsInCollection(collectionId: CollectionId): Promise<PointId[]>;
-  
+
   /**
    * 删除指定的向量点
    * @param collectionId - 集合ID

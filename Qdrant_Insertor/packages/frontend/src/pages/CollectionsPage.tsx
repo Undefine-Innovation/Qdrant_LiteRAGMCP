@@ -22,14 +22,29 @@ const CollectionsPage = () => {
   });
 
   // 获取集合列表
-  const { state: collectionsState, execute: loadCollections } = useApi(() =>
-    collectionsApi.getCollections(paginationParams),
+  const { state: collectionsState, execute: loadCollections } = useApi(
+    () => collectionsApi.getCollections(paginationParams),
+    {
+      maxRetries: 3,
+      retryDelay: 1000,
+      onSuccess: data => {
+        console.log('Collections loaded successfully:', data);
+      },
+      onError: error => {
+        console.error('Failed to load collections:', error);
+      },
+    },
   );
 
   // 创建集合
   const handleCreateCollection = async (data: CreateCollectionRequest) => {
-    await collectionsApi.createCollection(data);
-    loadCollections();
+    try {
+      await collectionsApi.createCollection(data);
+      await loadCollections();
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+      throw error;
+    }
   };
 
   // 更新集合
@@ -37,14 +52,24 @@ const CollectionsPage = () => {
     id: string,
     data: UpdateCollectionRequest,
   ) => {
-    await collectionsApi.updateCollection(id, data);
-    loadCollections();
+    try {
+      await collectionsApi.updateCollection(id, data);
+      await loadCollections();
+    } catch (error) {
+      console.error('Failed to update collection:', error);
+      throw error;
+    }
   };
 
   // 删除集合
   const handleDeleteCollection = async (id: string) => {
-    await collectionsApi.deleteCollection(id);
-    loadCollections();
+    try {
+      await collectionsApi.deleteCollection(id);
+      await loadCollections();
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
+      throw error;
+    }
   };
 
   // 刷新数据
@@ -73,7 +98,9 @@ const CollectionsPage = () => {
   }, []);
 
   const collections =
-    collectionsState.data?.data || (collectionsState.data as any)?.data || [];
+    (collectionsState.data as any)?.data ||
+    (collectionsState.data as Collection[]) ||
+    [];
   const pagination = (collectionsState.data as any)?.pagination;
 
   // 调试日志

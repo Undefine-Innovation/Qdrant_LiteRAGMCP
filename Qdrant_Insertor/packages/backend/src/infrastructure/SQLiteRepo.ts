@@ -52,7 +52,10 @@ export class SQLiteRepo {
   /**
    * @param db `better-sqlite3` 数据库实例。
    */
-  constructor(db: Database.Database, private readonly logger: Logger) {
+  constructor(
+    db: Database.Database,
+    private readonly logger: Logger,
+  ) {
     this.db = db;
     this.core = new SQLiteRepoCore(db);
     this.collections = new CollectionsTable(db);
@@ -66,8 +69,16 @@ export class SQLiteRepo {
     this.systemHealth = new SystemHealthTable(db);
     this.alertHistory = new AlertHistoryTable(db);
 
-    this.collectionManager = new CollectionManager(this.collections, this.core, this.logger);
-    this.documentManager = new DocumentManager(this.docs, this.core, this.logger);
+    this.collectionManager = new CollectionManager(
+      this.collections,
+      this.core,
+      this.logger,
+    );
+    this.documentManager = new DocumentManager(
+      this.docs,
+      this.core,
+      this.logger,
+    );
     this.chunkManager = new ChunkManager(
       this.chunkMeta,
       this.chunksFts5,

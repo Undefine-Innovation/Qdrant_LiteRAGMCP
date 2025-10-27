@@ -2,21 +2,55 @@
 
 search:
   get:
-    summary: Search for documents
-    description: Execute vector similarity search based on query and collection ID.
+    operationId: searchDocuments
+    tags:
+      - 搜索
+    summary: 基本文档搜索
+    description: |
+      基于查询文本和集合ID执行向量相似度搜索。此端点使用语义搜索技术，能够理解查询的意图和上下文，而不仅仅是关键词匹配。
+      
+      ## 搜索原理
+      
+      系统将查询文本转换为向量嵌入，然后在指定的集合中查找最相似的文档块。搜索结果按相关性得分排序，得分越高表示与查询越相关。
+      
+      ## 使用场景
+      
+      - **知识检索**: 在企业文档库中查找特定信息
+      - **问答系统**: 为用户问题提供相关的文档片段
+      - **内容发现**: 发现与特定主题相关的文档内容
+      - **研究辅助**: 快速定位研究资料中的相关信息
+      
+      ## 最佳实践
+      
+      - 使用自然语言描述查询，而不是关键词
+      - 提供足够的上下文以获得更准确的结果
+      - 对于特定领域的搜索，确保文档已上传到正确的集合
     parameters:
       - in: query
         name: q
         schema:
           type: string
+          minLength: 1
+          maxLength: 1000
         required: true
-        description: The search query.
+        description: |
+          搜索查询文本。支持自然语言查询，系统会理解查询的语义而非仅仅匹配关键词。
+          
+          **示例查询**:
+          - "如何配置数据库连接池？"
+          - "机器学习中的过拟合问题"
+          - "React组件生命周期方法"
+        example: "如何优化数据库查询性能？"
       - in: query
         name: collectionId
         schema:
           type: string
         required: true
-        description: The ID of the collection to search in.
+        description: |
+          要搜索的集合ID。必须是一个有效的集合标识符。
+          
+          **注意**: 如果指定的集合不存在，将返回404错误。
+        example: "tech-docs"
       - in: query
         name: limit
         schema:
@@ -24,16 +58,269 @@ search:
           default: 10
           minimum: 1
           maximum: 100
-        description: Maximum number of results to return.
+        description: |
+          返回的最大结果数量。默认值为10，最大值为100。
+          
+          **建议**:
+          - 对于一般查询，使用默认值10
+          - 对于需要更多结果的场景，可以增加到20-50
+          - 避免设置过大的值，以免影响性能
+        example: 10
     responses:
       '200':
-        description: Search results
+        description: 搜索成功，返回按相关性排序的结果列表
         content:
           application/json:
             schema:
               type: array
               items:
                 $ref: '../components/schemas/search.yaml#/RetrievalResultDTO'
+            example:
+              - type: "chunkResult"
+                score: 0.95
+                content: "数据库查询优化是提高应用性能的关键因素之一。通过创建适当的索引、避免全表扫描、使用查询缓存等技术，可以显著提升查询速度..."
+                metadata:
+                  docId: "doc-12345"
+                  chunkIndex: 2
+                  title: "数据库性能优化指南"
+                  titleChain: "技术文档 > 数据库 > 性能优化"
+              - type: "chunkResult"
+                score: 0.87
+                content: "索引是数据库优化的核心工具。合理的索引设计可以使查询速度提升几个数量级，但过多的索引会影响写入性能..."
+                metadata:
+                  docId: "doc-67890"
+                  chunkIndex: 1
+                  title: "数据库索引设计原则"
+                  titleChain: "技术文档 > 数据库 > 索引设计"
+      '400':
+        description: 请求参数错误
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "查询文本不能为空"
+                details:
+                  field: "q"
+                  issue: "empty"
+      '404':
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'invalid-collection' 不存在"
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+searchPaginated:
+  get:
+    operationId: searchDocumentsPaginated
+    tags:
+      - 搜索
+    summary: 分页文档搜索
+    description: |
+      基于查询文本和可选的集合ID执行向量相似度搜索，支持分页功能。此端点适用于需要浏览大量搜索结果的场景。
+      
+      ## 分页搜索优势
+      
+      - **性能优化**: 避免一次性返回大量数据，提高响应速度
+      - **用户体验**: 提供流畅的分页浏览体验
+      - **资源节约**: 减少网络传输和客户端内存使用
+      - **灵活控制**: 允许用户控制每页显示的结果数量
+      
+      ## 使用场景
+      
+      - **文档浏览器**: 构建文档浏览界面，支持分页查看搜索结果
+      - **研究工具**: 学术研究中需要浏览大量相关文献
+      - **内容发现**: 在大型内容库中逐步发现相关内容
+      - **API集成**: 为其他应用提供分页搜索能力
+      
+      ## 分页导航
+      
+      使用返回的`pagination`对象构建分页导航：
+      - `hasNext`: 是否有下一页
+      - `hasPrev`: 是否有上一页
+      - `totalPages`: 总页数
+      - `page`: 当前页码
+    parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        required: true
+        description: |
+          搜索查询文本。支持自然语言查询，系统会理解查询的语义而非仅仅匹配关键词。
+          
+          **示例查询**:
+          - "微服务架构设计原则"
+          - "容器化部署最佳实践"
+          - "前端性能优化技巧"
+        example: "如何设计可扩展的微服务架构？"
+      - in: query
+        name: collectionId
+        schema:
+          type: string
+        required: false
+        description: |
+          要搜索的集合ID。可选参数，如果不提供，将在所有集合中搜索。
+          
+          **使用建议**:
+          - 对于特定领域的搜索，指定集合ID可以获得更精确的结果
+          - 对于全局搜索，不提供此参数
+        example: "architecture-docs"
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          minimum: 1
+        description: |
+          页码，从1开始。用于指定要获取的搜索结果页面。
+          
+          **注意**: 页码超出范围时将返回空结果
+        example: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+        description: |
+          每页结果数量，最大值为100。
+          
+          **建议**:
+          - Web界面: 10-20个结果/页
+          - API集成: 20-50个结果/页
+          - 数据分析: 50-100个结果/页
+        example: 20
+      - in: query
+        name: sort
+        schema:
+          type: string
+          default: score
+          enum: [score]
+        description: |
+          结果排序字段。当前支持按相关性得分排序。
+          
+          **未来可能支持**:
+          - `created_at`: 按创建时间排序
+          - `updated_at`: 按更新时间排序
+          - `title`: 按标题排序
+        example: "score"
+      - in: query
+        name: order
+        schema:
+          type: string
+          default: desc
+          enum: [asc, desc]
+        description: |
+          排序顺序。
+          
+          - `desc`: 降序（默认，相关性得分从高到低）
+          - `asc`: 升序（相关性得分从低到高）
+          
+          **注意**: 对于相关性得分，通常使用降序以获得最相关的结果
+        example: "desc"
+    responses:
+      '200':
+        description: 搜索成功，返回分页结果和分页信息
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/search.yaml#/RetrievalResultDTO'
+                  description: 当前页的搜索结果列表
+                pagination:
+                  type: object
+                  properties:
+                    page:
+                      type: integer
+                      description: 当前页码
+                      example: 1
+                    limit:
+                      type: integer
+                      description: 每页结果数量
+                      example: 20
+                    total:
+                      type: integer
+                      description: 总结果数量
+                      example: 156
+                    totalPages:
+                      type: integer
+                      description: 总页数
+                      example: 8
+                    hasNext:
+                      type: boolean
+                      description: 是否有下一页
+                      example: true
+                    hasPrev:
+                      type: boolean
+                      description: 是否有上一页
+                      example: false
+                  required:
+                    - page
+                    - limit
+                    - total
+                    - totalPages
+                    - hasNext
+                    - hasPrev
+                  description: 分页导航信息
+              required:
+                - data
+                - pagination
+            example:
+              data:
+                - type: "chunkResult"
+                  score: 0.95
+                  content: "微服务架构是一种将应用程序构建为一组小型服务的方法，每个服务运行在自己的进程中，并通过轻量级机制进行通信..."
+                  metadata:
+                    docId: "doc-12345"
+                    chunkIndex: 2
+                    title: "微服务架构设计指南"
+                    titleChain: "技术文档 > 架构 > 微服务"
+                - type: "chunkResult"
+                  score: 0.87
+                  content: "服务发现是微服务架构中的关键组件，它允许服务自动找到并与其他服务通信，而无需硬编码网络位置..."
+                  metadata:
+                    docId: "doc-67890"
+                    chunkIndex: 1
+                    title: "微服务中的服务发现机制"
+                    titleChain: "技术文档 > 架构 > 微服务"
+              pagination:
+                page: 1
+                limit: 20
+                total: 156
+                totalPages: 8
+                hasNext: true
+                hasPrev: false
+      '400':
+        description: 请求参数错误
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "页码必须大于0"
+                details:
+                  field: "page"
+                  issue: "invalid_value"
       '422':
         $ref: '../components/responses/common.yaml#/ValidationError'
       '500':

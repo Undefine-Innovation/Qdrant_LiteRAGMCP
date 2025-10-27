@@ -4,9 +4,9 @@ import { useDebounce } from '../hooks/useDebounce';
 import LoadingSpinner from './LoadingSpinner';
 
 interface SearchBoxProps {
-  onSearch: (query: string, collectionId?: string) => Promise<SearchResult[]>;
+  onSearch: (query: string, collectionId?: string) => Promise<void>;
   onResultSelect?: (result: SearchResult) => void;
-  collections?: { id: string; name: string }[];
+  collections?: { collectionId: string; name: string }[];
   placeholder?: string;
   className?: string;
   showSuggestions?: boolean;
@@ -48,13 +48,10 @@ const SearchBox = ({
 
       setIsSearching(true);
       try {
-        const results = await onSearch(
-          searchQuery,
-          selectedCollection || undefined,
-        );
-        setSuggestions(results.slice(0, maxSuggestions));
-        setShowDropdown(true);
-        setSelectedIndex(-1);
+        await onSearch(searchQuery, selectedCollection || undefined);
+        // 注意：由于SearchPage中的onSearch现在返回void，这里不再设置建议
+        setSuggestions([]);
+        setShowDropdown(false);
       } catch (error) {
         console.error('搜索失败:', error);
         setSuggestions([]);
@@ -62,7 +59,7 @@ const SearchBox = ({
         setIsSearching(false);
       }
     },
-    [onSearch, selectedCollection, maxSuggestions],
+    [onSearch, selectedCollection],
   );
 
   // 当防抖查询变化时执行搜索
@@ -118,11 +115,14 @@ const SearchBox = ({
   };
 
   // 处理搜索提交
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (query.trim()) {
       setShowDropdown(false);
-      // 这里可以触发完整搜索，而不仅仅是建议
-      onSearch(query, selectedCollection || undefined);
+      try {
+        await onSearch(query, selectedCollection || undefined);
+      } catch (error) {
+        console.error('搜索失败:', error);
+      }
     }
   };
 
@@ -240,7 +240,10 @@ const SearchBox = ({
           >
             <option value="">全部集合</option>
             {collections.map(collection => (
-              <option key={collection.id} value={collection.id}>
+              <option
+                key={collection.collectionId}
+                value={collection.collectionId}
+              >
                 {collection.name}
               </option>
             ))}
@@ -263,7 +266,7 @@ const SearchBox = ({
           <ul className="py-1">
             {suggestions.map((result, index) => (
               <li
-                key={result.id}
+                key={`${result.metadata.docId}_${result.metadata.chunkIndex}`}
                 className={`px-4 py-3 cursor-pointer hover:bg-secondary-50 ${
                   index === selectedIndex ? 'bg-secondary-100' : ''
                 }`}
@@ -271,13 +274,18 @@ const SearchBox = ({
               >
                 <div className="text-sm">
                   <div className="font-medium text-secondary-900 mb-1">
-                    {highlightText(result.documentName, query)}
+                    {highlightText(
+                      result.metadata.docName || '未知文档',
+                      query,
+                    )}
                   </div>
                   <div className="text-secondary-600 line-clamp-2">
                     {highlightText(result.content, query)}
                   </div>
                   <div className="flex items-center mt-1 text-xs text-secondary-500 space-x-2">
-                    <span>集合: {result.collectionName}</span>
+                    <span>
+                      集合: {result.metadata.collectionName || '未知集合'}
+                    </span>
                     <span>相关度: {(result.score * 100).toFixed(1)}%</span>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError } from '../services/api';
 import { useAppStore } from '../stores/useAppStore';
 
@@ -9,6 +9,20 @@ interface ApiState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  retryCount: number;
+  lastUpdated: number | null;
+}
+
+/**
+ * API 请求配置接口
+ */
+interface ApiConfig {
+  maxRetries?: number;
+  retryDelay?: number;
+  retryCondition?: (error: ApiError) => boolean;
+  onSuccess?: (data: any) => void;
+  onError?: (error: ApiError) => void;
+  onRetry?: (retryCount: number, error: ApiError) => void;
 }
 
 /**
@@ -19,53 +33,152 @@ interface ApiState<T> {
  */
 export const useApi = <T = any>(
   apiCall: () => Promise<T>,
+  config: ApiConfig = {},
 ): {
   state: ApiState<T>;
   execute: () => Promise<void>;
   reset: () => void;
+  retry: () => Promise<void>;
 } => {
+  const {
+    maxRetries = 3,
+    retryDelay = 1000,
+    retryCondition = (error: ApiError) => {
+      // 默认重试条件：网络错误或5xx服务器错误
+      return (
+        error.code === 'NETWORK_ERROR' ||
+        (typeof error.code === 'number' && error.code >= 500)
+      );
+    },
+    onSuccess,
+    onError,
+    onRetry,
+  } = config;
+
   const [state, setState] = useState<ApiState<T>>({
     data: null,
     loading: false,
     error: null,
+    retryCount: 0,
+    lastUpdated: null,
   });
 
   const { setLoading, setError } = useAppStore();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const execute = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+    let currentRetryCount = 0;
+
+    setState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+      retryCount: 0,
+    }));
     setLoading(true);
     setError(null);
 
+    const attemptRequest = async (): Promise<T> => {
+      try {
+        const result = await apiCall();
+
+        setState({
+          data: result,
+          loading: false,
+          error: null,
+          retryCount: currentRetryCount,
+          lastUpdated: Date.now(),
+        });
+
+        onSuccess?.(result);
+        return result;
+      } catch (error) {
+        const apiError = error as ApiError;
+
+        if (currentRetryCount < maxRetries && retryCondition(apiError)) {
+          currentRetryCount++;
+
+          setState(prev => ({
+            ...prev,
+            retryCount: currentRetryCount,
+          }));
+
+          onRetry?.(currentRetryCount, apiError);
+
+          // 等待后重试
+          await new Promise(resolve =>
+            setTimeout(resolve, retryDelay * currentRetryCount),
+          );
+          return attemptRequest();
+        } else {
+          const errorMessage = apiError.message || '请求失败';
+
+          setState({
+            data: null,
+            loading: false,
+            error: errorMessage,
+            retryCount: currentRetryCount,
+            lastUpdated: null,
+          });
+
+          onError?.(apiError);
+          setError(errorMessage);
+          throw apiError;
+        }
+      }
+    };
+
     try {
-      const result = await apiCall();
-      setState({
-        data: result,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      const errorMessage = (error as ApiError).message || '请求失败';
-      setState({
-        data: null,
-        loading: false,
-        error: errorMessage,
-      });
-      setError(errorMessage);
+      await attemptRequest();
     } finally {
       setLoading(false);
     }
-  }, [apiCall, setLoading, setError]);
+  }, [
+    apiCall,
+    maxRetries,
+    retryDelay,
+    retryCondition,
+    onSuccess,
+    onError,
+    onRetry,
+    setLoading,
+    setError,
+  ]);
+
+  const retry = useCallback(async () => {
+    await execute();
+  }, [execute]);
 
   const reset = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     setState({
       data: null,
       loading: false,
       error: null,
+      retryCount: 0,
+      lastUpdated: null,
     });
   }, []);
 
-  return { state, execute, reset };
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  return { state, execute, reset, retry };
 };
 
 /**
@@ -78,8 +191,9 @@ export const useApi = <T = any>(
 export const useAutoApi = <T = any>(
   apiCall: () => Promise<T>,
   deps: any[] = [],
+  config: ApiConfig = {},
 ): ApiState<T> => {
-  const { state, execute } = useApi(apiCall);
+  const { state, execute } = useApi(apiCall, config);
 
   useEffect(() => {
     execute();
@@ -105,6 +219,7 @@ export const usePaginatedApi = <T = any>(
     limit: number;
     totalPages: number;
   }>,
+  config: ApiConfig = {},
 ): {
   state: ApiState<{
     data: T[];
@@ -117,12 +232,15 @@ export const usePaginatedApi = <T = any>(
   nextPage: () => Promise<void>;
   prevPage: () => Promise<void>;
   reset: () => void;
+  hasNext: boolean;
+  hasPrev: boolean;
 } => {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentLimit, setCurrentLimit] = useState(10);
 
-  const { state, execute, reset } = useApi(() =>
-    apiCall(currentPage, currentLimit),
+  const { state, execute, reset } = useApi(
+    () => apiCall(currentPage, currentLimit),
+    config,
   );
 
   const loadPage = useCallback(
@@ -151,11 +269,66 @@ export const usePaginatedApi = <T = any>(
     }
   }, [currentPage, currentLimit, execute]);
 
+  const hasNext = state.data ? currentPage < state.data.totalPages : false;
+  const hasPrev = currentPage > 1;
+
   return {
     state,
     loadPage,
     nextPage,
     prevPage,
+    reset,
+    hasNext,
+    hasPrev,
+  };
+};
+
+/**
+ * 防抖API Hook
+ * 用于处理需要防抖的API请求
+ */
+export const useDebouncedApi = <T = any>(
+  apiCall: (query: string) => Promise<T>,
+  delay: number = 300,
+  config: ApiConfig = {},
+): {
+  state: ApiState<T>;
+  execute: (query: string) => Promise<void>;
+  reset: () => void;
+} => {
+  const [query, setQuery] = useState('');
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { state, execute, reset } = useApi(() => apiCall(query), config);
+
+  const debouncedExecute = useCallback(
+    (newQuery: string) => {
+      setQuery(newQuery);
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        if (newQuery.trim()) {
+          execute();
+        }
+      }, delay);
+    },
+    [apiCall, delay, execute],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return {
+    state,
+    execute: debouncedExecute,
     reset,
   };
 };

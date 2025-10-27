@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Document } from '../types';
+import { Document, Chunk } from '../types';
 import { documentsApi } from '../services/api';
+import { usePaginatedApi } from '../hooks/useApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
+import Pagination from './Pagination';
 
-// 文档块接口
-interface DocumentChunk {
-  id: string;
-  documentId: string;
-  content: string;
-  index: number;
+// 文档块接口（扩展后端Chunk类型）
+interface DocumentChunk extends Chunk {
   tokenCount: number;
 }
 
@@ -29,13 +27,44 @@ const DocumentDetail = ({
   className = '',
 }: DocumentDetailProps) => {
   const [document, setDocument] = useState<Document | null>(null);
-  const [chunks, setChunks] = useState<DocumentChunk[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'content' | 'chunks'>('content');
   const [selectedChunk, setSelectedChunk] = useState<DocumentChunk | null>(
     null,
   );
+
+  // 使用分页Hook加载文档块
+  const {
+    state: chunksState,
+    loadPage: loadChunksPage,
+    nextPage,
+    prevPage,
+  } = usePaginatedApi(async (page: number, limit: number) => {
+    const response = await documentsApi.getDocumentChunksPaginated(documentId, {
+      page,
+      limit,
+      sort: 'chunkIndex',
+      order: 'asc',
+    });
+
+    // 处理块数据，将后端格式转换为前端格式
+    const chunksData = response.data.map((chunk: any) => ({
+      id: chunk.pointId,
+      documentId: chunk.docId,
+      content: chunk.content,
+      index: chunk.chunkIndex,
+      tokenCount: Math.floor(chunk.content.length / 4), // 估算token数量
+    }));
+
+    return {
+      data: chunksData,
+      total: response.pagination.total,
+      page: response.pagination.page,
+      limit: response.pagination.limit,
+      totalPages: response.pagination.totalPages,
+    };
+  });
 
   // 加载文档详情
   useEffect(() => {
@@ -45,25 +74,14 @@ const DocumentDetail = ({
         setError(null);
 
         // 调用实际的API
-        const [documentResponse, chunksResponse] = await Promise.all([
-          documentsApi.getDocument(documentId),
-          documentsApi.getDocumentChunks(documentId),
-        ]);
+        const documentResponse = await documentsApi.getDocument(documentId);
 
         // 处理文档数据
         const docData = documentResponse as Document;
-
-        // 处理块数据，将后端格式转换为前端格式
-        const chunksData = (chunksResponse as any[]).map((chunk) => ({
-          id: chunk.pointId,
-          documentId: chunk.docId,
-          content: chunk.content,
-          index: chunk.chunkIndex,
-          tokenCount: Math.floor(chunk.content.length / 4), // 估算token数量
-        }));
-
         setDocument(docData);
-        setChunks(chunksData);
+
+        // 加载第一页的文档块
+        await loadChunksPage(1, 20);
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载文档详情失败');
       } finally {
@@ -74,33 +92,20 @@ const DocumentDetail = ({
     if (documentId) {
       loadDocumentDetail();
     }
-  }, [documentId]);
+  }, [documentId, loadChunksPage]);
 
   // 获取状态显示文本和样式
-  const getStatusInfo = (status: Document['status']) => {
-    switch (status) {
-      case 'new':
-        return { text: '新建', className: 'bg-gray-100 text-gray-800' };
-      case 'split_ok':
-        return { text: '分割完成', className: 'bg-blue-100 text-blue-800' };
-      case 'embed_ok':
-        return { text: '嵌入完成', className: 'bg-indigo-100 text-indigo-800' };
-      case 'synced':
-        return { text: '已同步', className: 'bg-green-100 text-green-800' };
-      case 'failed':
-        return { text: '失败', className: 'bg-red-100 text-red-800' };
-      case 'retrying':
-        return { text: '重试中', className: 'bg-yellow-100 text-yellow-800' };
-      case 'dead':
-        return { text: '已放弃', className: 'bg-gray-100 text-gray-800' };
-      default:
-        return { text: status, className: 'bg-gray-100 text-gray-800' };
+  const getStatusInfo = (isDeleted?: boolean) => {
+    if (isDeleted) {
+      return { text: '已删除', className: 'bg-red-100 text-red-800' };
     }
+    return { text: '正常', className: 'bg-green-100 text-green-800' };
   };
 
   // 格式化日期
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN', {
+  const formatDate = (timestamp?: number) => {
+    if (!timestamp) return '未知';
+    return new Date(timestamp).toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -144,7 +149,7 @@ const DocumentDetail = ({
     );
   }
 
-  const statusInfo = getStatusInfo(document.status);
+  const statusInfo = getStatusInfo(document.isDeleted);
 
   return (
     <div
@@ -187,7 +192,14 @@ const DocumentDetail = ({
         </div>
 
         <div className="mt-2 flex items-center space-x-6 text-sm text-secondary-500">
+          <span>文档ID: {document.docId}</span>
           <span>集合ID: {document.collectionId}</span>
+          <span>
+            文件大小:{' '}
+            {document.sizeBytes
+              ? `${(document.sizeBytes / 1024).toFixed(1)} KB`
+              : '未知'}
+          </span>
           <span>创建时间: {formatDate(document.createdAt)}</span>
           <span>更新时间: {formatDate(document.updatedAt)}</span>
         </div>
@@ -214,7 +226,7 @@ const DocumentDetail = ({
                 : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
             }`}
           >
-            文档块 ({chunks.length})
+            文档块 ({chunksState.data?.total || chunksState.data?.length || 0})
           </button>
         </nav>
       </div>
@@ -234,7 +246,7 @@ const DocumentDetail = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {chunks.length === 0 ? (
+            {!chunksState.data?.data || chunksState.data?.data?.length === 0 ? (
               <div className="text-center py-8 text-secondary-500">
                 该文档尚未被分割成块
               </div>
@@ -246,7 +258,7 @@ const DocumentDetail = ({
                     文档块列表
                   </h3>
                   <div className="max-h-96 overflow-y-auto space-y-2">
-                    {chunks.map(chunk => (
+                    {chunksState.data?.data?.map(chunk => (
                       <div
                         key={chunk.id}
                         onClick={() => setSelectedChunk(chunk)}
@@ -270,6 +282,23 @@ const DocumentDetail = ({
                       </div>
                     ))}
                   </div>
+
+                  {/* 分页组件 */}
+                  {chunksState.data && chunksState.data.totalPages > 1 && (
+                    <div className="mt-4">
+                      <Pagination
+                        currentPage={chunksState.data.page}
+                        totalPages={chunksState.data.totalPages}
+                        total={chunksState.data.total}
+                        limit={chunksState.data.limit}
+                        onPageChange={page =>
+                          loadChunksPage(page, chunksState.data?.limit || 20)
+                        }
+                        onLimitChange={limit => loadChunksPage(1, limit)}
+                        loading={chunksState.loading}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* 块详情 */}

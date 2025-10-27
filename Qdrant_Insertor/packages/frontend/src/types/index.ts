@@ -10,15 +10,13 @@ export * from '../../../../shared/types/index';
  * 集合接口
  */
 export interface Collection {
-  id: string;
   collectionId: string;
   name: string;
   description?: string;
-  documentCount?: number;
-  createdAt: string;
-  created_at: string;
-  updatedAt: string;
-  updated_at: string;
+  docCount?: number;
+  chunkCount?: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /**
@@ -41,35 +39,34 @@ export interface UpdateCollectionRequest {
  * 文档接口
  */
 export interface Document {
-  id: string;
+  docId: string;
   name: string;
   collectionId: string;
-  status:
-    | 'new'
-    | 'split_ok'
-    | 'embed_ok'
-    | 'synced'
-    | 'failed'
-    | 'retrying'
-    | 'dead';
-  createdAt: string;
-  created_at: string;
-  updatedAt: string;
-  updated_at: string;
-  errorMessage?: string;
+  key: string;
+  sizeBytes?: number;
+  mime?: string;
+  createdAt: number;
+  updatedAt?: number;
+  isDeleted?: boolean;
 }
 
 /**
  * 搜索结果接口
  */
 export interface SearchResult {
-  id: string;
-  documentId: string;
-  documentName: string;
-  collectionId: string;
-  collectionName: string;
-  content: string;
+  type: 'chunkResult' | 'graphResult';
   score: number;
+  content: string;
+  metadata: {
+    docId: string;
+    docName?: string;
+    collectionId: string;
+    collectionName?: string;
+    chunkIndex?: number;
+    titleChain?: string;
+    title?: string;
+    pointId?: string;
+  };
 }
 
 /**
@@ -121,11 +118,9 @@ export interface PaginatedResponse<T> {
  * 系统状态接口
  */
 export interface SystemStatus {
-  status: 'healthy' | 'degraded' | 'down';
-  collections: number;
-  documents: number;
-  qdrantConnected: boolean;
-  lastSyncTime?: string;
+  status: 'ok' | 'degraded' | 'unhealthy';
+  qdrant: 'ok' | 'unhealthy';
+  sqlite: 'ok' | 'unhealthy';
 }
 
 /**
@@ -145,4 +140,43 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+}
+
+/**
+ * 文档块接口
+ */
+export interface Chunk {
+  pointId: string;
+  docId: string;
+  chunkIndex: number;
+  content: string;
+  titleChain: string;
+  title?: string;
+  contentHash?: string;
+  createdAt?: number;
+}
+
+/**
+ * 上传文档响应接口
+ */
+export interface UploadDocumentResponse {
+  docId: string;
+  name: string;
+  collectionId: string;
+}
+
+/**
+ * 健康检查响应接口
+ */
+export interface HealthCheckResponse {
+  ok: boolean;
+}
+
+/**
+ * 详细健康检查响应接口
+ */
+export interface DetailedHealthCheckResponse {
+  status: 'ok' | 'degraded' | 'unhealthy';
+  qdrant: 'ok' | 'unhealthy';
+  sqlite: 'ok' | 'unhealthy';
 }

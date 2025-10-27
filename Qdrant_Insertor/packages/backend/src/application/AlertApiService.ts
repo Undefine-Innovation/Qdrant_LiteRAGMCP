@@ -103,6 +103,72 @@ export class AlertApiService {
   }
 
   /**
+   * 获取告警规则总数
+   */
+  async getAlertRulesCount(activeOnly?: boolean): Promise<number> {
+    try {
+      logger.info('Getting alert rules count');
+      return this.alertService.getAlertRulesCount(activeOnly);
+    } catch (error) {
+      logger.error('Failed to get alert rules count', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * 分页获取告警规则列表API
+   */
+  async getAlertRulesPaginated(
+    page: number,
+    limit: number,
+    sort: string = 'created_at',
+    order: 'asc' | 'desc' = 'desc',
+    activeOnly?: boolean,
+  ): Promise<{ rules: AlertRuleResponse[]; total: number }> {
+    try {
+      logger.info('Getting alert rules paginated', {
+        page,
+        limit,
+        sort,
+        order,
+        activeOnly,
+      });
+
+      const [rules, total] = await Promise.all([
+        this.alertService.getAlertRulesPaginated(
+          page,
+          limit,
+          sort,
+          order,
+          activeOnly,
+        ),
+        this.alertService.getAlertRulesCount(activeOnly),
+      ]);
+
+      const mappedRules = rules.map((rule) => ({
+        id: rule.id,
+        name: rule.name,
+        description: rule.description,
+        metricName: rule.metricName,
+        condition: rule.conditionOperator,
+        threshold: rule.thresholdValue,
+        severity: rule.severity,
+        enabled: rule.isActive,
+        cooldownMinutes: rule.cooldownMinutes,
+        notificationChannels: rule.notificationChannels,
+        createdAt: new Date(rule.createdAt).toISOString(),
+        updatedAt: new Date(rule.updatedAt).toISOString(),
+        lastTriggered: undefined, // AlertRule中没有这个字段
+      }));
+
+      return { rules: mappedRules, total };
+    } catch (error) {
+      logger.error('Failed to get alert rules paginated', { error });
+      throw error;
+    }
+  }
+
+  /**
    * 更新告警规则API
    */
   async updateAlertRule(

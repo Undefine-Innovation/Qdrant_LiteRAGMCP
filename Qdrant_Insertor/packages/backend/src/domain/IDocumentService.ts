@@ -16,7 +16,7 @@ export interface IDocumentService {
    * @returns 所有文档的数组
    */
   listAllDocuments(): Doc[];
-  
+
   /**
    * 分页获取文档列表
    * @param query - 分页查询参数
@@ -27,27 +27,38 @@ export interface IDocumentService {
     query: PaginationQuery,
     collectionId?: CollectionId,
   ): PaginatedResponse<Doc>;
-  
+
   /**
    * 根据ID获取文档
    * @param docId - 文档ID
    * @returns 文档对象，如果不存在则返回undefined
    */
   getDocumentById(docId: DocId): Doc | undefined;
-  
+
   /**
    * 重新同步文档
    * @param docId - 文档ID
    * @returns 重新同步后的文档对象
    */
   resyncDocument(docId: DocId): Promise<Doc>;
-  
+
   /**
    * 获取文档的块列表
    * @param docId - 文档ID
    * @returns 文档块数组
    */
   getDocumentChunks(docId: DocId): any[];
+
+  /**
+   * 分页获取文档的块列表
+   * @param docId - 文档ID
+   * @param query - 分页查询参数
+   * @returns 分页的文档块响应
+   */
+  getDocumentChunksPaginated(
+    docId: DocId,
+    query: PaginationQuery,
+  ): PaginatedResponse<any>;
 
   /**
    * 删除文档

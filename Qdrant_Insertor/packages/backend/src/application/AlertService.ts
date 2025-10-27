@@ -101,6 +101,32 @@ export class AlertService {
   }
 
   /**
+   * 获取告警规则总数
+   */
+  public getAlertRulesCount(activeOnly?: boolean): number {
+    return this.ruleManager.getAlertRulesCount(activeOnly);
+  }
+
+  /**
+   * 分页获取告警规则
+   */
+  public getAlertRulesPaginated(
+    page: number,
+    limit: number,
+    sort: string = 'created_at',
+    order: 'asc' | 'desc' = 'desc',
+    activeOnly?: boolean,
+  ): AlertRule[] {
+    return this.ruleManager.getAlertRulesPaginated(
+      page,
+      limit,
+      sort,
+      order,
+      activeOnly,
+    );
+  }
+
+  /**
    * 激活/停用告警规则
    */
   public setAlertRuleActive(id: string, isActive: boolean): boolean {

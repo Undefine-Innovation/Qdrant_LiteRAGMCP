@@ -33,30 +33,38 @@ const SearchPage = () => {
   );
 
   // 获取搜索结果
-  const { state: searchState, execute: executeSearch } = useApi(() =>
-    searchApi.searchPaginated({
-      q: query,
-      collectionId: selectedCollection || undefined,
-      ...paginationParams,
-    }),
+  const { state: searchState, execute: executeSearch } = useApi(
+    () =>
+      searchApi.searchPaginated({
+        q: query,
+        collectionId: selectedCollection || undefined,
+        ...paginationParams,
+      }),
+    {
+      maxRetries: 2,
+      retryDelay: 500,
+      retryCondition: error => {
+        // 搜索失败时不重试，避免重复请求
+        return false;
+      },
+    },
   );
 
   // 执行搜索
   const handleSearch = async (
     searchQuery: string,
     collectionId?: string,
-  ): Promise<SearchResult[]> => {
+  ): Promise<void> => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       setTotalResults(0);
       setTotalPages(0);
-      return [];
+      return;
     }
 
     setQuery(searchQuery);
     setSelectedCollection(collectionId || '');
     setPaginationParams(prev => ({ ...prev, page: 1 }));
-    return [];
   };
 
   // 处理页码变化
@@ -77,7 +85,7 @@ const SearchPage = () => {
 
   // 处理结果选择
   const handleResultSelect = (result: SearchResult) => {
-    setSelectedDocumentId(result.documentId);
+    setSelectedDocumentId(result.metadata.docId);
     setShowDetailModal(true);
   };
 
@@ -128,7 +136,10 @@ const SearchPage = () => {
             <option value="">所有集合</option>
             {(collectionsState.data as any)?.data?.map(
               (collection: Collection) => (
-                <option key={collection.id} value={collection.id}>
+                <option
+                  key={collection.collectionId}
+                  value={collection.collectionId}
+                >
                   {collection.name}
                 </option>
               ),

@@ -2,47 +2,12 @@
 
 ValidationError:
   description: Validation Error
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/error.yaml#/ErrorResponse'
-      example:
-        error:
-          code: VALIDATION_ERROR
-          message: "field 'q' is required"
-          details:
-            field: q
-            issue: required
 
 NotFoundError:
   description: Resource Not Found
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/error.yaml#/ErrorResponse'
-      example:
-        error:
-          code: NOT_FOUND
-          message: "Resource not found"
 
 InternalServerError:
   description: Internal Server Error
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/error.yaml#/ErrorResponse'
-      example:
-        error:
-          code: INTERNAL_SERVER_ERROR
-          message: 'An unexpected error occurred.'
 
 FileTooLargeError:
   description: Payload Too Large
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/error.yaml#/ErrorResponse'
-      example:
-        error:
-          code: FILE_TOO_LARGE
-          message: "File size exceeds the maximum limit of 10MB"

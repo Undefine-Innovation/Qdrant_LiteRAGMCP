@@ -115,7 +115,10 @@ const DocumentsPage = () => {
             <option value="">选择集合</option>
             {(collectionsState.data as any)?.data?.map(
               (collection: Collection) => (
-                <option key={collection.id} value={collection.id}>
+                <option
+                  key={collection.collectionId}
+                  value={collection.collectionId}
+                >
                   {collection.name}
                 </option>
               ),

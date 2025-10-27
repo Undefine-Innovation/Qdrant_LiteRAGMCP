@@ -94,8 +94,48 @@ export function createMonitoringRoutes(
   // 获取告警规则列表
   alertRulesRouter.get('/', async (req, res) => {
     try {
-      const result = await monitoringApiService.getAlertRules();
-      res.json(result);
+      // 检查是否提供了分页参数，如果没有则返回所有结果（向后兼容）
+      const hasPaginationParams = req.query.page || req.query.limit;
+
+      if (hasPaginationParams) {
+        const page = req.query.page
+          ? parseInt(req.query.page as string, 10)
+          : 1;
+        const limit = req.query.limit
+          ? parseInt(req.query.limit as string, 10)
+          : 20;
+        const sort = (req.query.sort as string) || 'created_at';
+        const order = (req.query.order as string) === 'asc' ? 'asc' : 'desc';
+        const activeOnly = req.query.activeOnly === 'true';
+
+        const result = await monitoringApiService.getAlertRulesPaginated(
+          page,
+          limit,
+          sort,
+          order,
+          activeOnly,
+        );
+
+        // 构建分页响应
+        const totalPages = Math.ceil(result.total / limit);
+        const response = {
+          data: result.rules,
+          pagination: {
+            page,
+            limit,
+            total: result.total,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+          },
+        };
+
+        res.json(response);
+      } else {
+        // 向后兼容：如果没有分页参数，返回所有结果
+        const result = await monitoringApiService.getAlertRules();
+        res.json(result);
+      }
     } catch (error) {
       logger.error('Get alert rules failed', { error });
       res.status(500).json({ error: 'Failed to get alert rules' });

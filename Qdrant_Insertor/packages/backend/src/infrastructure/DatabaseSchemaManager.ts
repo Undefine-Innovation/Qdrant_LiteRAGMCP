@@ -81,11 +81,8 @@ export class DatabaseSchemaManager {
     try {
       this.logger.info(`执行${scriptName}脚本...`);
 
-      // 分割SQL语句并执行
-      const statements = sql
-        .split(';')
-        .map((stmt) => stmt.trim())
-        .filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'));
+      // 分割SQL语句并执行，处理触发器等多行语句
+      const statements = this.splitSqlStatements(sql);
 
       for (const statement of statements) {
         if (statement.trim()) {
@@ -106,5 +103,71 @@ export class DatabaseSchemaManager {
       this.logger.error(`执行${scriptName}脚本失败`, error);
       throw error;
     }
+  }
+
+  /**
+   * 分割SQL语句，正确处理触发器等多行语句
+   */
+  private splitSqlStatements(sql: string): string[] {
+    const statements: string[] = [];
+    let currentStatement = '';
+    let inTrigger = false;
+    let triggerDepth = 0;
+
+    const lines = sql.split('\n');
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // 跳过注释行
+      if (trimmedLine.startsWith('--')) {
+        continue;
+      }
+
+      currentStatement += line + '\n';
+
+      // 检测触发器开始
+      if (trimmedLine.toUpperCase().startsWith('CREATE TRIGGER')) {
+        inTrigger = true;
+        triggerDepth = 0;
+      }
+
+      // 检测BEGIN和END
+      if (inTrigger) {
+        if (trimmedLine.toUpperCase().includes('BEGIN')) {
+          triggerDepth++;
+        }
+        if (trimmedLine.toUpperCase().includes('END')) {
+          triggerDepth--;
+          if (triggerDepth === 0) {
+            inTrigger = false;
+            // 触发器结束，添加到语句列表
+            const triggerStatement = currentStatement.trim();
+            if (triggerStatement) {
+              statements.push(triggerStatement);
+            }
+            currentStatement = '';
+            continue;
+          }
+        }
+      }
+
+      // 如果不在触发器中且遇到分号，则语句结束
+      if (!inTrigger && trimmedLine.endsWith(';')) {
+        const statement = currentStatement.trim();
+        if (statement) {
+          statements.push(statement);
+        }
+        currentStatement = '';
+      }
+    }
+
+    // 添加最后一个语句（如果没有以分号结尾）
+    const lastStatement = currentStatement.trim();
+    if (lastStatement) {
+      statements.push(lastStatement);
+    }
+
+    return statements;
   }
 }

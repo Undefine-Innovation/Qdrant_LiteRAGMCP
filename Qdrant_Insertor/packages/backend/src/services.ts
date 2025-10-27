@@ -138,10 +138,14 @@ export async function initializeServices(
   const graphService: IGraphService = new GraphService();
   const autoGCService = new AutoGCService(dbRepo, qdrantRepo, logger, config);
 
-  const collectionService: ICollectionService = new CollectionService(dbRepo);
+  const collectionService: ICollectionService = new CollectionService(
+    dbRepo,
+    qdrantRepo,
+  );
   const documentService: IDocumentService = new DocumentService(
     dbRepo,
     importService,
+    qdrantRepo, // Add QdrantRepo dependency
   );
 
   // 初始化监控服务

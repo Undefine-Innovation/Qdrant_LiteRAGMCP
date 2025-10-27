@@ -111,7 +111,7 @@ export class DocsTable {
    */
   getCount(collectionId?: CollectionId): number {
     let sql = 'SELECT COUNT(*) as count FROM docs WHERE is_deleted = 0';
-    let params: any[] = [];
+    const params: unknown[] = [];
 
     if (collectionId) {
       sql += ' AND collectionId = ?';
@@ -153,7 +153,7 @@ export class DocsTable {
       SELECT * FROM docs
       WHERE is_deleted = 0
     `;
-    let params: any[] = [];
+    const params: unknown[] = [];
 
     if (collectionId) {
       sql += ' AND collectionId = ?';

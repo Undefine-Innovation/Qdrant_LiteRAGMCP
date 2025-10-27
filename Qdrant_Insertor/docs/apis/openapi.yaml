@@ -1,20 +1,90 @@
 openapi: 3.0.0
 info:
-  title: RAG System API
+  title: Qdrant MCP RAG System API
   version: 1.0.0
-  description: API for Document-level RAG Retrieval System with Knowledge Graph capabilities.
+  description: |
+    # Qdrant MCP RAG System API
+    
+    这是一个基于Qdrant向量数据库的文档级RAG（检索增强生成）系统API，支持知识图谱功能。
+    
+    ## 功能概述
+    
+    - **文档管理**: 上传、存储、检索和管理各种格式的文档
+    - **向量搜索**: 基于语义相似度的高效文档检索
+    - **集合管理**: 组织和管理文档集合
+    - **知识图谱**: 提取和存储文档中的实体关系
+    - **分页搜索**: 支持大规模文档集的高效分页检索
+    
+    ## 核心概念
+    
+    ### 集合 (Collections)
+    集合是文档的逻辑分组，每个集合包含一组相关的文档。集合有助于组织和管理不同主题或项目的文档。
+    
+    ### 文档 (Documents)
+    文档是系统中的基本内容单元，可以是各种格式的文件（如PDF、Markdown、TXT等）。上传后，文档会被自动处理和分块。
+    
+    ### 文档块 (Chunks)
+    文档被自动分割成更小的文本块，每个块都会生成向量嵌入，用于语义搜索。这种分块策略提高了检索的精确度和相关性。
+    
+    ## 使用场景
+    
+    - **企业知识库**: 构建企业内部文档检索系统
+    - **学术研究**: 高效检索和分析学术论文
+    - **技术文档**: 快速查找技术文档和API参考
+    - **内容管理**: 管理和检索大量内容资源
+    - **智能问答**: 为问答系统提供语义检索能力
+    
+    ## 快速开始
+    
+    1. **创建集合**: 首先创建一个集合来组织您的文档
+    2. **上传文档**: 将文档上传到指定集合
+    3. **搜索内容**: 使用自然语言查询检索相关内容
+    
+    ## API认证
+    
+    当前版本不需要认证，但在生产环境中建议配置适当的认证机制。
+    
+    ## 错误处理
+    
+    API使用标准HTTP状态码，所有错误响应都包含详细的错误信息和错误代码，便于调试和处理。
+    
+    ## 限制说明
+    
+    - 单个文件大小限制: 10MB
+    - 搜索结果最大数量: 100
+    - 批量操作限制: 100个项目/批次
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 servers:
   - url: /api
-    description: Local Development Server
+    description: 本地开发服务器
+  - url: https://your-production-server.com/api
+    description: 生产环境服务器
+security:
+  - {}
+
+tags:
+  - name: 健康检查
+    description: 系统健康状态和监控相关端点
+  - name: 搜索
+    description: 文档搜索和检索相关端点
+  - name: 文档管理
+    description: 文档上传、管理和操作相关端点
+  - name: 集合管理
+    description: 集合创建、管理和操作相关端点
 
 paths:
   /health:
     get:
-      summary: Health check
-      description: Simple health check endpoint to verify API is running.
+      operationId: healthCheck
+      tags:
+        - 健康检查
+      summary: 简单健康检查
+      description: 简单的健康检查端点，用于验证API是否正常运行。
       responses:
         '200':
-          description: System is healthy
+          description: 系统健康
           content:
             application/json:
               schema:
@@ -23,14 +93,29 @@ paths:
                   ok:
                     type: boolean
                     example: true
+              example:
+                ok: true
+        '500':
+          description: 内部服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: "健康检查失败"
 
   /healthz:
     get:
-      summary: Detailed health check
-      description: Detailed health check with service status information.
+      operationId: detailedHealthCheck
+      tags:
+        - 健康检查
+      summary: 详细健康检查
+      description: 详细的健康检查，包含各服务的状态信息。
       responses:
         '200':
-          description: System is healthy
+          description: 系统健康
           content:
             application/json:
               schema:
@@ -39,25 +124,68 @@ paths:
                   status:
                     type: string
                     enum: ['ok', 'degraded', 'unhealthy']
+                    description: 整体系统状态
                   qdrant:
                     type: string
                     enum: ['ok', 'unhealthy']
+                    description: Qdrant向量数据库状态
                   sqlite:
                     type: string
                     enum: ['ok', 'unhealthy']
+                    description: SQLite数据库状态
+              example:
+                status: "ok"
+                qdrant: "ok"
+                sqlite: "ok"
         '503':
-          description: Service Unavailable
+          description: 服务不可用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: SERVICE_UNAVAILABLE
+                  message: "One or more services are unavailable"
+        '500':
+          description: 内部服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: "健康检查失败"
 
   /metrics:
     get:
-      summary: Prometheus metrics endpoint
+      operationId: getMetrics
+      tags:
+        - 健康检查
+      summary: Prometheus指标端点
+      description: 提供Prometheus格式的系统指标数据，用于监控和告警。
       responses:
         '200':
-          description: Prometheus metrics in exposition format
+          description: Prometheus格式的指标数据
           content:
             text/plain:
               schema:
                 type: string
+              example: |
+                # HELP api_requests_total Total number of API requests
+                # TYPE api_requests_total counter
+                api_requests_total{method="GET",endpoint="/search"} 1234
+        '500':
+          description: 内部服务器错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: "获取指标失败"
 
   /upload:
     $ref: './paths/upload.yaml#/upload'
@@ -77,14 +205,30 @@ paths:
   /docs/{docId}/extract-graph:
     $ref: './paths/documents.yaml#/extractGraph'
 
+  /docs/{docId}/chunks:
+    $ref: './paths/documents.yaml#/docChunks'
+
   /collections:
-    $ref: './paths/collections.yaml#/collections'
+    get:
+      $ref: './paths/collections.yaml#/get'
+    post:
+      $ref: './paths/collections.yaml#/post'
 
   /collections/{collectionId}:
-    $ref: './paths/collections.yaml#/collectionById'
+    get:
+      $ref: './paths/collections.yaml#/getById'
+    put:
+      $ref: './paths/collections.yaml#/put'
+    patch:
+      $ref: './paths/collections.yaml#/patch'
+    delete:
+      $ref: './paths/collections.yaml#/delete'
 
   /search:
     $ref: './paths/search.yaml#/search'
+
+  /search/paginated:
+    $ref: './paths/search.yaml#/searchPaginated'
 
 components:
   schemas:

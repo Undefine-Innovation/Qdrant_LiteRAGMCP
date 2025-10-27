@@ -1,135 +1,417 @@
 # Collection Paths
 
-/collections:
-  get:
-    summary: List all collections
-    description: Get a list of all collections in the system.
+get:
+    operationId: getCollections
+    tags:
+      - 集合管理
+    summary: 获取所有集合列表
+    description: |
+      获取系统中所有集合的列表，包括基本信息和统计数据。
+      
+      ## 返回信息
+      
+      每个集合包含以下信息：
+      - **基本信息**: 集合ID、名称、描述
+      - **统计数据**: 文档数量、文本块数量
+      - **时间信息**: 创建时间、更新时间
+      
+      ## 使用场景
+      
+      - **集合浏览**: 在管理界面显示所有可用集合
+      - **数据概览**: 了解系统中的文档分布情况
+      - **选择界面**: 为文档上传提供集合选择选项
+      - **系统监控**: 监控集合数量和增长趋势
+      
+      ## 注意事项
+      
+      - **性能考虑**: 大量集合可能影响响应时间
+      - **权限控制**: 返回的集合列表可能受用户权限限制
     responses:
       '200':
-        description: List of collections
+        description: 集合列表获取成功
         content:
           application/json:
             schema:
               type: array
               items:
                 $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+            example:
+              - collectionId: "tech-docs"
+                name: "技术文档"
+                description: "技术相关的文档集合"
+                docCount: 25
+                chunkCount: 156
+                createdAt: 1672531200000
+                updatedAt: 1672531200000
+              - collectionId: "user-guides"
+                name: "用户指南"
+                description: "产品使用指南和教程"
+                docCount: 12
+                chunkCount: 89
+                createdAt: 1672531200000
+                updatedAt: 1672531200000
+      '400':
+        $ref: '../components/responses/common.yaml#/ValidationError'
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
-  post:
-    summary: Create a new collection
-    description: Create a new collection with the specified name and optional description.
+post:
+    operationId: createCollection
+    tags:
+      - 集合管理
+    summary: 创建新集合
+    description: |
+      创建一个新的集合，用于组织和管理相关文档。
+      
+      ## 集合概念
+      
+      集合是文档的逻辑分组单位，具有以下特点：
+      - **文档组织**: 将相关文档组织在一起
+      - **搜索范围**: 可以限制搜索在特定集合内进行
+      - **权限控制**: 可以基于集合实现访问控制
+      - **配置隔离**: 不同集合可以有不同的处理配置
+      
+      ## 使用场景
+      
+      - **主题分类**: 按主题或领域创建集合（如技术文档、用户指南）
+      - **部门隔离**: 按部门或团队创建集合
+      - **项目组织**: 按项目创建集合，管理项目相关文档
+      - **权限管理**: 为不同用户组创建专用集合
+      
+      ## 注意事项
+      
+      - **名称唯一性**: 集合名称在系统中必须唯一
+      - **ID生成**: 集合ID由系统自动生成，基于名称
+      - **初始状态**: 新创建的集合不包含任何文档
     requestBody:
       required: true
       content:
         application/json:
           schema:
             $ref: '../components/schemas/collection.yaml#/CreateCollectionRequest'
+          example:
+            name: "技术文档"
+            description: "技术相关的文档集合，包括API文档、开发指南等"
     responses:
       '201':
-        description: Collection created successfully
+        description: 集合创建成功
         content:
           application/json:
             schema:
               $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+            example:
+              collectionId: "tech-docs"
+              name: "技术文档"
+              description: "技术相关的文档集合，包括API文档、开发指南等"
+              docCount: 0
+              chunkCount: 0
+              createdAt: 1672531200000
+              updatedAt: 1672531200000
       '422':
-        $ref: '../components/responses/common.yaml#/ValidationError'
+        description: 请求参数验证失败
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "集合名称已存在"
+                details:
+                  field: "name"
+                  reason: "集合名称 'tech-docs' 已存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
 
-/collections/{collectionId}:
-  get:
-    summary: Get a collection by ID
-    description: Retrieve a specific collection by its ID.
+getById:
+    operationId: getCollectionById
+    tags:
+      - 集合管理
+    summary: 根据ID获取集合
+    description: |
+      根据集合ID检索特定集合的详细信息。
+      
+      ## 返回信息
+      
+      返回的集合信息包括：
+      - **基本信息**: 集合ID、名称、描述
+      - **统计数据**: 文档数量、文本块数量
+      - **时间信息**: 创建时间、更新时间
+      
+      ## 使用场景
+      
+      - **集合详情**: 在集合详情页面显示完整信息
+      - **编辑准备**: 获取集合信息以进行编辑操作
+      - **数据统计**: 显示特定集合的文档和文本块统计
+      - **权限检查**: 验证用户对集合的访问权限
+      
+      ## 注意事项
+      
+      - **实时数据**: 统计数据是实时计算的
+      - **性能考虑**: 大集合的统计计算可能需要更多时间
     parameters:
       - in: path
         name: collectionId
         schema:
           type: string
         required: true
-        description: The ID of the collection to retrieve.
+        description: |
+          要检索的集合ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "tech-docs"
+        example: "tech-docs"
     responses:
       '200':
-        description: Collection details
+        description: 集合详情获取成功
         content:
           application/json:
             schema:
               $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+            example:
+              collectionId: "tech-docs"
+              name: "技术文档"
+              description: "技术相关的文档集合"
+              docCount: 25
+              chunkCount: 156
+              createdAt: 1672531200000
+              updatedAt: 1672531200000
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'non-existent-collection' 不存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
-  put:
-    summary: Update a collection (full update)
-    description: Update a collection with new name and/or description. This operation replaces all fields.
+put:
+    operationId: updateCollection
+    tags:
+      - 集合管理
+    summary: 完整更新集合
+    description: |
+      完整更新集合的名称和描述。此操作会替换所有字段。
+      
+      ## 更新操作
+      
+      完整更新会：
+      - **替换所有字段**: 无论是否提供，所有字段都会被更新
+      - **验证新值**: 验证新的名称和描述是否符合要求
+      - **更新时间戳**: 自动更新最后修改时间
+      - **保持关联**: 保持与现有文档的关联关系
+      
+      ## 使用场景
+      
+      - **批量更新**: 需要同时更新多个字段时
+      - **表单提交**: 从表单提交完整数据时
+      - **数据迁移**: 批量修改集合信息时
+      
+      ## 注意事项
+      
+      - **名称唯一性**: 新名称必须在整个系统中唯一
+      - **文档关联**: 更新不会影响集合中的文档
+      - **ID不变**: 集合ID不会更改
     parameters:
       - in: path
         name: collectionId
         schema:
           type: string
         required: true
-        description: The ID of the collection to update.
+        description: |
+          要更新的集合ID。
+          
+          **注意**: 集合必须存在
+        example: "tech-docs"
     requestBody:
       required: true
       content:
         application/json:
           schema:
             $ref: '../components/schemas/collection.yaml#/UpdateCollectionRequest'
+          example:
+            name: "技术文档库"
+            description: "更新后的技术文档集合描述"
     responses:
       '200':
-        description: Collection updated successfully
+        description: 集合更新成功
         content:
           application/json:
             schema:
               $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+            example:
+              collectionId: "tech-docs"
+              name: "技术文档库"
+              description: "更新后的技术文档集合描述"
+              docCount: 25
+              chunkCount: 156
+              createdAt: 1672531200000
+              updatedAt: 1672617600000
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'non-existent-collection' 不存在"
       '422':
-        $ref: '../components/responses/common.yaml#/ValidationError'
+        description: 请求参数验证失败
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "集合名称已存在"
+                details:
+                  field: "name"
+                  reason: "集合名称 'existing-name' 已存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
-  patch:
-    summary: Update a collection (partial update)
-    description: Update specific fields of a collection. Only provided fields will be updated.
+patch:
+    operationId: patchCollection
+    tags:
+      - 集合管理
+    summary: 部分更新集合
+    description: |
+      部分更新集合的字段。只更新提供的字段，未提供的字段保持不变。
+      
+      ## 更新操作
+      
+      部分更新会：
+      - **选择性更新**: 只更新请求中包含的字段
+      - **保持不变**: 未提供的字段保持原值
+      - **验证新值**: 验证提供的字段值是否符合要求
+      - **更新时间戳**: 自动更新最后修改时间
+      
+      ## 使用场景
+      
+      - **单字段更新**: 只需要更新名称或描述中的一个
+      - **渐进式更新**: 分步骤更新集合信息
+      - **API灵活性**: 提供更灵活的更新选项
+      
+      ## 注意事项
+      
+      - **空请求**: 请求体不能为空，至少包含一个字段
+      - **名称唯一性**: 如果更新名称，新名称必须唯一
+      - **文档关联**: 更新不会影响集合中的文档
     parameters:
       - in: path
         name: collectionId
         schema:
           type: string
         required: true
-        description: The ID of the collection to update.
+        description: |
+          要更新的集合ID。
+          
+          **注意**: 集合必须存在
+        example: "tech-docs"
     requestBody:
       required: true
       content:
         application/json:
           schema:
             $ref: '../components/schemas/collection.yaml#/UpdateCollectionRequest'
+          example:
+            description: "更新后的集合描述，名称保持不变"
     responses:
       '200':
-        description: Collection updated successfully
+        description: 集合更新成功
         content:
           application/json:
             schema:
               $ref: '../components/schemas/collection.yaml#/CollectionResponse'
+            example:
+              collectionId: "tech-docs"
+              name: "技术文档"
+              description: "更新后的集合描述，名称保持不变"
+              docCount: 25
+              chunkCount: 156
+              createdAt: 1672531200000
+              updatedAt: 1672617600000
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'non-existent-collection' 不存在"
       '422':
-        $ref: '../components/responses/common.yaml#/ValidationError'
+        description: 请求参数验证失败
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "集合名称已存在"
+                details:
+                  field: "name"
+                  reason: "集合名称 'existing-name' 已存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
-  delete:
-    summary: Delete a collection
-    description: Delete a collection and all its associated documents and chunks.
+delete:
+    operationId: deleteCollection
+    tags:
+      - 集合管理
+    summary: 删除集合
+    description: |
+      删除集合及其所有关联的文档和文本块。
+      
+      ## 删除操作影响
+      
+      删除集合会同时清理：
+      - **集合元数据**: 从SQLite数据库删除集合信息
+      - **文档数据**: 删除集合中的所有文档
+      - **文本块数据**: 删除所有文档的文本块
+      - **向量嵌入**: 从Qdrant数据库删除相关向量
+      - **原始文件**: 删除文档的原始文件
+      
+      ## 注意事项
+      
+      - **不可逆操作**: 删除后无法恢复，请谨慎操作
+      - **级联删除**: 所有相关数据会被完全清理
+      - **搜索影响**: 删除后集合内容将不再出现在搜索结果中
+      
+      ## 使用场景
+      
+      - **内容清理**: 清理不再需要的集合和内容
+      - **隐私保护**: 删除包含敏感信息的整个集合
+      - **存储管理**: 释放大量存储空间
+      - **重组数据**: 重新组织文档结构前的清理工作
     parameters:
       - in: path
         name: collectionId
         schema:
           type: string
         required: true
-        description: The ID of the collection to delete.
+        description: |
+          要删除的集合ID。
+          
+          **警告**: 此操作不可逆，会删除集合中的所有文档
+        example: "tech-docs"
     responses:
       '204':
-        description: Collection deleted successfully
+        description: 集合删除成功，无返回内容
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'non-existent-collection' 不存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'

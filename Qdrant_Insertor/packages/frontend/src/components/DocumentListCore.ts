@@ -93,13 +93,10 @@ export class DocumentListCore {
   /**
    * 生成分页数组
    */
-  static generatePagination(
-    currentPage: number,
-    totalPages: number,
-  ): number[] {
+  static generatePagination(currentPage: number, totalPages: number): number[] {
     const pages = [];
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
 
     // 显示页码范围
     if (startPage > 1) {

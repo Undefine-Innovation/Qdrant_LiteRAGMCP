@@ -1,5 +1,10 @@
 import type { Database } from 'better-sqlite3';
-import type { ChunkMeta, PointId, DocId, CollectionId } from '../../../domain/types.js';
+import type {
+  ChunkMeta,
+  PointId,
+  DocId,
+  CollectionId,
+} from '../../../domain/types.js';
 import {
   SELECT_CHUNK_BY_POINT_ID,
   SELECT_CHUNKS_BY_DOC_ID,

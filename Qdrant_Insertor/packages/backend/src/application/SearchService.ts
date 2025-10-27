@@ -219,7 +219,7 @@ export class SearchService implements ISearchService {
         // Fallback to keyword search only
         const kwResults = this.sqliteRepo.chunksFts5.search(
           query,
-          collectionId || '' as CollectionId,
+          collectionId || ('' as CollectionId),
           limit * page, // Get more results to calculate pagination
         );
         if (!kwResults) {
@@ -258,7 +258,11 @@ export class SearchService implements ISearchService {
       const searchLimit = limit * page; // Get enough results to calculate pagination
       const [keywordResults, semanticResults] = await Promise.all([
         // a. Keyword search
-        this.sqliteRepo.chunksFts5.search(query, collectionId || '' as CollectionId, searchLimit),
+        this.sqliteRepo.chunksFts5.search(
+          query,
+          collectionId || ('' as CollectionId),
+          searchLimit,
+        ),
         // b. Vector search - only if collectionId is provided
         collectionId
           ? this.qdrantRepo.search(collectionId, {
@@ -296,7 +300,7 @@ export class SearchService implements ISearchService {
       // 4. Get chunk details for all fused results
       const chunks = this.sqliteRepo.getChunksByPointIds(
         fusedPointIds,
-        collectionId || '' as CollectionId,
+        collectionId || ('' as CollectionId),
       );
       const chunksMap = new Map(chunks.map((c) => [c.pointId, c]));
 

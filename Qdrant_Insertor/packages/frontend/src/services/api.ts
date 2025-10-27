@@ -1,5 +1,15 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { PaginationParams } from '../types/index.js';
+import {
+  PaginationParams,
+  Collection,
+  Document,
+  SearchResult,
+  PaginatedResponse,
+  Chunk,
+  UploadDocumentResponse,
+  HealthCheckResponse,
+  DetailedHealthCheckResponse,
+} from '../types/index.js';
 
 /**
  * API 响应接口
@@ -163,21 +173,26 @@ export const collectionsApi = {
   /**
    * 获取集合列表（支持分页）
    */
-  getCollections: async (params?: PaginationQueryParams) => {
+  getCollections: async (
+    params?: PaginationQueryParams,
+  ): Promise<Collection[] | PaginatedResponse<Collection>> => {
     return apiClient.get('/collections', { params });
   },
 
   /**
    * 获取单个集合
    */
-  getCollection: async (id: string) => {
+  getCollection: async (id: string): Promise<Collection> => {
     return apiClient.get(`/collections/${id}`);
   },
 
   /**
    * 创建集合
    */
-  createCollection: async (data: { name: string; description?: string }) => {
+  createCollection: async (data: {
+    name: string;
+    description?: string;
+  }): Promise<Collection> => {
     return apiClient.post('/collections', data);
   },
 
@@ -187,7 +202,7 @@ export const collectionsApi = {
   updateCollection: async (
     id: string,
     data: { name?: string; description?: string },
-  ) => {
+  ): Promise<Collection> => {
     return apiClient.put(`/collections/${id}`, data);
   },
 
@@ -197,14 +212,14 @@ export const collectionsApi = {
   patchCollection: async (
     id: string,
     data: { name?: string; description?: string },
-  ) => {
+  ): Promise<Collection> => {
     return apiClient.patch(`/collections/${id}`, data);
   },
 
   /**
    * 删除集合
    */
-  deleteCollection: async (id: string) => {
+  deleteCollection: async (id: string): Promise<void> => {
     return apiClient.delete(`/collections/${id}`);
   },
 };
@@ -218,21 +233,24 @@ export const documentsApi = {
    */
   getDocuments: async (
     params?: PaginationQueryParams & { collectionId?: string },
-  ) => {
+  ): Promise<Document[] | PaginatedResponse<Document>> => {
     return apiClient.get('/docs', { params });
   },
 
   /**
    * 获取单个文档
    */
-  getDocument: async (id: string) => {
+  getDocument: async (id: string): Promise<Document> => {
     return apiClient.get(`/docs/${id}`);
   },
 
   /**
    * 上传文档到指定集合
    */
-  uploadToCollection: async (collectionId: string, file: File) => {
+  uploadToCollection: async (
+    collectionId: string,
+    file: File,
+  ): Promise<UploadDocumentResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     return apiClient.upload(`/collections/${collectionId}/docs`, formData);
@@ -241,7 +259,7 @@ export const documentsApi = {
   /**
    * 上传文档到默认集合
    */
-  uploadDocument: async (file: File) => {
+  uploadDocument: async (file: File): Promise<UploadDocumentResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     return apiClient.upload('/upload', formData);
@@ -250,22 +268,32 @@ export const documentsApi = {
   /**
    * 重新同步文档
    */
-  resyncDocument: async (id: string) => {
+  resyncDocument: async (id: string): Promise<Document> => {
     return apiClient.put(`/docs/${id}/resync`);
   },
 
   /**
    * 删除文档
    */
-  deleteDocument: async (id: string) => {
+  deleteDocument: async (id: string): Promise<void> => {
     return apiClient.delete(`/docs/${id}`);
   },
 
   /**
    * 获取文档的块列表
    */
-  getDocumentChunks: async (id: string) => {
+  getDocumentChunks: async (id: string): Promise<Chunk[]> => {
     return apiClient.get(`/docs/${id}/chunks`);
+  },
+
+  /**
+   * 获取文档的块列表（支持分页）
+   */
+  getDocumentChunksPaginated: async (
+    id: string,
+    params?: PaginationQueryParams,
+  ): Promise<Chunk[] | PaginatedResponse<Chunk>> => {
+    return apiClient.get(`/docs/${id}/chunks`, { params });
   },
 };
 
@@ -278,9 +306,9 @@ export const searchApi = {
    */
   search: async (params: {
     q: string;
-    collectionId?: string;
+    collectionId: string;
     limit?: number;
-  }) => {
+  }): Promise<SearchResult[]> => {
     return apiClient.get('/search', { params });
   },
 
@@ -289,8 +317,95 @@ export const searchApi = {
    */
   searchPaginated: async (
     params: PaginationQueryParams & { q: string; collectionId?: string },
-  ) => {
+  ): Promise<PaginatedResponse<SearchResult>> => {
     return apiClient.get('/search/paginated', { params });
+  },
+};
+
+/**
+ * 监控相关API
+ */
+export const monitoringApi = {
+  /**
+   * 获取告警规则列表
+   */
+  getAlertRules: async () => {
+    return apiClient.get('/alert-rules');
+  },
+
+  /**
+   * 获取告警规则列表（支持分页）
+   */
+  getAlertRulesPaginated: async (params?: PaginationQueryParams) => {
+    return apiClient.get('/alert-rules', { params });
+  },
+
+  /**
+   * 获取告警历史
+   */
+  getAlertHistory: async (params?: {
+    limit?: number;
+    offset?: number;
+    ruleId?: string;
+    timeRange?: string;
+  }) => {
+    return apiClient.get('/alerts/history', { params });
+  },
+
+  /**
+   * 创建告警规则
+   */
+  createAlertRule: async (data: any) => {
+    return apiClient.post('/alert-rules', data);
+  },
+
+  /**
+   * 更新告警规则
+   */
+  updateAlertRule: async (id: string, data: any) => {
+    return apiClient.put(`/alert-rules/${id}`, data);
+  },
+
+  /**
+   * 删除告警规则
+   */
+  deleteAlertRule: async (id: string) => {
+    return apiClient.delete(`/alert-rules/${id}`);
+  },
+
+  /**
+   * 获取通知渠道列表
+   */
+  getNotificationChannels: async () => {
+    return apiClient.get('/notification-channels');
+  },
+
+  /**
+   * 创建通知渠道
+   */
+  createNotificationChannel: async (data: any) => {
+    return apiClient.post('/notification-channels', data);
+  },
+
+  /**
+   * 更新通知渠道
+   */
+  updateNotificationChannel: async (id: string, data: any) => {
+    return apiClient.put(`/notification-channels/${id}`, data);
+  },
+
+  /**
+   * 删除通知渠道
+   */
+  deleteNotificationChannel: async (id: string) => {
+    return apiClient.delete(`/notification-channels/${id}`);
+  },
+
+  /**
+   * 测试通知
+   */
+  testNotification: async (id: string, data: any) => {
+    return apiClient.post(`/notification-channels/${id}/test`, data);
   },
 };
 
@@ -301,7 +416,7 @@ export const graphApi = {
   /**
    * 提取文档图谱
    */
-  extractGraph: async (docId: string) => {
+  extractGraph: async (docId: string): Promise<{ message: string }> => {
     return apiClient.post(`/docs/${docId}/extract-graph`);
   },
 };
@@ -311,9 +426,16 @@ export const graphApi = {
  */
 export const commonApi = {
   /**
-   * 健康检查
+   * 简单健康检查
    */
-  healthCheck: async () => {
+  healthCheck: async (): Promise<HealthCheckResponse> => {
     return apiClient.get('/health');
+  },
+
+  /**
+   * 详细健康检查
+   */
+  detailedHealthCheck: async (): Promise<DetailedHealthCheckResponse> => {
+    return apiClient.get('/healthz');
   },
 };

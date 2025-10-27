@@ -23,12 +23,25 @@
     "clean": "npm run clean --workspaces && rm -rf node_modules",
     "install:all": "npm install && npm run build:shared",
     "test": "npm run test --workspaces",
-    "check-lines" : "npm run format && node ./Scripts/check-lines.js"
+    "test:api-consistency": "node tests/api-consistency-check.test.js",
+    "check-lines" : "npm run format && node ./Scripts/check-lines.js",
+    "check-openapi" : "redocly lint docs/apis/openapi.yaml",
+    "bundle-openapi" : "redocly bundle docs/apis/openapi.yaml --output docs/apis/bundled.yaml",
+    "api:check": "node scripts/api-consistency-check.js",
+    "api:check:verbose": "node scripts/api-consistency-check.js --verbose",
+    "api:check:watch": "node scripts/api-consistency-check.js --watch",
+    "api:check:fix": "node scripts/api-consistency-check.js --fix",
+    "pre-commit": "npm run api:check && npm run lint && npm run test",
+    "validate:api": "npm run check-openapi && npm run api:check"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
     "prettier": "^3.6.2",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "js-yaml": "^4.1.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.5",
+    "@types/js-yaml": "^4.0.5"
   },
   "engines": {
     "node": ">=18.0.0",

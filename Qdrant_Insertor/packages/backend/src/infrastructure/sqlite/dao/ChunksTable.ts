@@ -1,11 +1,18 @@
 import type { Database } from 'better-sqlite3';
-import type { PointId, DocId, CollectionId } from '../../../domain/types.js';
+import type {
+  PointId,
+  DocId,
+  CollectionId,
+  PaginationQuery,
+  PaginatedResponse,
+} from '../../../domain/types.js';
 import {
   INSERT_CHUNKS_BATCH,
   SELECT_CHUNKS_BY_POINT_IDS,
   DELETE_CHUNKS_BY_POINT_IDS,
   SELECT_CHUNKS_BY_DOC_ID,
 } from '../sql/chunks.sql.js';
+import { parsePaginationQuery } from '../../../utils/pagination.js';
 
 /**
  * `chunks` 表的数据访问对象 (DAO)。
@@ -157,5 +164,79 @@ export class ChunksTable {
       title?: string;
       content: string;
     }>;
+  }
+
+  /**
+   * 获取文档的块总数
+   * @param docId - 文档ID
+   * @returns 块总数
+   */
+  getCountByDocId(docId: DocId): number {
+    const stmt = this.db.prepare(
+      'SELECT COUNT(*) as count FROM chunks WHERE docId = ?',
+    );
+    const result = stmt.get(docId) as { count: number };
+    return result.count;
+  }
+
+  /**
+   * 分页获取文档的块列表
+   * @param docId - 文档ID
+   * @param query - 分页查询参数
+   * @returns 分页的块响应
+   */
+  listPaginatedByDocId(
+    docId: DocId,
+    query: PaginationQuery,
+  ): PaginatedResponse<{
+    pointId: PointId;
+    docId: DocId;
+    collectionId: CollectionId;
+    chunkIndex: number;
+    title?: string;
+    content: string;
+  }> {
+    const { page, limit, sort, order } = parsePaginationQuery(query);
+    const offset = (page - 1) * limit;
+
+    // 获取总数
+    const total = this.getCountByDocId(docId);
+
+    // 构建排序和分页查询
+    const validSortFields = ['chunkIndex', 'title', 'created_at'];
+    const sortField = validSortFields.includes(sort) ? sort : 'chunkIndex';
+    const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
+
+    const sql = `
+      SELECT * FROM chunks
+      WHERE docId = ?
+      ORDER BY ${sortField} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+
+    const stmt = this.db.prepare(sql);
+    const chunks = stmt.all(docId, limit, offset) as Array<{
+      pointId: PointId;
+      docId: DocId;
+      collectionId: CollectionId;
+      chunkIndex: number;
+      title?: string;
+      content: string;
+    }>;
+
+    // 构建分页响应
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: chunks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 }

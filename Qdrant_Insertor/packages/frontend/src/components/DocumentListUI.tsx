@@ -23,8 +23,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   const pages = [];
-  let startPage = Math.max(1, currentPage - 2);
-  let endPage = Math.min(totalPages, currentPage + 2);
+  const startPage = Math.max(1, currentPage - 2);
+  const endPage = Math.min(totalPages, currentPage + 2);
 
   // 显示页码范围
   if (startPage > 1) {
@@ -57,10 +57,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         </button>
         {pages.map((page, index) =>
           page === '...' ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="px-2 text-secondary-500"
-            >
+            <span key={`ellipsis-${index}`} className="px-2 text-secondary-500">
               ...
             </span>
           ) : (
@@ -99,7 +96,9 @@ interface LoadingStateProps {
 /**
  * 加载状态组件
  */
-export const LoadingState: React.FC<LoadingStateProps> = ({ message = '加载文档列表...' }) => {
+export const LoadingState: React.FC<LoadingStateProps> = ({
+  message = '加载文档列表...',
+}) => {
   return (
     <div className="flex justify-center items-center py-12">
       <LoadingSpinner size="lg" />
@@ -150,9 +149,7 @@ export const EmptyState: React.FC = () => {
           d="M9 12h6m-6 6v6m-6 6h6m2 2h6m2 2h6m-6 6v6m-6 6h6"
         />
       </svg>
-      <h3 className="mt-2 text-sm font-medium text-secondary-900">
-        暂无文档
-      </h3>
+      <h3 className="mt-2 text-sm font-medium text-secondary-900">暂无文档</h3>
       <p className="mt-1 text-sm text-secondary-500">
         开始上传文档以使用此功能
       </p>
@@ -170,7 +167,10 @@ interface DocumentTableProps {
   onDocumentView: (documentId: string) => void;
   onDocumentDelete: (documentId: string) => void;
   onDocumentRetry: (documentId: string) => void;
-  getStatusInfo: (status: Document['status']) => { text: string; className: string };
+  getStatusInfo: (status: Document['status']) => {
+    text: string;
+    className: string;
+  };
 }
 
 /**
@@ -191,7 +191,8 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   const formatDate = (timestamp?: number | string) => {
     if (!timestamp) return '-';
     // 如果是字符串，直接解析；如果是数字，作为时间戳处理
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
+    const date =
+      typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
     return date.toLocaleString('zh-CN');
   };
 
@@ -201,10 +202,10 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       // 全选
-      documents.forEach(doc => onDocumentSelect(doc.id, true));
+      documents.forEach(doc => onDocumentSelect(doc.docId, true));
     } else {
       // 取消全选
-      documents.forEach(doc => onDocumentSelect(doc.id, false));
+      documents.forEach(doc => onDocumentSelect(doc.docId, false));
     }
   };
 
@@ -216,37 +217,54 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
             <input
               type="checkbox"
               checked={selectedDocuments.length === documents.length}
-              onChange={(e) => handleSelectAll(e.target.checked)}
+              onChange={e => handleSelectAll(e.target.checked)}
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded"
             />
           </th>
-          <th key="filename" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+          <th
+            key="filename"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
             文件名
           </th>
-          <th key="collection" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+          <th
+            key="collection"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
             集合
           </th>
-          <th key="status" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+          <th
+            key="status"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
             状态
           </th>
-          <th key="uploadTime" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+          <th
+            key="uploadTime"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
             上传时间
           </th>
-          <th key="actions" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+          <th
+            key="actions"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
             操作
           </th>
         </tr>
       </thead>
       <tbody className="bg-white divide-y divide-secondary-200">
-        {documents.map((document) => {
+        {documents.map(document => {
           const statusInfo = getStatusInfo(document.status);
           return (
-            <tr key={document.id} className="hover:bg-secondary-50">
+            <tr key={document.docId} className="hover:bg-secondary-50">
               <td className="px-6 py-4 whitespace-nowrap">
                 <input
                   type="checkbox"
-                  checked={selectedDocuments.includes(document.id)}
-                  onChange={(e) => onDocumentSelect(document.id, e.target.checked)}
+                  checked={selectedDocuments.includes(document.docId)}
+                  onChange={e =>
+                    onDocumentSelect(document.docId, e.target.checked)
+                  }
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded"
                 />
               </td>
@@ -277,7 +295,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 <div className="flex items-center space-x-2">
                   {onDocumentView && (
                     <button
-                      onClick={() => onDocumentView(document.id)}
+                      onClick={() => onDocumentView(document.docId)}
                       className="text-primary-600 hover:text-primary-900"
                     >
                       查看
@@ -286,18 +304,18 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                   {(document.status === 'failed' ||
                     document.status === 'dead') &&
                     onDocumentRetry && (
-                    <button
-                      onClick={() => onDocumentRetry(document.id)}
-                      className="text-yellow-600 hover:text-yellow-900"
-                    >
-                      重试
-                    </button>
-                  )}
+                      <button
+                        onClick={() => onDocumentRetry(document.docId)}
+                        className="text-yellow-600 hover:text-yellow-900"
+                      >
+                        重试
+                      </button>
+                    )}
                   {onDocumentDelete && (
                     <button
                       onClick={() => {
                         if (confirm(`确定要删除文档 "${document.name}" 吗？`)) {
-                          onDocumentDelete(document.id);
+                          onDocumentDelete(document.docId);
                         }
                       }}
                       className="text-red-600 hover:text-red-900"

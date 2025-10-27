@@ -78,7 +78,7 @@ export class MonitoringApiService {
     const activeAlerts = await this.alertApi.getAlertHistory({
       offset: 0,
       limit: 100,
-      timeRange: '24h'
+      timeRange: '24h',
     });
 
     return {
@@ -109,6 +109,25 @@ export class MonitoringApiService {
    */
   async getAlertRules(): Promise<any[]> {
     return this.alertApi.getAlertRules();
+  }
+
+  /**
+   * 分页获取告警规则列表API
+   */
+  async getAlertRulesPaginated(
+    page: number,
+    limit: number,
+    sort: string = 'created_at',
+    order: 'asc' | 'desc' = 'desc',
+    activeOnly?: boolean,
+  ): Promise<{ rules: any[]; total: number }> {
+    return this.alertApi.getAlertRulesPaginated(
+      page,
+      limit,
+      sort,
+      order,
+      activeOnly,
+    );
   }
 
   /**

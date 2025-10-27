@@ -2,47 +2,98 @@
 
 RetrievalResultDTO:
   type: object
+  description: |
+    检索结果数据传输对象，表示搜索结果中的一个匹配项。
+    
+    ## 结果类型
+    
+    搜索API可能返回不同类型的结果：
+    - **chunkResult**: 文档块搜索结果，基于向量相似度
+    - **graphResult**: 图搜索结果，基于实体关系（未来功能）
+    
+    ## 相关性得分
+    
+    得分范围和含义：
+    - **范围**: 通常为0-1，越高表示越相关
+    - **阈值**: 应用可以设置最小得分阈值
+    - **比较**: 得分可用于结果排序和筛选
+    - **算法**: 基于向量余弦相似度或其他相似度算法
+    
+    ## 元数据内容
+    
+    元数据可能包含：
+    - **文档信息**: 文档ID、名称、所属集合
+    - **位置信息**: 文本块在文档中的位置
+    - **上下文信息**: 标题链、章节信息
+    - **统计信息**: 文档大小、创建时间等
+    
+    ## 使用场景
+    
+    - **搜索结果展示**: 在搜索结果页面显示匹配内容
+    - **AI问答**: 为AI模型提供相关上下文
+    - **内容推荐**: 基于相似度推荐相关内容
+    - **数据分析**: 分析搜索结果的质量和分布
   properties:
     type:
       type: string
       enum: ['chunkResult', 'graphResult']
-      description: The type of the result.
+      description: |
+        结果类型，标识搜索结果的来源和性质。
+        
+        **chunkResult**: 基于向量相似度的文档块搜索结果
+        **graphResult**: 基于知识图谱的实体关系搜索结果（未来功能）
+        
+        **用途**: 区分不同类型的搜索结果
+        **处理**: 不同类型的结果可能需要不同的展示方式
+      example: "chunkResult"
     score:
       type: number
       format: float
-      description: The relevance score of this result.
+      description: |
+        此结果的相关性得分，表示与查询的匹配程度。
+        
+        **范围**: 通常为0-1，1表示完全匹配
+        **算法**: 基于向量余弦相似度或其他相似度算法
+        **用途**: 结果排序、筛选和相关性判断
+        **阈值**: 应用可以设置最小得分阈值过滤低质量结果
+      example: 0.85
     content:
       type: string
-      description: The content of the result.
+      description: |
+        搜索结果的主要内容，通常是匹配的文本片段。
+        
+        **来源**: 文档块的实际内容或相关描述
+        **长度**: 通常为几百字符，提供足够的上下文
+        **高亮**: 客户端可以基于查询词进行高亮显示
+        **格式**: 纯文本，可能包含特殊标记
+      example: "这是与查询匹配的文档内容片段，包含了相关的信息..."
     metadata:
       type: object
-      description: Additional metadata about the result.
-      properties:
-        pointId:
-          type: string
-          description: The ID of the point in Qdrant.
-          nullable: true
-        docId:
-          type: string
-          description: The ID of the document.
-          nullable: true
-        chunkIndex:
-          type: integer
-          description: The index of the chunk.
-          nullable: true
-        titleChain:
-          type: string
-          description: The title chain of the chunk.
-          nullable: true
-        title:
-          type: string
-          description: The title of the chunk.
-          nullable: true
-        collectionId:
-          type: string
-          description: The ID of the collection.
-          nullable: true
+      description: |
+        结果的元数据，提供额外的上下文和结构化信息。
+        
+        **内容**: 包含文档、文本块、位置等信息
+        **结构**: 键值对形式，具体字段可能因结果类型而异
+        **用途**: 提供搜索结果的完整上下文
+        **扩展**: 可以添加额外的元数据字段
+        
+        **常见字段**:
+        - docId: 文档ID
+        - docName: 文档名称
+        - collectionId: 集合ID
+        - collectionName: 集合名称
+        - chunkIndex: 文本块索引
+        - titleChain: 标题链
+        - pointId: 向量点ID
       additionalProperties: true
+      example:
+        docId: "doc-abc123def456"
+        docName: "技术文档.md"
+        collectionId: "tech-docs"
+        collectionName: "技术文档"
+        chunkIndex: 0
+        titleChain: "技术文档 > 入门指南 > 安装步骤"
+        pointId: "doc-abc123def456_0"
   required:
     - type
     - score

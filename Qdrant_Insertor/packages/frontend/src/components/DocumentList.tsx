@@ -7,7 +7,7 @@ import {
   LoadingState,
   ErrorState,
   EmptyState,
-  BatchActions
+  BatchActions,
 } from './DocumentListUI';
 
 /**
@@ -50,12 +50,11 @@ const DocumentList = ({
   // 处理文档选择
   const handleSelectDocument = (documentId: string, checked: boolean) => {
     if (checked) {
-      setSelectedDocuments((prev) => [...prev, documentId]);
+      setSelectedDocuments(prev => [...prev, documentId]);
     } else {
-      setSelectedDocuments((prev) => prev.filter((id) => id !== documentId));
+      setSelectedDocuments(prev => prev.filter(id => id !== documentId));
     }
   };
-
 
   // 处理批量删除
   const handleBatchDelete = async () => {
@@ -63,7 +62,7 @@ const DocumentList = ({
 
     if (confirm(`确定要删除选中的 ${selectedDocuments.length} 个文档吗？`)) {
       try {
-        await Promise.all(selectedDocuments.map((id) => onDelete(id)));
+        await Promise.all(selectedDocuments.map(id => onDelete(id)));
         setSelectedDocuments([]);
         onRefresh();
       } catch (error) {
@@ -86,7 +85,9 @@ const DocumentList = ({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}
+    >
       {/* 批量操作工具栏 */}
       <BatchActions
         selectedDocuments={selectedDocuments}

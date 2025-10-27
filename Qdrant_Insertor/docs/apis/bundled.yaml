@@ -1,0 +1,825 @@
+openapi: 3.0.0
+info:
+  title: RAG System API
+  version: 1.0.0
+  description: API for Document-level RAG Retrieval System with Knowledge Graph capabilities.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: /api
+    description: Local Development Server
+security:
+  - {}
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Simple health check endpoint to verify API is running.
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /healthz:
+    get:
+      summary: Detailed health check
+      description: Detailed health check with service status information.
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                      - degraded
+                      - unhealthy
+                  qdrant:
+                    type: string
+                    enum:
+                      - ok
+                      - unhealthy
+                  sqlite:
+                    type: string
+                    enum:
+                      - ok
+                      - unhealthy
+        '503':
+          description: Service Unavailable
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      responses:
+        '200':
+          description: Prometheus metrics in exposition format
+          content:
+            text/plain:
+              schema:
+                type: string
+  /upload:
+    post:
+      summary: Upload a document
+      description: Upload a document file using multipart/form-data. The document will be automatically added to a default collection.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The document file to upload.
+              required:
+                - file
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadDocumentResponse'
+        '413':
+          $ref: '#/components/responses/FileTooLargeError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /collections/{collectionId}/docs:
+    post:
+      summary: Upload a document to a specific collection
+      description: Upload a document file to a specific collection using multipart/form-data.
+      parameters:
+        - in: path
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to upload the document to.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The document file to upload.
+              required:
+                - file
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadDocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /docs:
+    get:
+      summary: List all documents
+      description: Get a list of all documents in the system. Supports both paginated and non-paginated modes.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number, starting from 1. If not provided, returns all documents (non-paginated mode).
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of results per page, maximum 100. Only used in paginated mode.
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: created_at
+            enum:
+              - created_at
+              - updated_at
+              - name
+          description: Sort field for results. Only used in paginated mode.
+        - in: query
+          name: order
+          schema:
+            type: string
+            default: desc
+            enum:
+              - asc
+              - desc
+          description: Sort order, asc or desc. Only used in paginated mode.
+        - in: query
+          name: collectionId
+          schema:
+            type: string
+          description: Optional collection ID to filter documents from a specific collection.
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentResponse'
+                    description: Non-paginated response (when no pagination parameters are provided)
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DocumentResponse'
+                      pagination:
+                        type: object
+                        properties:
+                          page:
+                            type: integer
+                            description: Current page number
+                          limit:
+                            type: integer
+                            description: Number of items per page
+                          total:
+                            type: integer
+                            description: Total number of items
+                          totalPages:
+                            type: integer
+                            description: Total number of pages
+                          hasNext:
+                            type: boolean
+                            description: Whether there is a next page
+                          hasPrev:
+                            type: boolean
+                            description: Whether there is a previous page
+                    required:
+                      - data
+                      - pagination
+                    description: Paginated response (when pagination parameters are provided)
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /docs/{docId}:
+    get:
+      summary: Get a document by ID
+      description: Retrieve a specific document by its ID.
+      parameters:
+        - in: path
+          name: docId
+          schema:
+            type: string
+          required: true
+          description: The ID of the document to retrieve.
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a document
+      description: Delete a document and all its associated chunks.
+      parameters:
+        - in: path
+          name: docId
+          schema:
+            type: string
+          required: true
+          description: The ID of the document to delete.
+      responses:
+        '204':
+          description: Document deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /docs/{docId}/resync:
+    put:
+      summary: Resync a document
+      description: Resynchronize a document from its original source file.
+      parameters:
+        - in: path
+          name: docId
+          schema:
+            type: string
+          required: true
+          description: The ID of the document to resync.
+      responses:
+        '200':
+          description: Document resynced successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /docs/{docId}/extract-graph:
+    post:
+      summary: Extract and store document graph
+      description: Trigger knowledge graph extraction and storage for a specific document.
+      parameters:
+        - in: path
+          name: docId
+          schema:
+            type: string
+          required: true
+          description: The ID of the document to extract graph from.
+      responses:
+        '202':
+          description: Graph extraction initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Graph extraction initiated for document ID: doc-xxxx'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /docs/{docId}/chunks:
+    get:
+      summary: Get document chunks
+      description: Retrieve all chunks for a specific document.
+      parameters:
+        - in: path
+          name: docId
+          schema:
+            type: string
+          required: true
+          description: The ID of the document to retrieve chunks for.
+      responses:
+        '200':
+          description: List of document chunks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChunkDTO'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /collections:
+    get:
+      summary: List all collections
+      description: Get a list of all collections in the system.
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new collection
+      description: Create a new collection with the specified name and optional description.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          description: Collection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /collections/{collectionId}:
+    get:
+      summary: Get a collection by ID
+      description: Retrieve a specific collection by its ID.
+      parameters:
+        - in: path
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to retrieve.
+      responses:
+        '200':
+          description: Collection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a collection (full update)
+      description: Update a collection with new name and/or description. This operation replaces all fields.
+      parameters:
+        - in: path
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          description: Collection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Update a collection (partial update)
+      description: Update specific fields of a collection. Only provided fields will be updated.
+      parameters:
+        - in: path
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          description: Collection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a collection
+      description: Delete a collection and all its associated documents and chunks.
+      parameters:
+        - in: path
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to delete.
+      responses:
+        '204':
+          description: Collection deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /search:
+    get:
+      summary: Search for documents
+      description: Execute vector similarity search based on query and collection ID.
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          required: true
+          description: The search query.
+        - in: query
+          name: collectionId
+          schema:
+            type: string
+          required: true
+          description: The ID of the collection to search in.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: Maximum number of results to return.
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RetrievalResultDTO'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /search/paginated:
+    get:
+      summary: Search for documents with pagination
+      description: Execute vector similarity search based on query and optional collection ID with pagination support.
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          required: true
+          description: The search query.
+        - in: query
+          name: collectionId
+          schema:
+            type: string
+          required: false
+          description: The ID of the collection to search in. Optional.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number, starting from 1.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of results per page, maximum 100.
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: score
+            enum:
+              - score
+          description: Sort field for results.
+        - in: query
+          name: order
+          schema:
+            type: string
+            default: desc
+            enum:
+              - asc
+              - desc
+          description: Sort order, asc or desc.
+      responses:
+        '200':
+          description: Paginated search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RetrievalResultDTO'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        description: Current page number
+                      limit:
+                        type: integer
+                        description: Number of items per page
+                      total:
+                        type: integer
+                        description: Total number of items
+                      totalPages:
+                        type: integer
+                        description: Total number of pages
+                      hasNext:
+                        type: boolean
+                        description: Whether there is a next page
+                      hasPrev:
+                        type: boolean
+                        description: Whether there is a previous page
+                required:
+                  - data
+                  - pagination
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    CollectionResponse:
+      type: object
+      properties:
+        collectionId:
+          type: string
+          description: 集合的唯一标识符。
+        name:
+          type: string
+          description: 集合的名称。
+        description:
+          type: string
+          description: 集合的描述。
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+          description: 集合创建时的时间戳。
+      required:
+        - collectionId
+        - name
+        - createdAt
+    CreateCollectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 集合的名称，必须是唯一的。
+        description:
+          type: string
+          description: 集合的可选描述。
+      required:
+        - name
+    UpdateCollectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 集合的新名称。
+        description:
+          type: string
+          description: 集合的新描述。
+    DocumentResponse:
+      type: object
+      properties:
+        docId:
+          type: string
+          description: 文档的唯一标识符。
+        name:
+          type: string
+          description: 文档的名称。
+        collectionId:
+          type: string
+          description: 所属集合的 ID。
+        key:
+          type: string
+          description: The key/path of the document.
+        sizeBytes:
+          type: integer
+          format: int64
+          description: The size of the document in bytes.
+          nullable: true
+        mime:
+          type: string
+          description: The MIME type of the document.
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+          description: 文档创建时的时间戳。
+        updatedAt:
+          type: integer
+          format: int64
+          description: 文档最后更新时的时间戳。
+          nullable: true
+        isDeleted:
+          type: boolean
+          description: Whether the document is marked as deleted.
+          nullable: true
+      required:
+        - docId
+        - name
+        - collectionId
+        - createdAt
+        - updatedAt
+    UploadDocumentResponse:
+      type: object
+      properties:
+        docId:
+          type: string
+          description: The ID of the uploaded document.
+        name:
+          type: string
+          description: The name of the uploaded file.
+        collectionId:
+          type: string
+          description: The ID of the collection this document belongs to.
+      required:
+        - docId
+        - name
+        - collectionId
+    ChunkDTO:
+      type: object
+      properties:
+        pointId:
+          type: string
+          description: Qdrant 中的向量点 ID，格式为 `docId#chunkIndex`。
+        docId:
+          type: string
+          description: 所属文档的 ID。
+        chunkIndex:
+          type: integer
+          description: 文本块在文档中的顺序索引。
+        content:
+          type: string
+          description: 文本块的内容。
+        titleChain:
+          type: string
+          description: 文本块的标题链，提供上下文信息。
+        title:
+          type: string
+          description: The title of the chunk.
+          nullable: true
+        contentHash:
+          type: string
+          description: The hash of the chunk content.
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+          description: The creation timestamp in epoch milliseconds.
+          nullable: true
+      required:
+        - pointId
+        - docId
+        - chunkIndex
+        - content
+        - titleChain
+    RetrievalResultDTO:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - chunkResult
+            - graphResult
+          description: 结果类型。
+        score:
+          type: number
+          format: float
+          description: 此结果的相关性得分。
+        content:
+          type: string
+          description: 结果内容。
+        metadata:
+          type: object
+          description: 结果的元数据。
+          additionalProperties: true
+      required:
+        - type
+        - score
+        - content
+        - metadata
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: 错误码，例如 VALIDATION_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: 人类可读的错误信息
+              example: field 'q' is required
+            details:
+              type: object
+              description: 可选：错误的额外详细信息
+              additionalProperties: true
+          required:
+            - code
+            - message
+      required:
+        - error
+  responses:
+    ValidationError:
+      description: Validation Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: field 'q' is required
+              details:
+                field: q
+                issue: required
+    NotFoundError:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INTERNAL_SERVER_ERROR
+              message: An unexpected error occurred.
+    FileTooLargeError:
+      description: Payload Too Large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FILE_TOO_LARGE
+              message: File size exceeds the maximum limit of 10MB

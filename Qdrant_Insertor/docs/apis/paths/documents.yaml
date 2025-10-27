@@ -2,8 +2,41 @@
 
 upload:
   post:
-    summary: Upload a document
-    description: Upload a document file using multipart/form-data. The document will be automatically added to a default collection.
+    operationId: uploadDocumentToDefaultCollection
+    tags:
+      - 文档管理
+    summary: 上传文档
+    description: |
+      使用multipart/form-data上传文档文件。文档将自动添加到默认集合中。
+      
+      ## 支持的文件格式
+      
+      当前版本系统仅支持纯文本格式文件：
+      - **文本文件**: .txt, .md, .markdown
+      
+      **注意**: 未来版本可能会支持更多文件格式，如PDF、DOCX等。
+      
+      ## 文档处理流程
+      
+      1. **文件上传**: 接收并验证上传的文件
+      2. **内容提取**: 从文件中提取文本内容
+      3. **文本分块**: 将文档分割成适合搜索的文本块
+      4. **向量嵌入**: 为每个文本块生成向量嵌入
+      5. **索引存储**: 将向量嵌入存储到Qdrant数据库
+      6. **元数据保存**: 保存文档元数据到SQLite数据库
+      
+      ## 使用场景
+      
+      - **知识库构建**: 批量上传企业文档构建知识库
+      - **文档管理**: 集中管理各类文档资源
+      - **内容索引**: 为文档内容创建可搜索的索引
+      - **文档分析**: 为后续的文档分析和检索做准备
+      
+      ## 注意事项
+      
+      - 文件大小限制为10MB
+      - 上传的文档会自动处理，处理时间取决于文档大小和复杂度
+      - 相同名称的文档会被视为不同文档（基于内容哈希区分）
     requestBody:
       required: true
       content:
@@ -14,27 +47,88 @@ upload:
               file:
                 type: string
                 format: binary
-                description: The document file to upload.
+                description: |
+                  要上传的文档文件。
+                  
+                  **支持格式**: TXT, MD, MARKDOWN等文本文件
+                  **大小限制**: 最大10MB
+                  **编码**: UTF-8（对于文本文件）
             required:
               - file
+          example:
+            file: "example-document.pdf"
     responses:
       '201':
-        description: Document uploaded successfully
+        description: 文档上传成功，返回文档基本信息
         content:
           application/json:
             schema:
               $ref: '../components/schemas/document.yaml#/UploadDocumentResponse'
-      '422':
-        $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              docId: "doc-abc123def456"
+              name: "技术文档.pdf"
+              collectionId: "default"
+      '400':
+        description: 请求参数错误
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "未提供文件"
+                details:
+                  field: "file"
+                  issue: "missing"
       '413':
         $ref: '../components/responses/common.yaml#/FileTooLargeError'
+      '415':
+        description: 不支持的文件格式
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/error.yaml#/ErrorResponse'
+            example:
+              error:
+                code: UNSUPPORTED_MEDIA_TYPE
+                message: "不支持的文件格式: .exe"
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
 
 uploadToCollection:
   post:
-    summary: Upload a document to a specific collection
-    description: Upload a document file to a specific collection using multipart/form-data.
+    operationId: uploadDocumentToSpecificCollection
+    tags:
+      - 文档管理
+    summary: 上传文档到指定集合
+    description: |
+      使用multipart/form-data将文档文件上传到指定的集合中。
+      
+      ## 使用场景
+      
+      - **分类管理**: 将不同主题的文档上传到相应的集合中
+      - **项目隔离**: 为不同项目创建独立的文档集合
+      - **权限控制**: 通过集合实现文档的访问控制
+      - **主题组织**: 按照主题或领域组织文档
+      
+      ## 处理流程
+      
+      1. **验证集合**: 检查指定的集合是否存在
+      2. **文件上传**: 接收并验证上传的文件
+      3. **内容提取**: 从文件中提取文本内容
+      4. **文本分块**: 将文档分割成适合搜索的文本块
+      5. **向量嵌入**: 为每个文本块生成向量嵌入
+      6. **索引存储**: 将向量嵌入存储到Qdrant数据库
+      7. **关联集合**: 将文档与指定集合关联
+      
+      ## 注意事项
+      
+      - 集合必须存在，否则会返回404错误
+      - 文件大小限制为10MB
+      - 当前仅支持文本文件（.txt, .md, .markdown）
     parameters:
       - in: path
         name: collectionId
@@ -52,18 +146,56 @@ uploadToCollection:
               file:
                 type: string
                 format: binary
-                description: The document file to upload.
+                description: |
+                  要上传的文档文件。
+                  
+                  **支持格式**: TXT, MD, MARKDOWN等文本文件
+                  **大小限制**: 最大10MB
+                  **编码**: UTF-8
             required:
               - file
     responses:
       '201':
-        description: Document uploaded successfully
+        description: 文档上传成功，返回文档基本信息
         content:
           application/json:
             schema:
               $ref: '../components/schemas/document.yaml#/UploadDocumentResponse'
+      '400':
+        description: 请求参数错误
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/ValidationError'
+            example:
+              error:
+                code: VALIDATION_ERROR
+                message: "未提供文件"
+                details:
+                  field: "file"
+                  issue: "missing"
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的集合不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "集合 'non-existent-collection' 不存在"
+      '413':
+        $ref: '../components/responses/common.yaml#/FileTooLargeError'
+      '415':
+        description: 不支持的文件格式
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/error.yaml#/ErrorResponse'
+            example:
+              error:
+                code: UNSUPPORTED_MEDIA_TYPE
+                message: "不支持的文件格式: .pdf"
       '422':
         $ref: '../components/responses/common.yaml#/ValidationError'
       '500':
@@ -71,22 +203,155 @@ uploadToCollection:
 
 listDocs:
   get:
+    operationId: listDocuments
     summary: List all documents
-    description: Get a list of all documents in the system.
+    description: Get a list of all documents in the system. Supports both paginated and non-paginated modes.
+    parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+          minimum: 1
+        description: |
+          页码，从1开始。如果不提供，则返回所有文档（非分页模式）。
+          
+          **注意**: 在非分页模式下，此参数被忽略
+        example: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+        description: |
+          每页结果数量，最大值为100。仅在分页模式下使用。
+          
+          **建议**:
+          - Web界面: 10-20个结果/页
+          - API集成: 20-50个结果/页
+        example: 20
+      - in: query
+        name: sort
+        schema:
+          type: string
+          default: created_at
+          enum: [created_at, updated_at, name]
+        description: |
+          结果排序字段。仅在分页模式下使用。
+          
+          - `created_at`: 按创建时间排序（默认）
+          - `updated_at`: 按更新时间排序
+          - `name`: 按文档名称排序
+        example: "created_at"
+      - in: query
+        name: order
+        schema:
+          type: string
+          default: desc
+          enum: [asc, desc]
+        description: |
+          排序顺序。仅在分页模式下使用。
+          
+          - `asc`: 升序（A-Z, 0-9）
+          - `desc`: 降序（Z-A, 9-0，默认）
+        example: "desc"
+      - in: query
+        name: collectionId
+        schema:
+          type: string
+        description: |
+          可选的集合ID，用于过滤特定集合中的文档。
+          
+          **使用场景**:
+          - 查看特定集合的文档
+          - 按主题或项目筛选文档
+        example: "tech-docs"
     responses:
       '200':
-        description: List of documents
+        description: 文档列表获取成功
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '../components/schemas/document.yaml#/DocumentResponse'
+              oneOf:
+                - type: array
+                  items:
+                    $ref: '../components/schemas/document.yaml#/DocumentResponse'
+                  description: 非分页响应（当未提供分页参数时）
+                  example:
+                    - docId: "doc-abc123"
+                      name: "技术文档.md"
+                      collectionId: "tech-docs"
+                      key: "/uploads/tech-docs/技术文档.md"
+                      sizeBytes: 10240
+                      mime: "text/markdown"
+                      createdAt: 1672531200000
+                      updatedAt: 1672531200000
+                      isDeleted: false
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '../components/schemas/document.yaml#/DocumentResponse'
+                    pagination:
+                      type: object
+                      properties:
+                        page:
+                          type: integer
+                          description: 当前页码
+                          example: 1
+                        limit:
+                          type: integer
+                          description: 每页项目数量
+                          example: 20
+                        total:
+                          type: integer
+                          description: 总项目数量
+                          example: 156
+                        totalPages:
+                          type: integer
+                          description: 总页数
+                          example: 8
+                        hasNext:
+                          type: boolean
+                          description: 是否有下一页
+                          example: true
+                        hasPrev:
+                          type: boolean
+                          description: 是否有上一页
+                          example: false
+                  required:
+                    - data
+                    - pagination
+                  description: 分页响应（当提供分页参数时）
+                  example:
+                    data:
+                      - docId: "doc-abc123"
+                        name: "技术文档.md"
+                        collectionId: "tech-docs"
+                        key: "/uploads/tech-docs/技术文档.md"
+                        sizeBytes: 10240
+                        mime: "text/markdown"
+                        createdAt: 1672531200000
+                        updatedAt: 1672531200000
+                        isDeleted: false
+                    pagination:
+                      page: 1
+                      limit: 20
+                      total: 156
+                      totalPages: 8
+                      hasNext: true
+                      hasPrev: false
+      '400':
+        $ref: '../components/responses/common.yaml#/ValidationError'
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
 
 docById:
   get:
+    operationId: getDocumentById
     summary: Get a document by ID
     description: Retrieve a specific document by its ID.
     parameters:
@@ -108,48 +373,212 @@ docById:
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
   delete:
-    summary: Delete a document
-    description: Delete a document and all its associated chunks.
+    operationId: deleteDocument
+    tags:
+      - 文档管理
+    summary: 删除文档
+    description: |
+      删除文档及其所有关联的文本块和向量嵌入。
+      
+      ## 删除操作影响
+      
+      删除文档会同时清理：
+      - 文档元数据（从SQLite数据库）
+      - 文本块数据（从SQLite数据库）
+      - 向量嵌入（从Qdrant数据库）
+      - 原始文件（从文件系统）
+      
+      ## 注意事项
+      
+      - **不可逆操作**: 删除后无法恢复，请谨慎操作
+      - **级联删除**: 所有相关数据会被完全清理
+      - **搜索影响**: 删除后文档内容将不再出现在搜索结果中
+      
+      ## 使用场景
+      
+      - **内容管理**: 清理过时或不再需要的文档
+      - **隐私保护**: 删除包含敏感信息的文档
+      - **存储管理**: 释放存储空间
     parameters:
       - in: path
         name: docId
         schema:
           type: string
         required: true
-        description: The ID of the document to delete.
+        description: |
+          要删除的文档ID。
+          
+          **警告**: 此操作不可逆，请确认后再执行
+        example: "doc-abc123def456"
     responses:
       '204':
-        description: Document deleted successfully
+        description: 文档删除成功，无返回内容
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的文档不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "文档 'non-existent-doc' 不存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
 
 resyncDoc:
   put:
-    summary: Resync a document
-    description: Resynchronize a document from its original source file.
+    operationId: resyncDocument
+    tags:
+      - 文档管理
+    summary: 重新同步文档
+    description: |
+      从原始源文件重新同步文档，更新文档内容和向量嵌入。
+      
+      ## 同步过程
+      
+      文档同步包括以下步骤：
+      1. **重新读取**: 从原始文件重新读取内容
+      2. **重新分块**: 根据配置的分块策略重新分割文本
+      3. **重新嵌入**: 为新的文本块生成向量嵌入
+      4. **更新索引**: 更新Qdrant中的向量索引
+      5. **更新元数据**: 更新文档的最后修改时间
+      
+      ## 使用场景
+      
+      - **内容更新**: 源文件内容已更新，需要重新索引
+      - **配置变更**: 分块策略或嵌入模型配置已更改
+      - **错误修复**: 之前的同步过程出现错误，需要重新处理
+      - **数据一致性**: 确保向量索引与源文件内容一致
+      
+      ## 注意事项
+      
+      - **异步处理**: 同步操作是异步进行的，可能需要一些时间完成
+      - **资源消耗**: 重新同步会消耗计算资源（嵌入生成）
+      - **临时不可用**: 同步过程中文档可能暂时不可用于搜索
     parameters:
       - in: path
         name: docId
         schema:
           type: string
         required: true
-        description: The ID of the document to resync.
+        description: |
+          要重新同步的文档ID。
+          
+          **注意**: 文档必须存在且源文件可访问
+        example: "doc-abc123def456"
     responses:
       '200':
-        description: Document resynced successfully
+        description: 文档重新同步成功
         content:
           application/json:
             schema:
               $ref: '../components/schemas/document.yaml#/DocumentResponse'
+            example:
+              docId: "doc-abc123def456"
+              name: "技术文档.md"
+              collectionId: "tech-docs"
+              key: "/uploads/tech-docs/技术文档.md"
+              sizeBytes: 10240
+              mime: "text/markdown"
+              createdAt: 1672531200000
+              updatedAt: 1672617600000
+              isDeleted: false
       '404':
-        $ref: '../components/responses/common.yaml#/NotFoundError'
+        description: 指定的文档不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "文档 'non-existent-doc' 不存在"
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+docChunks:
+  get:
+    operationId: getDocumentChunks
+    tags:
+      - 文档管理
+    summary: 获取文档块
+    description: |
+      检索指定文档的所有文本块，包括文本内容和元数据。
+      
+      ## 返回信息
+      
+      每个文档块包含：
+      - **基本信息**: 块ID、所属文档ID、在文档中的位置
+      - **文本内容**: 实际的文本内容
+      - **元数据**: 创建时间、更新时间等
+      - **向量信息**: 关联的向量嵌入ID（如果已生成）
+      
+      ## 使用场景
+      
+      - **内容审查**: 查看文档被分割成的具体文本块
+      - **调试分析**: 分析文档分块效果和质量
+      - **内容管理**: 管理和操作特定的文本块
+      - **性能分析**: 了解文档的块数量和分布
+      
+      ## 注意事项
+      
+      - **数据量**: 大文档可能包含大量文本块
+      - **性能影响**: 获取大量文本块可能影响响应时间
+      - **分页支持**: 当前API不支持分页，会返回所有文本块
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: |
+          要检索文本块的文档ID。
+          
+          **注意**: 文档必须存在且已完成分块处理
+        example: "doc-abc123def456"
+    responses:
+      '200':
+        description: 文档块列表获取成功
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/schemas/document.yaml#/ChunkDTO'
+            example:
+              - pointId: "doc-abc123def456_0"
+                docId: "doc-abc123def456"
+                chunkIndex: 0
+                content: "这是文档的第一个文本块，包含了文档的引言部分..."
+                titleChain: "技术文档 > 入门指南 > 安装步骤"
+                title: "安装步骤"
+                createdAt: 1672531200000
+                updatedAt: 1672531200000
+              - pointId: "doc-abc123def456_1"
+                docId: "doc-abc123def456"
+                chunkIndex: 1
+                content: "这是文档的第二个文本块，包含了主要内容的开始部分..."
+                titleChain: "技术文档 > 入门指南 > 配置说明"
+                title: "配置说明"
+                createdAt: 1672531200000
+                updatedAt: 1672531200000
+      '404':
+        description: 指定的文档不存在
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "文档 'non-existent-doc' 不存在"
       '500':
         $ref: '../components/responses/common.yaml#/InternalServerError'
 
 extractGraph:
   post:
+    operationId: extractDocumentGraph
     summary: Extract and store document graph
     description: Trigger knowledge graph extraction and storage for a specific document.
     parameters:

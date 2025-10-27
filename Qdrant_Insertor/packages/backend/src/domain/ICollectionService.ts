@@ -17,13 +17,13 @@ export interface ICollectionService {
    * @returns 创建的集合对象
    */
   createCollection(name: string, description?: string): Collection;
-  
+
   /**
    * 获取所有集合列表
    * @returns 所有集合的数组
    */
   listAllCollections(): Collection[];
-  
+
   /**
    * 分页获取集合列表
    * @param query - 分页查询参数
@@ -32,14 +32,14 @@ export interface ICollectionService {
   listCollectionsPaginated(
     query: PaginationQuery,
   ): PaginatedResponse<Collection>;
-  
+
   /**
    * 根据ID获取集合
    * @param collectionId - 集合ID
    * @returns 集合对象，如果不存在则返回undefined
    */
   getCollectionById(collectionId: CollectionId): Collection | undefined;
-  
+
   /**
    * 更新集合信息
    * @param collectionId - 集合ID
@@ -52,7 +52,7 @@ export interface ICollectionService {
     name?: string,
     description?: string,
   ): Collection;
-  
+
   /**
    * 删除集合
    * @param collectionId - 要删除的集合ID

@@ -148,13 +148,13 @@ const SearchResults = ({
       <div className="space-y-4">
         {results.map(result => (
           <div
-            key={result.id}
+            key={`${result.metadata.docId}_${result.metadata.chunkIndex}`}
             className="bg-white border border-secondary-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
             onClick={() => onResultSelect?.(result)}
           >
             <div className="flex items-start justify-between mb-2">
               <h3 className="text-lg font-medium text-primary-600 hover:text-primary-800">
-                {highlightText(result.documentName, query)}
+                {highlightText(result.metadata.docName || '未知文档', query)}
               </h3>
               <span className="text-sm text-secondary-500 bg-secondary-100 px-2 py-1 rounded">
                 {formatScore(result.score)}
@@ -180,7 +180,7 @@ const SearchResults = ({
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                {result.documentName}
+                {result.metadata.docName || '未知文档'}
               </span>
               <span className="flex items-center">
                 <svg
@@ -196,8 +196,26 @@ const SearchResults = ({
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
-                {result.collectionName}
+                {result.metadata.collectionName || '未知集合'}
               </span>
+              {result.metadata.titleChain && (
+                <span className="flex items-center">
+                  <svg
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  {result.metadata.titleChain}
+                </span>
+              )}
             </div>
           </div>
         ))}

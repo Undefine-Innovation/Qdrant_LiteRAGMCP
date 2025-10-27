@@ -55,7 +55,7 @@ const CollectionManager = ({
   const handleDelete = async (collection: Collection) => {
     if (confirm(`确定要删除集合 "${collection.name}" 吗？此操作不可撤销。`)) {
       try {
-        await onDelete(collection.id);
+        await onDelete(collection.collectionId);
         onRefresh();
       } catch (err) {
         console.error('删除失败:', err);
@@ -100,9 +100,14 @@ const CollectionManager = ({
       {showCreateForm && (
         <CollectionForm
           collection={editingCollection}
-          onSubmit={async (data: CreateCollectionRequest | UpdateCollectionRequest) => {
+          onSubmit={async (
+            data: CreateCollectionRequest | UpdateCollectionRequest,
+          ) => {
             if (editingCollection) {
-              await onUpdate(editingCollection.id, data as UpdateCollectionRequest);
+              await onUpdate(
+                editingCollection.collectionId,
+                data as UpdateCollectionRequest,
+              );
             } else {
               await onCreate(data as CreateCollectionRequest);
             }

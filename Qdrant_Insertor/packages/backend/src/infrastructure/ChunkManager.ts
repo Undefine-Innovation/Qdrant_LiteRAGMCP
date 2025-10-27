@@ -43,7 +43,10 @@ export class ChunkManager {
     }
 
     return chunks.reduce(
-      (acc: Record<string, { content: string; title?: string }>, chunk: any) => {
+      (
+        acc: Record<string, { content: string; title?: string }>,
+        chunk: any,
+      ) => {
         acc[chunk.pointId] = {
           content: chunk.content,
           title: chunk.title ?? undefined,

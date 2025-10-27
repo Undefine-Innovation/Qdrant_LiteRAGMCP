@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-10-27T01:40:07.074Z",
+  "summary": {
+    "totalIssues": 1,
+    "totalWarnings": 10,
+    "totalErrors": 1
+  },
+  "issues": [
+    {
+      "type": "MISSING_IMPLEMENTATION",
+      "severity": "ERROR",
+      "message": "文档中定义的路由未在代码中实现: GET /healthz",
+      "route": "GET /healthz"
+    }
+  ],
+  "warnings": [
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: POST /collections",
+      "route": "POST /collections"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: GET /collections",
+      "route": "GET /collections"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: GET /collections/:collectionId",
+      "route": "GET /collections/:collectionId"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: PUT /collections/:collectionId",
+      "route": "PUT /collections/:collectionId"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: PATCH /collections/:collectionId",
+      "route": "PATCH /collections/:collectionId"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: DELETE /collections/:collectionId",
+      "route": "DELETE /collections/:collectionId"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: POST /docs",
+      "route": "POST /docs"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: GET /monitoring/sync-jobs/stats",
+      "route": "GET /monitoring/sync-jobs/stats"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: GET /monitoring/alerts/history",
+      "route": "GET /monitoring/alerts/history"
+    },
+    {
+      "type": "MISSING_DOCUMENTATION",
+      "severity": "WARNING",
+      "message": "代码中实现的路由未在文档中定义: GET /monitoring/dashboard",
+      "route": "GET /monitoring/dashboard"
+    }
+  ],
+  "recommendations": [
+    "实现 1 个缺失的API端点",
+    "为 10 个已实现的API端点添加文档"
+  ]
+}

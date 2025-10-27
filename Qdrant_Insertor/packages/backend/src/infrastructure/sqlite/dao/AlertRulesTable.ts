@@ -185,6 +185,63 @@ export class AlertRulesTable {
   }
 
   /**
+   * 获取告警规则总数
+   */
+  getCount(activeOnly?: boolean): number {
+    let query = 'SELECT COUNT(*) as count FROM alert_rules';
+
+    if (activeOnly) {
+      query = 'SELECT COUNT(*) as count FROM alert_rules WHERE is_active = 1';
+    }
+
+    const stmt = this.db.prepare(query);
+    const result = stmt.get() as { count: number };
+    return result.count;
+  }
+
+  /**
+   * 分页获取告警规则
+   */
+  listPaginated(
+    page: number,
+    limit: number,
+    sort: string = 'created_at',
+    order: 'asc' | 'desc' = 'desc',
+    activeOnly?: boolean,
+  ): AlertRule[] {
+    const offset = (page - 1) * limit;
+
+    // 验证排序字段
+    const allowedSortFields = [
+      'name',
+      'metric_name',
+      'severity',
+      'created_at',
+      'updated_at',
+    ];
+    const sortField = allowedSortFields.includes(sort) ? sort : 'created_at';
+
+    let query = `
+      SELECT * FROM alert_rules
+      ORDER BY ${sortField} ${order.toUpperCase()}
+      LIMIT ? OFFSET ?
+    `;
+
+    if (activeOnly) {
+      query = `
+        SELECT * FROM alert_rules
+        WHERE is_active = 1
+        ORDER BY ${sortField} ${order.toUpperCase()}
+        LIMIT ? OFFSET ?
+      `;
+    }
+
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(limit, offset) as AlertRuleRow[];
+    return rows.map((row) => this.mapRowToAlertRule(row));
+  }
+
+  /**
    * 根据指标名称获取活跃的告警规则
    */
   getActiveByMetricName(metricName: string): AlertRule[] {

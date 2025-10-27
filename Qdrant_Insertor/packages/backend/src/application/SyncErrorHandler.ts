@@ -212,7 +212,9 @@ export class SyncErrorHandler {
    * 设置执行同步的方法
    * @param executeSyncMethod - 执行同步的方法
    */
-  setExecuteSyncMethod(executeSyncMethod: (docId: string) => Promise<void>): void {
+  setExecuteSyncMethod(
+    executeSyncMethod: (docId: string) => Promise<void>,
+  ): void {
     this.executeSync = executeSyncMethod;
   }
 
