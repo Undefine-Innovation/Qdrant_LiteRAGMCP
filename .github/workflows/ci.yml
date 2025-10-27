@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run install:all
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Check code formatting
+        run: npm run format
+
+      - name: Check file line limits
+        run: npm run check-lines
+
+      - name: Validate OpenAPI specification
+        run: npm run check-openapi
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Run API consistency check
+        run: npm run api:check
+
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.node-version }}
+          path: |
+            packages/backend/coverage/
+            packages/frontend/coverage/
+            api-consistency-report.json
+          retention-days: 30
+
+  notify:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request'
+    
+    steps:
+      - name: Notify PR status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha
+            });
+            
+            const failedChecks = checks.check_runs.filter(check => check.conclusion === 'failure');
+            const passedChecks = checks.check_runs.filter(check => check.conclusion === 'success');
+            
+            let status = 'success';
+            let message = `✅ CI检查通过 (${passedChecks.length} 个检查成功)`;
+            
+            if (failedChecks.length > 0) {
+              status = 'failure';
+              message = `❌ CI检查失败 (${failedChecks.length} 个检查失败, ${passedChecks.length} 个检查成功)`;
+            }
+            
+            // 创建或更新PR状态检查
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: status,
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: message,
+              context: 'ci/workflow'
+            });
