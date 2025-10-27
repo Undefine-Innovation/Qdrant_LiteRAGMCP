@@ -54,6 +54,7 @@ lerna-debug.log*
 *~
 .DS_Store
 Thumbs.db
+.VSCodeCounter/
 
 # ── 7. 测试 & 缓存 ──
 .cache/
