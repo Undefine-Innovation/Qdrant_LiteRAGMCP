@@ -2,9 +2,9 @@ name: API Consistency Check
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master ]
   schedule:
     # 每天UTC 02:00运行（北京时间10:00）
     - cron: '0 2 * * *'
