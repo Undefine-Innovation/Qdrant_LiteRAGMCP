@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, KeyboardEvent, FocusEvent, MouseEvent } from 'react';
 import { SearchResult } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
+import { defaultSearchLimiter, SearchHistory } from '../utils/searchLimiter';
 import LoadingSpinner from './LoadingSpinner';
 
 interface SearchBoxProps {
@@ -24,7 +25,6 @@ const SearchBox = ({
   placeholder = '输入搜索关键词...',
   className = '',
   showSuggestions = true,
-  maxSuggestions = 5,
 }: SearchBoxProps) => {
   const [query, setQuery] = useState('');
   const [selectedCollection, setSelectedCollection] = useState<string>('');
@@ -32,10 +32,27 @@ const SearchBox = ({
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showHistory, setShowHistory] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<
+    Array<{
+      query: string;
+      collectionId?: string;
+      timestamp: number;
+    }>
+  >([]);
 
-  const debouncedQuery = useDebounce(query, 300);
+  // 使用高级防抖Hook
+  const { debouncedValue: debouncedQuery, cancel: cancelDebounce } =
+    useDebounce(query, {
+      delay: 300,
+      leading: false,
+      trailing: true,
+      maxWait: 1000,
+    });
+
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const currentSearchRef = useRef<string>('');
 
   // 执行搜索
   const performSearch = useCallback(
@@ -46,25 +63,52 @@ const SearchBox = ({
         return;
       }
 
+      // 防止重复搜索
+      if (currentSearchRef.current === searchQuery && isSearching) {
+        return;
+      }
+
+      currentSearchRef.current = searchQuery;
       setIsSearching(true);
+
       try {
-        await onSearch(searchQuery, selectedCollection || undefined);
+        // 使用搜索限速器执行搜索
+        await defaultSearchLimiter.execute(
+          searchQuery,
+          async () => {
+            await onSearch(searchQuery, selectedCollection || undefined);
+            return Promise.resolve();
+          },
+          selectedCollection || undefined,
+        );
+
+        // 添加到搜索历史
+        SearchHistory.add(searchQuery, selectedCollection || undefined);
+
         // 注意：由于SearchPage中的onSearch现在返回void，这里不再设置建议
         setSuggestions([]);
         setShowDropdown(false);
       } catch (error) {
-        console.error('搜索失败:', error);
-        setSuggestions([]);
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('搜索失败:', error);
+          setSuggestions([]);
+        }
       } finally {
         setIsSearching(false);
+        currentSearchRef.current = '';
       }
     },
-    [onSearch, selectedCollection],
+    [onSearch, selectedCollection, isSearching],
   );
 
   // 当防抖查询变化时执行搜索
   useEffect(() => {
-    if (showSuggestions && debouncedQuery.trim()) {
+    // 只有当查询真正变化时才执行搜索，避免重复触发
+    if (
+      showSuggestions &&
+      debouncedQuery.trim() &&
+      debouncedQuery !== currentSearchRef.current
+    ) {
       performSearch(debouncedQuery);
     } else if (!debouncedQuery.trim()) {
       setSuggestions([]);
@@ -72,17 +116,29 @@ const SearchBox = ({
     }
   }, [debouncedQuery, performSearch, showSuggestions]);
 
+  // 加载搜索历史
+  useEffect(() => {
+    if (showHistory && !query.trim()) {
+      setSearchHistory(SearchHistory.get());
+    }
+  }, [showHistory, query]);
+
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-    if (!e.target.value.trim()) {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+
+    if (!newQuery.trim()) {
       setShowDropdown(false);
       setSuggestions([]);
+      setShowHistory(true);
+    } else {
+      setShowHistory(false);
     }
   };
 
   // 处理键盘导航
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (!showDropdown || suggestions.length === 0) return;
 
     switch (e.key) {
@@ -117,13 +173,31 @@ const SearchBox = ({
   // 处理搜索提交
   const handleSearch = async () => {
     if (query.trim()) {
+      // 取消防抖，立即执行搜索
+      cancelDebounce();
       setShowDropdown(false);
-      try {
-        await onSearch(query, selectedCollection || undefined);
-      } catch (error) {
-        console.error('搜索失败:', error);
-      }
+      setShowHistory(false);
+      await performSearch(query);
     }
+  };
+
+  // 处理历史记录选择
+  const handleHistorySelect = (historyItem: {
+    query: string;
+    collectionId?: string;
+  }) => {
+    setQuery(historyItem.query);
+    if (historyItem.collectionId) {
+      setSelectedCollection(historyItem.collectionId);
+    }
+    setShowHistory(false);
+    performSearch(historyItem.query);
+  };
+
+  // 清空搜索历史
+  const handleClearHistory = () => {
+    SearchHistory.clear();
+    setSearchHistory([]);
   };
 
   // 处理结果选择
@@ -136,12 +210,17 @@ const SearchBox = ({
 
   // 处理焦点事件
   const handleFocus = () => {
-    if (query.trim() && suggestions.length > 0) {
-      setShowDropdown(true);
+    if (query.trim()) {
+      if (suggestions.length > 0) {
+        setShowDropdown(true);
+      }
+    } else {
+      setShowHistory(true);
+      setSearchHistory(SearchHistory.get());
     }
   };
 
-  const handleBlur = (e: React.FocusEvent) => {
+  const handleBlur = (e: FocusEvent) => {
     // 延迟隐藏下拉框，以便处理点击事件
     setTimeout(() => {
       if (!searchRef.current?.contains(e.relatedTarget as Node)) {
@@ -259,6 +338,48 @@ const SearchBox = ({
           搜索
         </button>
       </div>
+
+      {/* 搜索历史下拉框 */}
+      {showHistory && !query.trim() && searchHistory.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-secondary-300 rounded-md shadow-lg max-h-64 overflow-y-auto">
+          <div className="px-4 py-2 border-b border-secondary-200 flex justify-between items-center">
+            <span className="text-sm font-medium text-secondary-700">
+              搜索历史
+            </span>
+            <button
+              onClick={handleClearHistory}
+              className="text-xs text-secondary-500 hover:text-secondary-700"
+            >
+              清空历史
+            </button>
+          </div>
+          <ul className="py-1">
+            {searchHistory.map((item, index) => (
+              <li
+                key={`${item.query}_${item.timestamp}`}
+                className={`px-4 py-2 cursor-pointer hover:bg-secondary-50 ${
+                  index === selectedIndex ? 'bg-secondary-100' : ''
+                }`}
+                onClick={() => handleHistorySelect(item)}
+              >
+                <div className="text-sm">
+                  <div className="font-medium text-secondary-900">
+                    {highlightText(item.query, query)}
+                  </div>
+                  {item.collectionId && (
+                    <div className="text-xs text-secondary-500">
+                      集合:{' '}
+                      {collections.find(
+                        c => c.collectionId === item.collectionId,
+                      )?.name || '未知集合'}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* 搜索建议下拉框 */}
       {showDropdown && suggestions.length > 0 && (

@@ -20,7 +20,7 @@ interface ApiConfig {
   maxRetries?: number;
   retryDelay?: number;
   retryCondition?: (error: ApiError) => boolean;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   onError?: (error: ApiError) => void;
   onRetry?: (retryCount: number, error: ApiError) => void;
 }
@@ -31,7 +31,7 @@ interface ApiConfig {
  * @param apiCall - API 调用函数
  * @returns API 状态和执行函数
  */
-export const useApi = <T = any>(
+export const useApi = <T = unknown>(
   apiCall: () => Promise<T>,
   config: ApiConfig = {},
 ): {
@@ -188,9 +188,9 @@ export const useApi = <T = any>(
  * @param deps - 依赖数组
  * @returns API 状态
  */
-export const useAutoApi = <T = any>(
+export const useAutoApi = <T = unknown>(
   apiCall: () => Promise<T>,
-  deps: any[] = [],
+  deps: unknown[] = [],
   config: ApiConfig = {},
 ): ApiState<T> => {
   const { state, execute } = useApi(apiCall, config);
@@ -208,7 +208,7 @@ export const useAutoApi = <T = any>(
  * @param apiCall - API 调用函数，接受页码参数
  * @returns 分页状态和操作函数
  */
-export const usePaginatedApi = <T = any>(
+export const usePaginatedApi = <T = unknown>(
   apiCall: (
     page: number,
     limit: number,
@@ -287,7 +287,7 @@ export const usePaginatedApi = <T = any>(
  * 防抖API Hook
  * 用于处理需要防抖的API请求
  */
-export const useDebouncedApi = <T = any>(
+export const useDebouncedApi = <T = unknown>(
   apiCall: (query: string) => Promise<T>,
   delay: number = 300,
   config: ApiConfig = {},
@@ -328,7 +328,7 @@ export const useDebouncedApi = <T = any>(
 
   return {
     state,
-    execute: debouncedExecute,
+    execute: debouncedExecute as (query: string) => Promise<void>,
     reset,
   };
 };

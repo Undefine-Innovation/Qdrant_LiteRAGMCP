@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { Collection, Document, SystemStatus, SearchResult } from '../types';
+import {
+  Collection,
+  Document,
+  SystemStatus,
+  SearchResult,
+  BatchUploadProgress,
+  BatchOperationProgress,
+} from '../types';
 
 /**
  * 应用状态接口
@@ -38,6 +45,21 @@ interface AppState {
     totalPages: number;
   } | null;
 
+  // 批量操作状态
+  batchUploadProgress: BatchUploadProgress | null;
+  batchOperationProgress: BatchOperationProgress | null;
+  selectedDocuments: string[];
+  selectedCollections: string[];
+  batchOperationHistory: Array<{
+    id: string;
+    type: 'upload' | 'delete';
+    timestamp: number;
+    status: 'completed' | 'failed';
+    total: number;
+    successful: number;
+    failed: number;
+  }>;
+
   // 错误状态
   error: string | null;
   lastError: {
@@ -63,6 +85,16 @@ interface AppState {
   clearError: () => void;
   resetSearch: () => void;
   refreshData: () => Promise<void>;
+
+  // 批量操作方法
+  setBatchUploadProgress: (progress: BatchUploadProgress | null) => void;
+  setBatchOperationProgress: (progress: BatchOperationProgress | null) => void;
+  setSelectedDocuments: (documentIds: string[]) => void;
+  setSelectedCollections: (collectionIds: string[]) => void;
+  addBatchOperationToHistory: (
+    operation: AppState['batchOperationHistory'][0],
+  ) => void;
+  clearBatchOperationHistory: () => void;
 }
 
 /**
@@ -85,6 +117,11 @@ export const useAppStore = create<AppState>()(
         collectionsPagination: null,
         documentsPagination: null,
         searchPagination: null,
+        batchUploadProgress: null,
+        batchOperationProgress: null,
+        selectedDocuments: [],
+        selectedCollections: [],
+        batchOperationHistory: [],
         error: null,
         lastError: null,
 
@@ -215,6 +252,8 @@ export const useAppStore = create<AppState>()(
           sidebarOpen: state.sidebarOpen,
           selectedCollection: state.selectedCollection,
           searchQuery: state.searchQuery,
+          selectedDocuments: state.selectedDocuments,
+          selectedCollections: state.selectedCollections,
         }),
       },
     ),

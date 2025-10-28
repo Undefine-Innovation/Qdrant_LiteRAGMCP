@@ -135,7 +135,7 @@ export interface UploadProgress {
 /**
  * 通用 API 响应接口
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -179,4 +179,84 @@ export interface DetailedHealthCheckResponse {
   status: 'ok' | 'degraded' | 'unhealthy';
   qdrant: 'ok' | 'unhealthy';
   sqlite: 'ok' | 'unhealthy';
+}
+
+/**
+ * 批量上传结果接口
+ */
+export interface BatchUploadResult {
+  fileName: string;
+  docId?: string;
+  collectionId?: string;
+  error?: string;
+}
+
+/**
+ * 批量上传响应接口
+ */
+export interface BatchUploadResponse {
+  success: boolean;
+  total: number;
+  successful: number;
+  failed: number;
+  results: BatchUploadResult[];
+}
+
+/**
+ * 批量删除结果接口
+ */
+export interface BatchDeleteResult {
+  id: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * 批量删除文档响应接口
+ */
+export interface BatchDeleteDocsResponse {
+  success: boolean;
+  total: number;
+  successful: number;
+  failed: number;
+  results: BatchDeleteResult[];
+}
+
+/**
+ * 批量删除集合响应接口
+ */
+export interface BatchDeleteCollectionsResponse {
+  success: boolean;
+  total: number;
+  successful: number;
+  failed: number;
+  results: BatchDeleteResult[];
+}
+
+/**
+ * 批量操作进度接口
+ */
+export interface BatchOperationProgress {
+  operationId: string;
+  type: 'upload' | 'delete';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  startTime: number;
+  endTime?: number;
+  estimatedTimeRemaining?: number;
+}
+
+/**
+ * 批量上传进度接口（扩展UploadProgress）
+ */
+export interface BatchUploadProgress extends UploadProgress {
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  status: 'processing' | 'completed' | 'completed_with_errors' | 'failed';
+  results?: BatchUploadResult[];
 }

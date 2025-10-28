@@ -3,6 +3,8 @@ import { Document, Collection, PaginationParams } from '../types';
 import { useApi } from '../hooks/useApi';
 import { documentsApi, collectionsApi } from '../services/api';
 import DocumentUpload from '../components/DocumentUpload';
+import BatchDocumentUpload from '../components/BatchDocumentUpload';
+import BatchDelete from '../components/BatchDelete';
 import DocumentList from '../components/DocumentList';
 import DocumentDetail from '../components/DocumentDetail';
 import Pagination from '../components/Pagination';
@@ -14,6 +16,8 @@ import Modal from '../components/Modal';
  */
 const DocumentsPage = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showBatchUploadModal, setShowBatchUploadModal] = useState(false);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>('');
   const [selectedCollection, setSelectedCollection] = useState<string>('');
@@ -113,7 +117,7 @@ const DocumentsPage = () => {
             className="input max-w-xs"
           >
             <option value="">选择集合</option>
-            {(collectionsState.data as any)?.data?.map(
+            {(collectionsState.data as { data: Collection[] })?.data?.map(
               (collection: Collection) => (
                 <option
                   key={collection.collectionId}
@@ -130,12 +134,24 @@ const DocumentsPage = () => {
           >
             上传文档
           </button>
+          <button
+            onClick={() => setShowBatchUploadModal(true)}
+            className="btn btn-secondary"
+          >
+            批量上传
+          </button>
+          <button
+            onClick={() => setShowBatchDeleteModal(true)}
+            className="btn btn-danger"
+          >
+            批量删除
+          </button>
         </div>
       </div>
 
       <DocumentList
         documents={
-          (documentsState.data as any)?.data ||
+          (documentsState.data as { data: Document[] })?.data ||
           (documentsState.data as unknown as Document[])
         }
         loading={documentsState.loading}
@@ -147,13 +163,13 @@ const DocumentsPage = () => {
       />
 
       {/* 分页组件 - 仅在有分页数据时显示 */}
-      {(documentsState.data as any)?.pagination &&
-        (documentsState.data as any)?.data?.length > 0 && (
+      {(documentsState.data as { pagination: { page: number; totalPages: number; total: number; limit: number } })?.pagination &&
+        (documentsState.data as { data: Document[] })?.data?.length > 0 && (
           <Pagination
-            currentPage={(documentsState.data as any).pagination.page}
-            totalPages={(documentsState.data as any).pagination.totalPages}
-            total={(documentsState.data as any).pagination.total}
-            limit={(documentsState.data as any).pagination.limit}
+            currentPage={(documentsState.data as { pagination: { page: number } }).pagination.page}
+            totalPages={(documentsState.data as { pagination: { totalPages: number } }).pagination.totalPages}
+            total={(documentsState.data as { pagination: { total: number } }).pagination.total}
+            limit={(documentsState.data as { pagination: { limit: number } }).pagination.limit}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             loading={documentsState.loading}
@@ -171,6 +187,38 @@ const DocumentsPage = () => {
           onUpload={handleUpload}
           multiple={true}
           accept=".txt,.md,.pdf,.doc,.docx"
+        />
+      </Modal>
+
+      {/* 批量上传模态框 */}
+      <Modal
+        isOpen={showBatchUploadModal}
+        onClose={() => setShowBatchUploadModal(false)}
+        title="批量上传文档"
+        size="xl"
+      >
+        <BatchDocumentUpload
+          collectionId={selectedCollection}
+          onComplete={() => {
+            setShowBatchUploadModal(false);
+            loadDocuments();
+          }}
+        />
+      </Modal>
+
+      {/* 批量删除模态框 */}
+      <Modal
+        isOpen={showBatchDeleteModal}
+        onClose={() => setShowBatchDeleteModal(false)}
+        title="批量删除"
+        size="xl"
+      >
+        <BatchDelete
+          collectionId={selectedCollection}
+          onComplete={() => {
+            setShowBatchDeleteModal(false);
+            loadDocuments();
+          }}
         />
       </Modal>
 

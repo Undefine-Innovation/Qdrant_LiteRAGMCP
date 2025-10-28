@@ -9,12 +9,18 @@ import {
   UploadDocumentResponse,
   HealthCheckResponse,
   DetailedHealthCheckResponse,
+  BatchUploadRequest,
+  BatchUploadResponse,
+  BatchDeleteDocumentsRequest,
+  BatchDeleteCollectionsRequest,
+  BatchDeleteResponse,
+  BatchOperationProgress,
 } from '../types/index.js';
 
 /**
  * API 响应接口
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -27,14 +33,14 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 /**
  * 分页查询参数接口
  */
 export interface PaginationQueryParams extends PaginationParams {
-  [key: string]: any; // 允许其他查询参数
+  [key: string]: unknown; // 允许其他查询参数
 }
 
 /**
@@ -90,7 +96,7 @@ class ApiClient {
   /**
    * GET 请求
    */
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.get<T>(url, config);
     return response.data;
   }
@@ -98,9 +104,9 @@ class ApiClient {
   /**
    * POST 请求
    */
-  async post<T = any>(
+  async post<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig,
   ): Promise<T> {
     const response = await this.client.post<T>(url, data, config);
@@ -110,9 +116,9 @@ class ApiClient {
   /**
    * PUT 请求
    */
-  async put<T = any>(
+  async put<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig,
   ): Promise<T> {
     const response = await this.client.put<T>(url, data, config);
@@ -122,7 +128,7 @@ class ApiClient {
   /**
    * DELETE 请求
    */
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.delete<T>(url, config);
     return response.data;
   }
@@ -130,9 +136,9 @@ class ApiClient {
   /**
    * PATCH 请求
    */
-  async patch<T = any>(
+  async patch<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig,
   ): Promise<T> {
     const response = await this.client.patch<T>(url, data, config);
@@ -142,7 +148,7 @@ class ApiClient {
   /**
    * 上传文件
    */
-  async upload<T = any>(
+  async upload<T = unknown>(
     url: string,
     formData: FormData,
     config?: AxiosRequestConfig,
@@ -295,6 +301,81 @@ export const documentsApi = {
   ): Promise<Chunk[] | PaginatedResponse<Chunk>> => {
     return apiClient.get(`/docs/${id}/chunks`, { params });
   },
+
+  /**
+   * 获取文档预览内容
+   */
+  getDocumentPreview: async (
+    id: string,
+    params?: { format?: 'html' | 'text' | 'json' },
+  ): Promise<{
+    content: string;
+    mimeType: string;
+    format: string;
+  }> => {
+    return apiClient.get(`/docs/${id}/preview`, { params });
+  },
+
+  /**
+   * 下载文档
+   */
+  getDocumentDownload: async (
+    id: string,
+    params?: { format?: 'original' | 'html' | 'txt' },
+  ): Promise<{
+    content: Blob;
+    mimeType: string;
+    filename: string;
+  }> => {
+    const response = await apiClient.get(`/docs/${id}/download`, {
+      params,
+      responseType: 'blob',
+    });
+
+    // 从响应头获取文件名
+    const contentDisposition = response.headers?.['content-disposition'] || '';
+    const filenameMatch = contentDisposition.match(
+      /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
+    );
+    const filename = filenameMatch
+      ? filenameMatch[1].replace(/['"]/g, '')
+      : `document.${params?.format || 'original'}`;
+
+    return {
+      content: response,
+      mimeType:
+        response.headers?.['content-type'] || 'application/octet-stream',
+      filename,
+    };
+  },
+
+  /**
+   * 获取文档缩略图
+   */
+  getDocumentThumbnail: async (
+    id: string,
+    params?: { width?: number; height?: number },
+  ): Promise<Blob> => {
+    return apiClient.get(`/docs/${id}/thumbnail`, {
+      params,
+      responseType: 'blob',
+    });
+  },
+
+  /**
+   * 获取文档格式信息
+   */
+  getDocumentFormat: async (
+    id: string,
+  ): Promise<{
+    format: {
+      mimeType: string;
+      extension: string;
+      category: 'text' | 'markdown' | 'pdf' | 'word' | 'unknown';
+    };
+  }> => {
+    return apiClient.get(`/docs/${id}/format`);
+  },
 };
 
 /**
@@ -355,14 +436,14 @@ export const monitoringApi = {
   /**
    * 创建告警规则
    */
-  createAlertRule: async (data: any) => {
+  createAlertRule: async (data: Record<string, unknown>) => {
     return apiClient.post('/alert-rules', data);
   },
 
   /**
    * 更新告警规则
    */
-  updateAlertRule: async (id: string, data: any) => {
+  updateAlertRule: async (id: string, data: Record<string, unknown>) => {
     return apiClient.put(`/alert-rules/${id}`, data);
   },
 
@@ -383,14 +464,14 @@ export const monitoringApi = {
   /**
    * 创建通知渠道
    */
-  createNotificationChannel: async (data: any) => {
+  createNotificationChannel: async (data: Record<string, unknown>) => {
     return apiClient.post('/notification-channels', data);
   },
 
   /**
    * 更新通知渠道
    */
-  updateNotificationChannel: async (id: string, data: any) => {
+  updateNotificationChannel: async (id: string, data: Record<string, unknown>) => {
     return apiClient.put(`/notification-channels/${id}`, data);
   },
 
@@ -404,7 +485,7 @@ export const monitoringApi = {
   /**
    * 测试通知
    */
-  testNotification: async (id: string, data: any) => {
+  testNotification: async (id: string, data: Record<string, unknown>) => {
     return apiClient.post(`/notification-channels/${id}/test`, data);
   },
 };
@@ -437,5 +518,58 @@ export const commonApi = {
    */
   detailedHealthCheck: async (): Promise<DetailedHealthCheckResponse> => {
     return apiClient.get('/healthz');
+  },
+};
+
+/**
+ * 批量操作相关API
+ */
+export const batchApi = {
+  /**
+   * 批量上传文档
+   */
+  uploadDocuments: async (
+    data: BatchUploadRequest,
+  ): Promise<BatchUploadResponse> => {
+    const formData = new FormData();
+
+    // 添加文件
+    data.files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    // 添加集合ID（如果提供）
+    if (data.collectionId) {
+      formData.append('collectionId', data.collectionId);
+    }
+
+    return apiClient.upload('/upload/batch', formData);
+  },
+
+  /**
+   * 批量删除文档
+   */
+  deleteDocuments: async (
+    data: BatchDeleteDocumentsRequest,
+  ): Promise<BatchDeleteResponse> => {
+    return apiClient.delete('/docs/batch', { data });
+  },
+
+  /**
+   * 批量删除集合
+   */
+  deleteCollections: async (
+    data: BatchDeleteCollectionsRequest,
+  ): Promise<BatchDeleteResponse> => {
+    return apiClient.delete('/collections/batch', { data });
+  },
+
+  /**
+   * 获取批量操作进度
+   */
+  getOperationProgress: async (
+    operationId: string,
+  ): Promise<BatchOperationProgress> => {
+    return apiClient.get(`/batch/progress/${operationId}`);
   },
 };

@@ -39,7 +39,7 @@ export const formatFileSize = (bytes: number): string => {
  * @param delay - 延迟时间（毫秒）
  * @returns 防抖后的函数
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number,
 ): ((...args: Parameters<T>) => void) => {
@@ -57,7 +57,7 @@ export const debounce = <T extends (...args: any[]) => any>(
  * @param delay - 延迟时间（毫秒）
  * @returns 节流后的函数
  */
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number,
 ): ((...args: Parameters<T>) => void) => {
@@ -95,7 +95,7 @@ export const generateId = (length: number = 8): string => {
  * @param value - 要检查的值
  * @returns 是否为空值
  */
-export const isEmpty = (value: any): boolean => {
+export const isEmpty = (value: unknown): boolean => {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim() === '';
   if (Array.isArray(value)) return value.length === 0;
@@ -129,7 +129,7 @@ export const deepClone = <T>(obj: T): T => {
  * @param error - 错误对象
  * @returns 错误消息字符串
  */
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: unknown): string => {
   if (typeof error === 'string') return error;
   if (error?.message) return error.message;
   if (error?.error) return error.error;
@@ -165,3 +165,10 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     return false;
   }
 };
+
+// 导出搜索限速器相关工具
+export {
+  defaultSearchLimiter,
+  SearchLimiter,
+  SearchHistory,
+} from './searchLimiter.js';

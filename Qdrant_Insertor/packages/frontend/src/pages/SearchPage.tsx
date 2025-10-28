@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SearchResult, Collection, PaginationParams } from '../types';
 import { useApi } from '../hooks/useApi';
 import { searchApi, collectionsApi } from '../services/api';
+import { defaultSearchLimiter } from '../utils/searchLimiter';
 import SearchBox from '../components/SearchBox';
 import SearchResults from '../components/SearchResults';
+import SearchStatusIndicator from '../components/SearchStatusIndicator';
 import DocumentDetail from '../components/DocumentDetail';
 import Pagination from '../components/Pagination';
 import Modal from '../components/Modal';
@@ -26,6 +28,14 @@ const SearchPage = () => {
     order: 'desc',
   });
   const [selectedCollection, setSelectedCollection] = useState<string>('');
+  const [isSearchStale, setIsSearchStale] = useState(false);
+
+  // 用于跟踪当前搜索请求
+  const currentSearchRef = useRef<{
+    query: string;
+    collectionId: string;
+    page: number;
+  } | null>(null);
 
   // 获取集合列表
   const { state: collectionsState, execute: loadCollections } = useApi(() =>
@@ -41,9 +51,9 @@ const SearchPage = () => {
         ...paginationParams,
       }),
     {
-      maxRetries: 2,
-      retryDelay: 500,
-      retryCondition: error => {
+      maxRetries: 1,
+      retryDelay: 300,
+      retryCondition: () => {
         // 搜索失败时不重试，避免重复请求
         return false;
       },
@@ -51,37 +61,76 @@ const SearchPage = () => {
   );
 
   // 执行搜索
-  const handleSearch = async (
-    searchQuery: string,
-    collectionId?: string,
-  ): Promise<void> => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setTotalResults(0);
-      setTotalPages(0);
-      return;
-    }
+  const handleSearch = useCallback(
+    async (searchQuery: string, collectionId?: string): Promise<void> => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        setTotalResults(0);
+        setTotalPages(0);
+        return;
+      }
 
-    setQuery(searchQuery);
-    setSelectedCollection(collectionId || '');
-    setPaginationParams(prev => ({ ...prev, page: 1 }));
-  };
+      // 更新搜索参数
+      setQuery(searchQuery);
+      setSelectedCollection(collectionId || '');
+      setPaginationParams(prev => ({ ...prev, page: 1 }));
+
+      // 标记当前搜索为最新
+      currentSearchRef.current = {
+        query: searchQuery,
+        collectionId: collectionId || '',
+        page: 1,
+      };
+      setIsSearchStale(false);
+    },
+    [],
+  );
 
   // 处理页码变化
-  const handlePageChange = (page: number) => {
-    setPaginationParams(prev => ({ ...prev, page }));
-  };
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setPaginationParams(prev => ({ ...prev, page }));
+      // 标记当前搜索为最新
+      currentSearchRef.current = {
+        query,
+        collectionId: selectedCollection,
+        page,
+      };
+      setIsSearchStale(false);
+    },
+    [query, selectedCollection],
+  );
 
   // 处理每页数量变化
-  const handleLimitChange = (limit: number) => {
-    setPaginationParams(prev => ({ ...prev, limit, page: 1 }));
-  };
+  const handleLimitChange = useCallback(
+    (limit: number) => {
+      setPaginationParams(prev => ({ ...prev, limit, page: 1 }));
+      // 标记当前搜索为最新
+      currentSearchRef.current = {
+        query,
+        collectionId: selectedCollection,
+        page: 1,
+      };
+      setIsSearchStale(false);
+    },
+    [query, selectedCollection],
+  );
 
   // 处理集合变化
-  const handleCollectionChange = (collectionId: string) => {
-    setSelectedCollection(collectionId);
-    setPaginationParams(prev => ({ ...prev, page: 1 }));
-  };
+  const handleCollectionChange = useCallback(
+    (collectionId: string) => {
+      setSelectedCollection(collectionId);
+      setPaginationParams(prev => ({ ...prev, page: 1 }));
+      // 标记当前搜索为最新
+      currentSearchRef.current = {
+        query,
+        collectionId,
+        page: 1,
+      };
+      setIsSearchStale(false);
+    },
+    [query],
+  );
 
   // 处理结果选择
   const handleResultSelect = (result: SearchResult) => {
@@ -92,19 +141,75 @@ const SearchPage = () => {
   // 当搜索参数变化时更新结果
   useEffect(() => {
     if (query.trim()) {
-      executeSearch();
+      // 检查当前搜索是否是最新的
+      const currentSearch = {
+        query,
+        collectionId: selectedCollection,
+        page: paginationParams.page || 1,
+      };
+
+      if (currentSearchRef.current) {
+        const {
+          query: lastQuery,
+          collectionId: lastCollectionId,
+          page: lastPage,
+        } = currentSearchRef.current;
+
+        // 只有当搜索参数真正发生变化时才执行搜索
+        if (
+          lastQuery !== query ||
+          lastCollectionId !== selectedCollection ||
+          lastPage !== (paginationParams.page || 1)
+        ) {
+          // 使用搜索限速器执行搜索
+          defaultSearchLimiter
+            .execute(
+              `${query}_${selectedCollection}_${paginationParams.page}`,
+              async () => {
+                await executeSearch();
+                return Promise.resolve();
+              },
+            )
+            .catch(error => {
+              if (error.name !== 'AbortError') {
+                console.error('搜索执行失败:', error);
+              }
+            });
+
+          // 更新当前搜索引用
+          currentSearchRef.current = currentSearch;
+        }
+      } else {
+        // 首次搜索
+        defaultSearchLimiter
+          .execute(
+            `${query}_${selectedCollection}_${paginationParams.page}`,
+            async () => {
+              await executeSearch();
+              return Promise.resolve();
+            },
+          )
+          .catch(error => {
+            if (error.name !== 'AbortError') {
+              console.error('搜索执行失败:', error);
+            }
+          });
+
+        // 设置当前搜索引用
+        currentSearchRef.current = currentSearch;
+      }
     }
-  }, [paginationParams, selectedCollection, query]);
+  }, [paginationParams, selectedCollection, query, executeSearch]);
 
   // 更新搜索结果
   useEffect(() => {
-    if (searchState.data) {
-      const data = searchState.data as any;
+    if (searchState.data && !isSearchStale) {
+      const data = searchState.data as { data: SearchResult[]; pagination: { total: number; totalPages: number } };
       setSearchResults(data.data || []);
       setTotalResults(data.pagination?.total || 0);
       setTotalPages(data.pagination?.totalPages || 0);
     }
-  }, [searchState.data]);
+  }, [searchState.data, isSearchStale]);
 
   // 初始加载
   useEffect(() => {
@@ -121,7 +226,7 @@ const SearchPage = () => {
               onSearch={handleSearch}
               onResultSelect={handleResultSelect}
               collections={
-                (collectionsState.data as any)?.data ||
+                (collectionsState.data as { data: Collection[] })?.data ||
                 (collectionsState.data as unknown as Collection[]) ||
                 undefined
               }
@@ -134,7 +239,7 @@ const SearchPage = () => {
             className="input max-w-xs"
           >
             <option value="">所有集合</option>
-            {(collectionsState.data as any)?.data?.map(
+            {(collectionsState.data as { data: Collection[] })?.data?.map(
               (collection: Collection) => (
                 <option
                   key={collection.collectionId}
@@ -145,6 +250,7 @@ const SearchPage = () => {
               ),
             )}
           </select>
+          <SearchStatusIndicator />
         </div>
       </div>
 

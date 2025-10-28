@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import { UploadProgress } from '../types';
 
 interface DocumentUploadProps {
@@ -93,18 +93,18 @@ const DocumentUpload = ({
   );
 
   // 处理拖拽事件
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    (e: DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
 
@@ -118,7 +118,7 @@ const DocumentUpload = ({
 
   // 处理文件选择
   const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (files && files.length > 0) {
         handleFiles(files);

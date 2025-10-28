@@ -2,6 +2,7 @@ import React from 'react';
 import { Document } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
+import DocumentThumbnail from './DocumentThumbnail';
 
 /**
  * 分页控件组件属性
@@ -222,6 +223,12 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
             />
           </th>
           <th
+            key="thumbnail"
+            className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
+          >
+            缩略图
+          </th>
+          <th
             key="filename"
             className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider"
           >
@@ -266,6 +273,16 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                     onDocumentSelect(document.docId, e.target.checked)
                   }
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded"
+                />
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <DocumentThumbnail
+                  documentId={document.docId}
+                  fileName={document.name}
+                  onClick={() =>
+                    onDocumentView && onDocumentView(document.docId)
+                  }
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
                 />
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

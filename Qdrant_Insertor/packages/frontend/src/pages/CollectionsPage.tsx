@@ -7,13 +7,16 @@ import {
 import { useApi } from '../hooks/useApi';
 import { collectionsApi } from '../services/api';
 import CollectionManager from '../components/CollectionManager';
+import BatchDelete from '../components/BatchDelete';
 import Pagination from '../components/Pagination';
+import Modal from '../components/Modal';
 
 /**
  * 集合管理页面组件
  * 用于创建、查看和管理文档集合
  */
 const CollectionsPage = () => {
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
   const [paginationParams, setPaginationParams] = useState<PaginationParams>({
     page: 1,
     limit: 20,
@@ -98,10 +101,10 @@ const CollectionsPage = () => {
   }, []);
 
   const collections =
-    (collectionsState.data as any)?.data ||
+    (collectionsState.data as { data: Collection[] })?.data ||
     (collectionsState.data as Collection[]) ||
     [];
-  const pagination = (collectionsState.data as any)?.pagination;
+  const pagination = (collectionsState.data as { pagination: { page: number; totalPages: number; total: number; limit: number } })?.pagination;
 
   // 调试日志
   console.log('CollectionsPage - collectionsState:', collectionsState);
@@ -119,6 +122,16 @@ const CollectionsPage = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-secondary-800">集合管理</h1>
+        <button
+          onClick={() => setShowBatchDeleteModal(true)}
+          className="btn btn-danger"
+        >
+          批量删除集合
+        </button>
+      </div>
+
       <CollectionManager
         collections={collections}
         loading={collectionsState.loading}
@@ -141,6 +154,22 @@ const CollectionsPage = () => {
           loading={collectionsState.loading}
         />
       )}
+
+      {/* 批量删除模态框 */}
+      <Modal
+        isOpen={showBatchDeleteModal}
+        onClose={() => setShowBatchDeleteModal(false)}
+        title="批量删除集合"
+        size="xl"
+      >
+        <BatchDelete
+          mode="collections"
+          onComplete={() => {
+            setShowBatchDeleteModal(false);
+            loadCollections();
+          }}
+        />
+      </Modal>
     </div>
   );
 };

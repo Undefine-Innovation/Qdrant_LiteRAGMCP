@@ -5,6 +5,9 @@ import { usePaginatedApi } from '../hooks/useApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import Pagination from './Pagination';
+import DocumentPreview from './DocumentPreview';
+import DocumentDownload from './DocumentDownload';
+import DocumentThumbnail from './DocumentThumbnail';
 
 // 文档块接口（扩展后端Chunk类型）
 interface DocumentChunk extends Chunk {
@@ -29,7 +32,9 @@ const DocumentDetail = ({
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'content' | 'chunks'>('content');
+  const [activeTab, setActiveTab] = useState<
+    'content' | 'chunks' | 'preview' | 'download'
+  >('content');
   const [selectedChunk, setSelectedChunk] = useState<DocumentChunk | null>(
     null,
   );
@@ -38,8 +43,6 @@ const DocumentDetail = ({
   const {
     state: chunksState,
     loadPage: loadChunksPage,
-    nextPage,
-    prevPage,
   } = usePaginatedApi(async (page: number, limit: number) => {
     const response = await documentsApi.getDocumentChunksPaginated(documentId, {
       page,
@@ -49,7 +52,12 @@ const DocumentDetail = ({
     });
 
     // 处理块数据，将后端格式转换为前端格式
-    const chunksData = response.data.map((chunk: any) => ({
+    const chunksData = response.data.map((chunk: {
+      pointId: string;
+      docId: string;
+      content: string;
+      chunkIndex: number;
+    }) => ({
       id: chunk.pointId,
       documentId: chunk.docId,
       content: chunk.content,
@@ -205,6 +213,20 @@ const DocumentDetail = ({
         </div>
       </div>
 
+      {/* 文档缩略图 */}
+      <div className="px-6 py-4 bg-secondary-50 border-b border-secondary-200">
+        <div className="flex items-center space-x-4">
+          <span className="text-sm font-medium text-secondary-700">
+            文档缩略图:
+          </span>
+          <DocumentThumbnail
+            documentId={document.docId}
+            fileName={document.name}
+            size={{ width: 80, height: 80 }}
+          />
+        </div>
+      </div>
+
       {/* 标签页导航 */}
       <div className="border-b border-secondary-200">
         <nav className="flex -mb-px">
@@ -219,6 +241,16 @@ const DocumentDetail = ({
             文档内容
           </button>
           <button
+            onClick={() => setActiveTab('preview')}
+            className={`py-2 px-4 text-sm font-medium border-b-2 ${
+              activeTab === 'preview'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
+            }`}
+          >
+            文档预览
+          </button>
+          <button
             onClick={() => setActiveTab('chunks')}
             className={`py-2 px-4 text-sm font-medium border-b-2 ${
               activeTab === 'chunks'
@@ -227,6 +259,16 @@ const DocumentDetail = ({
             }`}
           >
             文档块 ({chunksState.data?.total || chunksState.data?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('download')}
+            className={`py-2 px-4 text-sm font-medium border-b-2 ${
+              activeTab === 'download'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
+            }`}
+          >
+            下载文档
           </button>
         </nav>
       </div>
@@ -244,6 +286,13 @@ const DocumentDetail = ({
               </p>
             </div>
           </div>
+        ) : activeTab === 'preview' ? (
+          <DocumentPreview documentId={document.docId} />
+        ) : activeTab === 'download' ? (
+          <DocumentDownload
+            documentId={document.docId}
+            documentName={document.name}
+          />
         ) : (
           <div className="space-y-4">
             {!chunksState.data?.data || chunksState.data?.data?.length === 0 ? (
