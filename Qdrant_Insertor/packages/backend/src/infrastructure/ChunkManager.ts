@@ -6,8 +6,12 @@ import {
   DocumentChunk,
   SearchResult,
   CollectionId,
+  ChunkMeta,
 } from '../domain/types.js';
 import { makeDocId, makePointId, hashContent } from '../domain/utils/id.js';
+import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
+import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
+import { ChunksTable } from './sqlite/dao/ChunksTable.js';
 
 /**
  * 块管理器
@@ -15,9 +19,9 @@ import { makeDocId, makePointId, hashContent } from '../domain/utils/id.js';
  */
 export class ChunkManager {
   constructor(
-    private readonly chunkMeta: any, // ChunkMetaTable
-    private readonly chunksFts5: any, // ChunksFts5Table
-    private readonly chunks: any, // ChunksTable
+    private readonly chunkMeta: ChunkMetaTable, // ChunkMetaTable
+    private readonly chunksFts5: ChunksFts5Table, // ChunksFts5Table
+    private readonly chunks: ChunksTable, // ChunksTable
     private readonly core: SQLiteRepoCore,
     private readonly logger: Logger,
   ) {}
@@ -45,7 +49,7 @@ export class ChunkManager {
     return chunks.reduce(
       (
         acc: Record<string, { content: string; title?: string }>,
-        chunk: any,
+        chunk: { pointId: PointId; content: string; title?: string },
       ) => {
         acc[chunk.pointId] = {
           content: chunk.content,
@@ -77,11 +81,19 @@ export class ChunkManager {
       collectionId,
     );
 
-    return chunks.map((row: any) => ({
+    return chunks.map((row: {
+      pointId: PointId;
+      docId: DocId;
+      collectionId: CollectionId;
+      chunkIndex: number;
+      content: string;
+      title?: string;
+      titleChain: string;
+    }) => ({
       ...row,
-      docId: row.docId as DocId,
+      docId: row.docId,
       pointId: row.pointId,
-      collectionId: row.collectionId as CollectionId,
+      collectionId: row.collectionId,
     }));
   }
 
@@ -103,7 +115,7 @@ export class ChunkManager {
       `[ChunkManager.addChunks] 开始处理文档 ${docId}，chunks数量: ${documentChunks.length}`,
     );
 
-    const chunkMetas: Omit<any, 'created_at'>[] = documentChunks.map(
+    const chunkMetas: Omit<ChunkMeta, 'created_at'>[] = documentChunks.map(
       (dc, index) => {
         const pointId = makePointId(docId, index) as PointId;
         this.logger.info(`[ChunkManager.addChunks] 生成chunkMeta ${index}:`, {
@@ -183,11 +195,29 @@ export class ChunkManager {
    * @param docId - 文档ID
    * @returns 文档对象
    */
-  private async getDoc(docId: DocId): Promise<any> {
+  private async getDoc(docId: DocId): Promise<{
+    docId: DocId;
+    name: string;
+    collectionId: CollectionId;
+    key?: string;
+    mime?: string;
+  }> {
     // 这里应该从DocumentManager获取文档
     // 暂时直接从docs表获取
     // 需要通过SQLiteRepoCore访问docs表
-    return (this.core as any).docs?.getById(docId);
+    return (this.core as { docs?: { getById: (id: DocId) => {
+      docId: DocId;
+      name: string;
+      collectionId: CollectionId;
+      key?: string;
+      mime?: string;
+      content?: string;
+      size_bytes?: number;
+      created_at?: number;
+      updated_at?: number;
+      synced_at?: number;
+      deleted_at?: number;
+    } } }).docs?.getById(docId);
   }
 
   /**
@@ -195,7 +225,7 @@ export class ChunkManager {
    * @param docId - 文档ID
    * @returns 块元数据数组
    */
-  getChunkMetasByDocId(docId: DocId): any[] {
+  getChunkMetasByDocId(docId: DocId): ChunkMeta[] {
     return this.chunkMeta.listByDocId(docId);
   }
 }

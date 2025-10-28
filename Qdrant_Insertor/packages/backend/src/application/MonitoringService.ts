@@ -58,28 +58,58 @@ export class MonitoringService {
   /**
    * 获取系统整体健康状态
    */
-  public getSystemHealth() {
+  public getSystemHealth(): {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    components: Record<string, {
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      lastCheck: string;
+      message?: string;
+      responseTime?: number;
+    }>;
+  } {
     return this.core.getSystemHealth();
   }
 
   /**
    * 获取组件健康状态
    */
-  public getComponentHealth(component: string) {
+  public getComponentHealth(component: string): {
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  } | null {
     return this.core.getComponentHealth(component);
   }
 
   /**
    * 获取所有组件健康状态
    */
-  public getAllComponentHealth() {
+  public getAllComponentHealth(): Array<{
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  }> {
     return this.core.getAllComponentHealth();
   }
 
   /**
    * 获取不健康的组件
    */
-  public getUnhealthyComponents() {
+  public getUnhealthyComponents(): Array<{
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  }> {
     return this.core.getUnhealthyComponents();
   }
 
@@ -91,21 +121,45 @@ export class MonitoringService {
     startTime?: number,
     endTime?: number,
     limit?: number,
-  ) {
+  ): Array<{
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  }> {
     return this.core.getMetrics(metricName, startTime, endTime, limit);
   }
 
   /**
    * 获取最新指标值
    */
-  public getLatestMetric(metricName: string) {
+  public getLatestMetric(metricName: string): {
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  } | null {
     return this.core.getLatestMetric(metricName);
   }
 
   /**
    * 获取多个指标的最新值
    */
-  public getLatestMetrics(metricNames: string[]) {
+  public getLatestMetrics(metricNames: string[]): Record<string, {
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  } | null> {
     return this.core.getLatestMetrics(metricNames);
   }
 
@@ -117,7 +171,13 @@ export class MonitoringService {
     startTime?: number,
     endTime?: number,
     aggregationType: 'avg' | 'min' | 'max' | 'sum' = 'avg',
-  ) {
+  ): {
+    min: number;
+    max: number;
+    avg: number;
+    sum: number;
+    count: number;
+  } {
     return this.core.getAggregatedMetrics(
       metricName,
       startTime,
@@ -129,7 +189,7 @@ export class MonitoringService {
   /**
    * 获取所有指标名称
    */
-  public getAllMetricNames() {
+  public getAllMetricNames(): string[] {
     return this.core.getAllMetricNames();
   }
 
@@ -140,7 +200,13 @@ export class MonitoringService {
     metricName: string,
     startTime?: number,
     endTime?: number,
-  ) {
+  ): {
+    min: number;
+    max: number;
+    avg: number;
+    sum: number;
+    count: number;
+  } {
     return this.core.getMetricStats(metricName, startTime, endTime);
   }
 

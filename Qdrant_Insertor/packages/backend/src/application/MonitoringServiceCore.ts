@@ -16,28 +16,58 @@ export class MonitoringServiceCore {
   /**
    * 获取系统整体健康状态
    */
-  public getSystemHealth() {
+  public getSystemHealth(): {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    components: Record<string, {
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      lastCheck: string;
+      message?: string;
+      responseTime?: number;
+    }>;
+  } {
     return this.sqliteRepo.systemHealth.getOverallHealth();
   }
 
   /**
    * 获取组件健康状态
    */
-  public getComponentHealth(component: string) {
+  public getComponentHealth(component: string): {
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  } | null {
     return this.sqliteRepo.systemHealth.getByComponent(component);
   }
 
   /**
    * 获取所有组件健康状态
    */
-  public getAllComponentHealth() {
+  public getAllComponentHealth(): Array<{
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  }> {
     return this.sqliteRepo.systemHealth.getAll();
   }
 
   /**
    * 获取不健康的组件
    */
-  public getUnhealthyComponents() {
+  public getUnhealthyComponents(): Array<{
+    component: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: number;
+    responseTimeMs?: number;
+    errorMessage?: string;
+    details?: Record<string, string | number | boolean>;
+  }> {
     return this.sqliteRepo.systemHealth.getUnhealthyComponents();
   }
 
@@ -49,7 +79,15 @@ export class MonitoringServiceCore {
     startTime?: number,
     endTime?: number,
     limit?: number,
-  ) {
+  ): Array<{
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  }> {
     const now = Date.now();
     const defaultStartTime = startTime || now - 24 * 60 * 60 * 1000; // 默认24小时
     const defaultEndTime = endTime || now;
@@ -65,14 +103,30 @@ export class MonitoringServiceCore {
   /**
    * 获取最新指标值
    */
-  public getLatestMetric(metricName: string) {
+  public getLatestMetric(metricName: string): {
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  } | null {
     return this.sqliteRepo.systemMetrics.getLatestByName(metricName);
   }
 
   /**
    * 获取多个指标的最新值
    */
-  public getLatestMetrics(metricNames: string[]) {
+  public getLatestMetrics(metricNames: string[]): Record<string, {
+    id: string;
+    metricName: string;
+    metricValue: number;
+    metricUnit?: string;
+    tags?: Record<string, string | number>;
+    timestamp: number;
+    createdAt: number;
+  } | null> {
     return this.sqliteRepo.systemMetrics.getLatestByNames(metricNames);
   }
 
@@ -84,7 +138,13 @@ export class MonitoringServiceCore {
     startTime?: number,
     endTime?: number,
     aggregationType: 'avg' | 'min' | 'max' | 'sum' = 'avg',
-  ) {
+  ): {
+    min: number;
+    max: number;
+    avg: number;
+    sum: number;
+    count: number;
+  } {
     const now = Date.now();
     const defaultStartTime = startTime || now - 24 * 60 * 60 * 1000; // 默认24小时
     const defaultEndTime = endTime || now;
@@ -100,7 +160,7 @@ export class MonitoringServiceCore {
   /**
    * 获取所有指标名称
    */
-  public getAllMetricNames() {
+  public getAllMetricNames(): string[] {
     return this.sqliteRepo.systemMetrics.getAllMetricNames();
   }
 
@@ -111,7 +171,13 @@ export class MonitoringServiceCore {
     metricName: string,
     startTime?: number,
     endTime?: number,
-  ) {
+  ): {
+    min: number;
+    max: number;
+    avg: number;
+    sum: number;
+    count: number;
+  } {
     return this.sqliteRepo.systemMetrics.getMetricStats(
       metricName,
       startTime,

@@ -1,6 +1,9 @@
 import { SQLiteRepoCore } from './SQLiteRepoCore.js';
 import { Logger } from '../logger.js';
 import { DocId, DocumentChunk, Doc } from '../domain/types.js';
+import { DocsTable } from './sqlite/dao/DocsTable.js';
+import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
+import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
 
 /**
  * 文档管理器
@@ -8,7 +11,14 @@ import { DocId, DocumentChunk, Doc } from '../domain/types.js';
  */
 export class DocumentManager {
   constructor(
-    private readonly docs: any, // DocsTable
+    private readonly docs: {
+      getById: (id: DocId) => Doc | undefined;
+      update: (id: DocId, data: Partial<Doc>) => void;
+      create: (data: Omit<Doc, 'docId'>) => DocId;
+      hardDelete: (id: DocId) => void;
+      chunkMeta: ChunkMetaTable;
+      chunksFts5: ChunksFts5Table;
+    }, // DocsTable
     private readonly core: SQLiteRepoCore,
     private readonly logger: Logger,
   ) {}

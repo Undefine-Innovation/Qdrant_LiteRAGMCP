@@ -10,6 +10,16 @@ import {
   SystemMetricsResponse,
   DashboardDataRequest,
   DashboardDataResponse,
+  CreateAlertRuleRequest,
+  AlertRuleResponse,
+  UpdateAlertRuleRequest,
+  AlertHistoryRequest,
+  AlertHistoryResponse,
+  CreateNotificationChannelRequest,
+  NotificationChannelResponse,
+  UpdateNotificationChannelRequest,
+  TestNotificationRequest,
+  TestNotificationResponse,
 } from '../api/contracts/monitoring.js';
 import { MonitoringApiServiceCore } from './MonitoringApiServiceCore.js';
 import { AlertApiService } from './AlertApiService.js';
@@ -88,7 +98,7 @@ export class MonitoringApiService {
         totalAlerts: alertStats.length,
         activeAlerts: activeAlerts.alerts.length,
       },
-      recentAlerts: activeAlerts.alerts.slice(0, 5).map((alert: any) => ({
+      recentAlerts: activeAlerts.alerts.slice(0, 5).map((alert) => ({
         id: alert.id,
         severity: alert.severity,
         message: alert.message || 'No message',
@@ -100,14 +110,14 @@ export class MonitoringApiService {
   /**
    * 创建告警规则API
    */
-  async createAlertRule(request: any): Promise<any> {
+  async createAlertRule(request: CreateAlertRuleRequest): Promise<AlertRuleResponse> {
     return this.alertApi.createAlertRule(request);
   }
 
   /**
    * 获取告警规则列表API
    */
-  async getAlertRules(): Promise<any[]> {
+  async getAlertRules(): Promise<AlertRuleResponse[]> {
     return this.alertApi.getAlertRules();
   }
 
@@ -120,7 +130,7 @@ export class MonitoringApiService {
     sort: string = 'created_at',
     order: 'asc' | 'desc' = 'desc',
     activeOnly?: boolean,
-  ): Promise<{ rules: any[]; total: number }> {
+  ): Promise<{ rules: AlertRuleResponse[]; total: number }> {
     return this.alertApi.getAlertRulesPaginated(
       page,
       limit,
@@ -133,7 +143,7 @@ export class MonitoringApiService {
   /**
    * 更新告警规则API
    */
-  async updateAlertRule(ruleId: string, request: any): Promise<any> {
+  async updateAlertRule(ruleId: string, request: UpdateAlertRuleRequest): Promise<AlertRuleResponse> {
     return this.alertApi.updateAlertRule(ruleId, request);
   }
 
@@ -147,21 +157,21 @@ export class MonitoringApiService {
   /**
    * 获取告警历史API
    */
-  async getAlertHistory(request: any): Promise<any> {
+  async getAlertHistory(request: AlertHistoryRequest): Promise<AlertHistoryResponse> {
     return this.alertApi.getAlertHistory(request);
   }
 
   /**
    * 创建通知渠道API
    */
-  async createNotificationChannel(request: any): Promise<any> {
+  async createNotificationChannel(request: CreateNotificationChannelRequest): Promise<NotificationChannelResponse> {
     return this.notificationApi.createNotificationChannel(request);
   }
 
   /**
    * 获取通知渠道列表API
    */
-  async getNotificationChannels(): Promise<any[]> {
+  async getNotificationChannels(): Promise<NotificationChannelResponse[]> {
     return this.notificationApi.getNotificationChannels();
   }
 
@@ -170,8 +180,8 @@ export class MonitoringApiService {
    */
   async updateNotificationChannel(
     channelId: string,
-    request: any,
-  ): Promise<any> {
+    request: UpdateNotificationChannelRequest,
+  ): Promise<NotificationChannelResponse> {
     return this.notificationApi.updateNotificationChannel(channelId, request);
   }
 
@@ -185,7 +195,7 @@ export class MonitoringApiService {
   /**
    * 测试通知API
    */
-  async testNotification(request: any): Promise<any> {
+  async testNotification(request: TestNotificationRequest): Promise<TestNotificationResponse> {
     return this.notificationApi.testNotification(request);
   }
 }

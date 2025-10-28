@@ -1,5 +1,5 @@
 import { Logger } from '../logger.js';
-import { SyncJobStatus } from '../domain/sync/types.js';
+import { SyncJobStatus, SyncJob } from '../domain/sync/types.js';
 import { ErrorCategory, RetryStats } from '../domain/sync/retry.js';
 import { createErrorClassifier } from '../domain/sync/ErrorClassifier.js';
 import { createRetryScheduler } from '../domain/sync/RetryScheduler.js';
@@ -115,7 +115,7 @@ export class SyncErrorHandler {
       errorCategory,
       job.retries,
       retryStrategy,
-      () => this.executeSync(docId as any), // 这里需要传入执行函数
+      () => this.executeSync(docId), // 这里需要传入执行函数
     );
   }
 
@@ -164,7 +164,7 @@ export class SyncErrorHandler {
    * @param job - 同步作业
    * @returns 是否应该重试
    */
-  shouldRetryJob(job: any): boolean {
+  shouldRetryJob(job: SyncJob): boolean {
     const errorCategory = job.error
       ? this.errorClassifier.classify(new Error(job.error))
       : ErrorCategory.UNKNOWN;
@@ -184,7 +184,7 @@ export class SyncErrorHandler {
    *
    * @param job - 同步作业
    */
-  async scheduleRetryForJob(job: any): Promise<void> {
+  async scheduleRetryForJob(job: SyncJob): Promise<void> {
     if (!job.error) return;
 
     const error = new Error(job.error);

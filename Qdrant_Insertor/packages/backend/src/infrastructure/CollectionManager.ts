@@ -1,6 +1,10 @@
 import { SQLiteRepoCore } from './SQLiteRepoCore.js';
 import { Logger } from '../logger.js';
 import { CollectionId } from '../domain/types.js';
+import { CollectionsTable } from './sqlite/dao/CollectionsTable.js';
+import { ChunkMetaTable } from './sqlite/dao/ChunkMetaTable.js';
+import { ChunksFts5Table } from './sqlite/dao/ChunksFts5Table.js';
+import { DocsTable } from './sqlite/dao/DocsTable.js';
 
 /**
  * 集合管理器
@@ -8,7 +12,14 @@ import { CollectionId } from '../domain/types.js';
  */
 export class CollectionManager {
   constructor(
-    private readonly collections: any, // CollectionsTable
+    private readonly collections: {
+      getById: (id: CollectionId) => { collectionId: CollectionId } | undefined;
+      delete: (id: CollectionId) => void;
+      chunkMeta: ChunkMetaTable;
+      chunksFts5: ChunksFts5Table;
+      docs: DocsTable;
+      listAll: () => { collectionId: CollectionId }[];
+    }, // CollectionsTable
     private readonly core: SQLiteRepoCore,
     private readonly logger: Logger,
   ) {}
@@ -52,6 +63,6 @@ export class CollectionManager {
    */
   async getAllCollectionIds(): Promise<CollectionId[]> {
     const collections = this.collections.listAll();
-    return collections.map((c: any) => c.collectionId);
+    return collections.map((c) => c.collectionId);
   }
 }

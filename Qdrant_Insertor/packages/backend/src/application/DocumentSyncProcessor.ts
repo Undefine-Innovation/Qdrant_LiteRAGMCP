@@ -45,7 +45,7 @@ export class DocumentSyncProcessor {
       return;
     }
 
-    const chunks: DocumentChunk[] = this.splitter.split(doc.content as string, {
+    const chunks: DocumentChunk[] = this.splitter.split(doc.content, {
       name: doc.name ?? '',
     });
 
@@ -96,7 +96,7 @@ export class DocumentSyncProcessor {
 
     const points: Point[] = chunkMetasWithContent.map(
       (chunkMeta: ChunkMeta & { content: string }, index: number) => ({
-        id: makePointId(chunkMeta.docId, chunkMeta.chunkIndex) as PointId,
+        id: makePointId(chunkMeta.docId, chunkMeta.chunkIndex),
         vector: embeddings[index],
         payload: {
           docId: chunkMeta.docId,

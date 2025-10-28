@@ -113,6 +113,14 @@ export class SQLiteRepo {
   }
 
   /**
+   * 获取数据库实例
+   * @returns 数据库实例
+   */
+  getDb(): Database.Database {
+    return this.db;
+  }
+
+  /**
    * 删除一个集合及其所有关联的文档和块。
    * 这是一个事务性操作。
    * @param collectionId 要删除的集合 ID。
@@ -201,7 +209,14 @@ export class SQLiteRepo {
    * @param docId - 文档ID
    * @returns 文档块数组
    */
-  public getDocumentChunks(docId: DocId): any[] {
+  public getDocumentChunks(docId: DocId): Array<{
+    pointId: PointId;
+    docId: DocId;
+    collectionId: CollectionId;
+    chunkIndex: number;
+    title?: string;
+    content: string;
+  }> {
     return this.chunks.getByDocId(docId);
   }
 
@@ -219,7 +234,11 @@ export class SQLiteRepo {
    * @param logger - 日志记录器
    * @returns 初始化结果
    */
-  async initializeDatabase(dbPath: string, logger: Logger): Promise<any> {
+  async initializeDatabase(dbPath: string, logger: Logger): Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+  }> {
     return this.core.initializeDatabase(dbPath, logger);
   }
 

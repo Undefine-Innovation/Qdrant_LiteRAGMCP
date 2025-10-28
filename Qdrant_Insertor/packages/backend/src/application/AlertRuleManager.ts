@@ -93,7 +93,12 @@ export class AlertRuleManager {
   /**
    * 获取告警统计信息
    */
-  public getAlertStats() {
+  public getAlertStats(): {
+    total: number;
+    active: number;
+    inactive: number;
+    bySeverity: Record<string, number>;
+  } {
     return this.sqliteRepo.alertRules.getStats();
   }
 

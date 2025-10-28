@@ -266,7 +266,7 @@ export class AlertApiService {
         alerts: alerts.map((alert) => ({
           id: alert.id,
           ruleId: alert.ruleId,
-          ruleName: (alert as { ruleName?: string }).ruleName || 'Unknown',
+          ruleName: ('ruleName' in alert ? alert.ruleName : undefined) || 'Unknown',
           severity: alert.severity,
           status: alert.status,
           message: alert.message || 'No message',
