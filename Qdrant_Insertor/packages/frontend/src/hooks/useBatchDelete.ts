@@ -92,8 +92,8 @@ export const useBatchDelete = () => {
         const response = await batchApi.deleteDocuments(request);
 
         // 开始进度轮询
-        if (response.operationId) {
-          startProgressPolling(response.operationId);
+        if ((response as any).operationId) {
+          startProgressPolling((response as any).operationId);
         }
 
         return response;
@@ -125,8 +125,8 @@ export const useBatchDelete = () => {
         const response = await batchApi.deleteCollections(request);
 
         // 开始进度轮询
-        if (response.operationId) {
-          startProgressPolling(response.operationId);
+        if ((response as any).operationId) {
+          startProgressPolling((response as any).operationId);
         }
 
         return response;

@@ -245,6 +245,44 @@ export const useAppStore = create<AppState>()(
             );
           }
         },
+
+        // 设置批量上传进度
+        setBatchUploadProgress: (progress: BatchUploadProgress | null) => {
+          set({ batchUploadProgress: progress }, false, 'setBatchUploadProgress');
+        },
+
+        // 设置批量操作进度
+        setBatchOperationProgress: (progress: BatchOperationProgress | null) => {
+          set({ batchOperationProgress: progress }, false, 'setBatchOperationProgress');
+        },
+
+        // 设置选中的文档
+        setSelectedDocuments: (documentIds: string[]) => {
+          set({ selectedDocuments: documentIds }, false, 'setSelectedDocuments');
+        },
+
+        // 设置选中的集合
+        setSelectedCollections: (collectionIds: string[]) => {
+          set({ selectedCollections: collectionIds }, false, 'setSelectedCollections');
+        },
+
+        // 添加批量操作到历史记录
+        addBatchOperationToHistory: (
+          operation: AppState['batchOperationHistory'][0],
+        ) => {
+          set(
+            state => ({
+              batchOperationHistory: [operation, ...state.batchOperationHistory].slice(0, 50),
+            }),
+            false,
+            'addBatchOperationToHistory',
+          );
+        },
+
+        // 清空批量操作历史
+        clearBatchOperationHistory: () => {
+          set({ batchOperationHistory: [] }, false, 'clearBatchOperationHistory');
+        },
       }),
       {
         name: 'app-store',

@@ -26,7 +26,7 @@ const CollectionsPage = () => {
 
   // 获取集合列表
   const { state: collectionsState, execute: loadCollections } = useApi(
-    () => collectionsApi.getCollections(paginationParams),
+    () => collectionsApi.getCollections(paginationParams as any),
     {
       maxRetries: 3,
       retryDelay: 1000,
@@ -100,11 +100,10 @@ const CollectionsPage = () => {
     loadCollections();
   }, []);
 
-  const collections =
-    (collectionsState.data as { data: Collection[] })?.data ||
-    (collectionsState.data as Collection[]) ||
-    [];
-  const pagination = (collectionsState.data as { pagination: { page: number; totalPages: number; total: number; limit: number } })?.pagination;
+  const collections = Array.isArray(collectionsState.data)
+    ? collectionsState.data as any[]
+    : (collectionsState.data as any)?.data || [];
+  const pagination = (collectionsState.data as any)?.pagination;
 
   // 调试日志
   console.log('CollectionsPage - collectionsState:', collectionsState);

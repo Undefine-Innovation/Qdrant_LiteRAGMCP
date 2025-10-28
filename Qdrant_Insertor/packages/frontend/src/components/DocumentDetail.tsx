@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Document, Chunk } from '../types';
+import { Document } from '../types';
 import { documentsApi } from '../services/api';
 import { usePaginatedApi } from '../hooks/useApi';
 import LoadingSpinner from './LoadingSpinner';
@@ -10,8 +10,18 @@ import DocumentDownload from './DocumentDownload';
 import DocumentThumbnail from './DocumentThumbnail';
 
 // 文档块接口（扩展后端Chunk类型）
-interface DocumentChunk extends Chunk {
-  tokenCount: number;
+interface DocumentChunk {
+  id: string;
+  pointId: string;
+  docId: string;
+  chunkIndex: number;
+  content: string;
+  titleChain: string;
+  title?: string;
+  contentHash?: string;
+  createdAt?: number;
+  tokenCount?: number;
+  index?: number;
 }
 
 interface DocumentDetailProps {
@@ -52,25 +62,23 @@ const DocumentDetail = ({
     });
 
     // 处理块数据，将后端格式转换为前端格式
-    const chunksData = response.data.map((chunk: {
-      pointId: string;
-      docId: string;
-      content: string;
-      chunkIndex: number;
-    }) => ({
-      id: chunk.pointId,
-      documentId: chunk.docId,
+    const responseData = Array.isArray(response) ? response : (response as any).data || [];
+    const chunksData = responseData.map((chunk: any) => ({
+      id: chunk.pointId || chunk.id,
+      pointId: chunk.pointId || chunk.id,
+      docId: chunk.docId,
       content: chunk.content,
-      index: chunk.chunkIndex,
+      chunkIndex: chunk.chunkIndex || chunk.index,
+      index: chunk.chunkIndex || chunk.index,
       tokenCount: Math.floor(chunk.content.length / 4), // 估算token数量
     }));
 
     return {
       data: chunksData,
-      total: response.pagination.total,
-      page: response.pagination.page,
-      limit: response.pagination.limit,
-      totalPages: response.pagination.totalPages,
+      total: (response as any).pagination?.total || 0,
+      page: (response as any).pagination?.page || 1,
+      limit: (response as any).pagination?.limit || 20,
+      totalPages: (response as any).pagination?.totalPages || 1,
     };
   });
 
@@ -221,8 +229,8 @@ const DocumentDetail = ({
           </span>
           <DocumentThumbnail
             documentId={document.docId}
-            fileName={document.name}
-            size={{ width: 80, height: 80 }}
+            documentName={document.name}
+            onClick={() => {}}
           />
         </div>
       </div>
@@ -258,7 +266,7 @@ const DocumentDetail = ({
                 : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
             }`}
           >
-            文档块 ({chunksState.data?.total || chunksState.data?.length || 0})
+            文档块 ({(chunksState.data as any)?.total || (chunksState.data as any)?.length || 0})
           </button>
           <button
             onClick={() => setActiveTab('download')}
@@ -295,7 +303,7 @@ const DocumentDetail = ({
           />
         ) : (
           <div className="space-y-4">
-            {!chunksState.data?.data || chunksState.data?.data?.length === 0 ? (
+            {!(chunksState.data as any)?.data || (chunksState.data as any)?.data?.length === 0 ? (
               <div className="text-center py-8 text-secondary-500">
                 该文档尚未被分割成块
               </div>
@@ -307,7 +315,7 @@ const DocumentDetail = ({
                     文档块列表
                   </h3>
                   <div className="max-h-96 overflow-y-auto space-y-2">
-                    {chunksState.data?.data?.map(chunk => (
+                    {(chunksState.data as any)?.data?.map((chunk: any) => (
                       <div
                         key={chunk.id}
                         onClick={() => setSelectedChunk(chunk)}
@@ -333,15 +341,15 @@ const DocumentDetail = ({
                   </div>
 
                   {/* 分页组件 */}
-                  {chunksState.data && chunksState.data.totalPages > 1 && (
+                  {(chunksState.data as any) && (chunksState.data as any).totalPages > 1 && (
                     <div className="mt-4">
                       <Pagination
-                        currentPage={chunksState.data.page}
-                        totalPages={chunksState.data.totalPages}
-                        total={chunksState.data.total}
-                        limit={chunksState.data.limit}
+                        currentPage={(chunksState.data as any).page}
+                        totalPages={(chunksState.data as any).totalPages}
+                        total={(chunksState.data as any).total}
+                        limit={(chunksState.data as any).limit}
                         onPageChange={page =>
-                          loadChunksPage(page, chunksState.data?.limit || 20)
+                          loadChunksPage(page, (chunksState.data as any)?.limit || 20)
                         }
                         onLimitChange={limit => loadChunksPage(1, limit)}
                         loading={chunksState.loading}
@@ -359,7 +367,7 @@ const DocumentDetail = ({
                     <div className="border border-secondary-200 rounded-md p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-secondary-900">
-                          块 #{selectedChunk.index + 1}
+                          块 #{(selectedChunk.index || 0) + 1}
                         </span>
                         <span className="text-xs text-secondary-500">
                           {selectedChunk.tokenCount} tokens

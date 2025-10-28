@@ -99,7 +99,11 @@ export class AlertRuleManager {
     inactive: number;
     bySeverity: Record<string, number>;
   } {
-    return this.sqliteRepo.alertRules.getStats();
+    const stats = this.sqliteRepo.alertRules.getStats();
+    return {
+      ...stats,
+      inactive: stats.total - stats.active,
+    };
   }
 
   /**

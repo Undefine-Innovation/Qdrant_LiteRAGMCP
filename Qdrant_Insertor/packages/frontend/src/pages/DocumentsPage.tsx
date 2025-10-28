@@ -117,7 +117,7 @@ const DocumentsPage = () => {
             className="input max-w-xs"
           >
             <option value="">选择集合</option>
-            {(collectionsState.data as { data: Collection[] })?.data?.map(
+            {(collectionsState.data as any)?.data?.map(
               (collection: Collection) => (
                 <option
                   key={collection.collectionId}
@@ -151,8 +151,9 @@ const DocumentsPage = () => {
 
       <DocumentList
         documents={
-          (documentsState.data as { data: Document[] })?.data ||
-          (documentsState.data as unknown as Document[])
+          Array.isArray(documentsState.data)
+            ? documentsState.data as Document[]
+            : (documentsState.data as any)?.data || []
         }
         loading={documentsState.loading}
         error={documentsState.error}
@@ -163,13 +164,13 @@ const DocumentsPage = () => {
       />
 
       {/* 分页组件 - 仅在有分页数据时显示 */}
-      {(documentsState.data as { pagination: { page: number; totalPages: number; total: number; limit: number } })?.pagination &&
-        (documentsState.data as { data: Document[] })?.data?.length > 0 && (
+      {(documentsState.data as any)?.pagination &&
+        (Array.isArray(documentsState.data) ? documentsState.data.length : (documentsState.data as any)?.data?.length || 0) > 0 && (
           <Pagination
-            currentPage={(documentsState.data as { pagination: { page: number } }).pagination.page}
-            totalPages={(documentsState.data as { pagination: { totalPages: number } }).pagination.totalPages}
-            total={(documentsState.data as { pagination: { total: number } }).pagination.total}
-            limit={(documentsState.data as { pagination: { limit: number } }).pagination.limit}
+            currentPage={(documentsState.data as any).pagination.page}
+            totalPages={(documentsState.data as any).pagination.totalPages}
+            total={(documentsState.data as any).pagination.total}
+            limit={(documentsState.data as any).pagination.limit}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             loading={documentsState.loading}

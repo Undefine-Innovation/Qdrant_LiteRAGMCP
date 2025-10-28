@@ -87,7 +87,7 @@ export const useBatchUpload = () => {
         // 创建批量上传请求
         const request: BatchUploadRequest = {
           files: Array.from(files),
-          collectionId,
+          collectionId: collectionId || '',
         };
 
         // 发送请求
@@ -100,6 +100,7 @@ export const useBatchUpload = () => {
 
         // 设置初始进度
         setBatchUploadProgress({
+          loaded: 0,
           total: response.total,
           processed: 0,
           successful: 0,
@@ -115,10 +116,11 @@ export const useBatchUpload = () => {
         setError(errorMessage);
 
         // 设置错误状态
-        setBatchUploadProgress(prev =>
-          prev
+        const currentProgress = useAppStore.getState().batchUploadProgress;
+        setBatchUploadProgress(
+          currentProgress
             ? {
-                ...prev,
+                ...currentProgress,
                 status: 'failed',
               }
             : null,

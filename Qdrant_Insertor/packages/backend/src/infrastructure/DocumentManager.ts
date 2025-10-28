@@ -72,6 +72,7 @@ export class DocumentManager {
           : content.byteLength,
       name: name ?? existingDoc.name,
       mime,
+      created_at: Date.now(),
     });
 
     return this.docs.getById(newId) ?? null;

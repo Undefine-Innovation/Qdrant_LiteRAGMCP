@@ -73,9 +73,9 @@ const BatchOperationStatus: React.FC = () => {
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
               />
             </svg>
-            {currentProgress.percentage > 0 && (
+            {(currentProgress.percentage || 0) > 0 && (
               <span className="absolute -top-1 -right-1 bg-white text-blue-500 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {currentProgress.percentage}%
+                {currentProgress.percentage || 0}%
               </span>
             )}
           </button>
@@ -90,7 +90,7 @@ const BatchOperationStatus: React.FC = () => {
         size="lg"
       >
         <BatchOperationProgressComponent
-          progress={currentProgress}
+          progress={batchOperationProgress}
           title="当前批量操作"
           showDetails={true}
           onCancel={() => {
@@ -130,7 +130,7 @@ const BatchOperationStatus: React.FC = () => {
                 <div className="w-32 bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${currentProgress.percentage}%` }}
+                    style={{ width: `${currentProgress.percentage || 0}%` }}
                   />
                 </div>
                 <button

@@ -6,7 +6,9 @@ import UploadProgress from './UploadProgress';
 import UploadResults from './UploadResults';
 
 interface BatchDocumentUploadProps {
-  onBatchUpload: (
+  onComplete?: () => void;
+  collectionId?: string;
+  onBatchUpload?: (
     files: FileList,
     collectionId?: string,
   ) => Promise<BatchUploadResult>;
@@ -21,6 +23,8 @@ interface BatchDocumentUploadProps {
  * 支持拖拽上传和点击选择多个文件
  */
 const BatchDocumentUpload = ({
+  onComplete,
+  collectionId: propCollectionId,
   onBatchUpload,
   accept = '.txt,.md,.pdf,.doc,.docx',
   maxFiles = 50,
@@ -32,7 +36,7 @@ const BatchDocumentUpload = ({
     useState<BatchUploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>(propCollectionId || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 处理文件选择
@@ -65,6 +69,7 @@ const BatchDocumentUpload = ({
     setError(null);
     setIsUploading(true);
     setUploadProgress({
+      loaded: 0,
       total: selectedFiles.length,
       processed: 0,
       successful: 0,
@@ -79,16 +84,21 @@ const BatchDocumentUpload = ({
       selectedFiles.forEach(file => dataTransfer.items.add(file));
       const fileList = dataTransfer.files;
 
+      if (!onBatchUpload) {
+        throw new Error('onBatchUpload function is required');
+      }
+      
       const result = await onBatchUpload(
         fileList,
         selectedCollectionId || undefined,
       );
 
       setUploadProgress({
-        total: result.total,
-        processed: result.total,
-        successful: result.successful,
-        failed: result.failed,
+        loaded: result.total || 0,
+        total: result.total || 0,
+        processed: result.total || 0,
+        successful: result.successful || 0,
+        failed: result.failed || 0,
         percentage: 100,
         status: result.success ? 'completed' : 'completed_with_errors',
         results: result.results,
@@ -98,6 +108,7 @@ const BatchDocumentUpload = ({
       setTimeout(() => {
         clearFiles();
         setUploadProgress(null);
+        onComplete?.();
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量上传失败');

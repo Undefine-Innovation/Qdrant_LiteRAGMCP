@@ -12,6 +12,14 @@ import {
   CreateNotificationChannelRequestSchema,
   UpdateNotificationChannelRequestSchema,
   TestNotificationRequestSchema,
+  HealthCheckRequest,
+  SyncJobStatsRequest,
+  SystemMetricsRequest,
+  CreateAlertRuleRequest,
+  AlertHistoryRequest,
+  DashboardDataRequest,
+  CreateNotificationChannelRequest,
+  TestNotificationRequest,
 } from '../api/contracts/monitoring.js';
 import { logger } from '../logger.js';
 
@@ -44,7 +52,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.getSyncJobStats(
-          req.validated!.query as any,
+          req.validated!.query as SyncJobStatsRequest,
         );
         res.json(result);
       } catch (error) {
@@ -61,7 +69,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.getSystemMetrics(
-          req.validated!.query as any,
+          req.validated!.query as SystemMetricsRequest,
         );
         res.json(result);
       } catch (error) {
@@ -81,7 +89,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.createAlertRule(
-          req.validated!.body as any,
+          req.validated!.body as CreateAlertRuleRequest,
         );
         res.status(201).json(result);
       } catch (error) {
@@ -182,7 +190,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.getAlertHistory(
-          req.validated!.query as any,
+          req.validated!.query as AlertHistoryRequest,
         );
         res.json(result);
       } catch (error) {
@@ -199,7 +207,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.getDashboardData(
-          req.validated!.query as any,
+          req.validated!.query as DashboardDataRequest,
         );
         res.json(result);
       } catch (error) {
@@ -219,7 +227,7 @@ export function createMonitoringRoutes(
     async (req: ValidatedRequest, res) => {
       try {
         const result = await monitoringApiService.createNotificationChannel(
-          req.validated!.body as any,
+          req.validated!.body as CreateNotificationChannelRequest,
         );
         res.status(201).json(result);
       } catch (error) {
@@ -284,7 +292,7 @@ export function createMonitoringRoutes(
         const { channelId } = req.params;
         const result = await monitoringApiService.testNotification({
           channelId,
-          ...(req.validated!.body as any),
+          ...(req.validated!.body as Omit<TestNotificationRequest, 'channelId'>),
         });
         res.json(result);
       } catch (error) {

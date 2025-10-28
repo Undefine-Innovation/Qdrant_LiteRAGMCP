@@ -1,5 +1,5 @@
 import { Logger } from '../logger.js';
-import { AlertRule, AlertHistory } from '../infrastructure/sqlite/dao/index.js';
+import { AlertRule, AlertHistory, AlertSeverity } from '../infrastructure/sqlite/dao/index.js';
 
 /**
  * 告警通知渠道接口
@@ -326,7 +326,7 @@ export class AlertNotificationService {
         metricName: 'test_metric',
         conditionOperator: '>',
         thresholdValue: 80,
-        severity: severity as 'low' | 'medium' | 'high' | 'critical',
+        severity: severity as AlertSeverity,
         isActive: true,
         cooldownMinutes: 5,
         notificationChannels: [channelId],

@@ -96,7 +96,7 @@ export class DocumentSyncProcessor {
 
     const points: Point[] = chunkMetasWithContent.map(
       (chunkMeta: ChunkMeta & { content: string }, index: number) => ({
-        id: makePointId(chunkMeta.docId, chunkMeta.chunkIndex),
+        id: makePointId(chunkMeta.docId, chunkMeta.chunkIndex) as PointId,
         vector: embeddings[index],
         payload: {
           docId: chunkMeta.docId,

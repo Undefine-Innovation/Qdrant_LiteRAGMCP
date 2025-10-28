@@ -168,7 +168,7 @@ interface DocumentTableProps {
   onDocumentView: (documentId: string) => void;
   onDocumentDelete: (documentId: string) => void;
   onDocumentRetry: (documentId: string) => void;
-  getStatusInfo: (status: Document['status']) => {
+  getStatusInfo: (status?: string) => {
     text: string;
     className: string;
   };
@@ -203,10 +203,10 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       // 全选
-      documents.forEach(doc => onDocumentSelect(doc.docId, true));
+      documents.forEach((doc: any) => onDocumentSelect(doc.docId, true));
     } else {
       // 取消全选
-      documents.forEach(doc => onDocumentSelect(doc.docId, false));
+      documents.forEach((doc: any) => onDocumentSelect(doc.docId, false));
     }
   };
 
@@ -262,7 +262,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
       </thead>
       <tbody className="bg-white divide-y divide-secondary-200">
         {documents.map(document => {
-          const statusInfo = getStatusInfo(document.status);
+          const statusInfo = getStatusInfo((document as any).status);
           return (
             <tr key={document.docId} className="hover:bg-secondary-50">
               <td className="px-6 py-4 whitespace-nowrap">
@@ -278,11 +278,9 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
               <td className="px-6 py-4 whitespace-nowrap">
                 <DocumentThumbnail
                   documentId={document.docId}
-                  fileName={document.name}
                   onClick={() =>
                     onDocumentView && onDocumentView(document.docId)
                   }
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
                 />
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
@@ -306,7 +304,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {formatDate(document.created_at || document.createdAt)}
+                {formatDate((document as any).created_at || (document as any).createdAt)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center space-x-2">
@@ -318,8 +316,8 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                       查看
                     </button>
                   )}
-                  {(document.status === 'failed' ||
-                    document.status === 'dead') &&
+                  {((document as any).status === 'failed' ||
+                    (document as any).status === 'dead') &&
                     onDocumentRetry && (
                       <button
                         onClick={() => onDocumentRetry(document.docId)}

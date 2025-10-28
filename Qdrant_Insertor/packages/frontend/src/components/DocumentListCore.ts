@@ -16,24 +16,20 @@ export class DocumentListCore {
   /**
    * 获取状态显示信息
    */
-  static getStatusInfo(status: Document['status']): DocumentStatusInfo {
+  static getStatusInfo(status?: string): DocumentStatusInfo {
     switch (status) {
       case 'new':
         return { text: '新建', className: 'bg-gray-100 text-gray-800' };
-      case 'split_ok':
-        return { text: '分割完成', className: 'bg-blue-100 text-blue-800' };
-      case 'embed_ok':
-        return { text: '嵌入完成', className: 'bg-indigo-100 text-indigo-800' };
-      case 'synced':
-        return { text: '已同步', className: 'bg-green-100 text-green-800' };
+      case 'processing':
+        return { text: '处理中', className: 'bg-blue-100 text-blue-800' };
+      case 'completed':
+        return { text: '已完成', className: 'bg-green-100 text-green-800' };
       case 'failed':
         return { text: '失败', className: 'bg-red-100 text-red-800' };
-      case 'retrying':
-        return { text: '重试中', className: 'bg-yellow-100 text-yellow-800' };
       case 'dead':
         return { text: '已放弃', className: 'bg-gray-100 text-gray-800' };
       default:
-        return { text: status, className: 'bg-gray-100 text-gray-800' };
+        return { text: status || '未知', className: 'bg-gray-100 text-gray-800' };
     }
   }
 
@@ -86,7 +82,7 @@ export class DocumentListCore {
       return [];
     } else {
       // 全选
-      return documents.map(doc => doc.id);
+      return documents.map(doc => (doc as any).id || doc.docId);
     }
   }
 

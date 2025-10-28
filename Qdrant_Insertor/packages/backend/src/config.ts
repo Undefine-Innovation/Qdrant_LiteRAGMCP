@@ -63,7 +63,7 @@ export function validateConfig(env = process.env): AppConfig {
     200,
   );
 
-  const API_PORT = validateNumber(env.API_PORT, 'API_PORT', 3000);
+  const API_PORT = validateNumber(env.API_PORT || env.PORT, 'API_PORT', 3000);
   const GC_INTERVAL_HOURS = validateNumber(
     env.GC_INTERVAL_HOURS,
     'GC_INTERVAL_HOURS',

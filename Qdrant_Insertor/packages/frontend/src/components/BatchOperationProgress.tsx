@@ -84,7 +84,6 @@ const BatchOperationProgressComponent: React.FC<
 
   const isCompleted =
     progress.status === 'completed' ||
-    progress.status === 'completed_with_errors' ||
     progress.status === 'failed' ||
     progress.status === 'cancelled';
 
@@ -114,7 +113,7 @@ const BatchOperationProgressComponent: React.FC<
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-gray-600">
           <span>进度</span>
-          <span>{progress.percentage}%</span>
+          <span>{progress.percentage || 0}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div

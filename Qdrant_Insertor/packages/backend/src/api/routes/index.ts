@@ -4,12 +4,16 @@ import { ISearchService } from '../../domain/ISearchService.js';
 import { IGraphService } from '../../domain/graph.js';
 import { ICollectionService } from '../../domain/ICollectionService.js';
 import { IDocumentService } from '../../domain/IDocumentService.js';
+import { IFileProcessingService } from '../../domain/IFileProcessingService.js';
+import { IBatchService } from '../../domain/IBatchService.js';
 import { MonitoringApiService } from '../../application/MonitoringApiService.js';
 import { createCollectionRoutes } from './collections.js';
 import { createDocumentRoutes } from './documents.js';
 import { createSearchRoutes } from './search.js';
 import { createGraphRoutes } from './graph.js';
+import { createPreviewRoutes } from './preview.js';
 import { createCommonRoutes } from './common.js';
+import { createBatchRoutes } from './batch.js';
 import { createMonitoringRoutes } from '../monitoring.js';
 
 /**
@@ -22,6 +26,8 @@ interface ApiServices {
   graphService: IGraphService;
   collectionService: ICollectionService;
   documentService: IDocumentService;
+  fileProcessingService: IFileProcessingService;
+  batchService: IBatchService;
   monitoringApiService?: MonitoringApiService;
 }
 
@@ -57,6 +63,12 @@ export function createApiRouter(services: ApiServices): express.Router {
 
   // 图谱路由
   router.use('/', createGraphRoutes(services.graphService));
+
+  // 预览和下载路由
+  router.use('/', createPreviewRoutes(services.fileProcessingService));
+
+  // 批量操作路由
+  router.use('/', createBatchRoutes(services.batchService));
 
   // 监控路由
   if (services.monitoringApiService) {

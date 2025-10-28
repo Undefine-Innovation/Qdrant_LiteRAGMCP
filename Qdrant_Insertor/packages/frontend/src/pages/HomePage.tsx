@@ -29,9 +29,9 @@ const HomePage = () => {
     executeSystem();
   }, []);
 
-  const collectionsCount = collectionsState.data?.pagination?.total || 0;
-  const documentsCount = documentsState.data?.pagination?.total || 0;
-  const systemStatus = systemState.data?.status || 'unknown';
+  const collectionsCount = (collectionsState.data as any)?.pagination?.total || 0;
+  const documentsCount = (documentsState.data as any)?.pagination?.total || 0;
+  const systemStatus = (systemState.data as any)?.status || 'unknown';
 
   return (
     <div className="space-y-6">

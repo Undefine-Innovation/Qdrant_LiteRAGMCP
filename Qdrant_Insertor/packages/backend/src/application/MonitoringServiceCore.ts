@@ -26,7 +26,12 @@ export class MonitoringServiceCore {
       responseTime?: number;
     }>;
   } {
-    return this.sqliteRepo.systemHealth.getOverallHealth();
+    const health = this.sqliteRepo.systemHealth.getOverallHealth();
+    return {
+      status: health.status,
+      lastCheck: Date.now(),
+      components: (health as any).components || {},
+    };
   }
 
   /**
@@ -40,7 +45,17 @@ export class MonitoringServiceCore {
     errorMessage?: string;
     details?: Record<string, string | number | boolean>;
   } | null {
-    return this.sqliteRepo.systemHealth.getByComponent(component);
+    const health = this.sqliteRepo.systemHealth.getByComponent(component);
+    if (!health) return null;
+    
+    return {
+      component: health.component,
+      status: health.status,
+      lastCheck: health.lastCheck,
+      responseTimeMs: health.responseTimeMs,
+      errorMessage: health.errorMessage,
+      details: health.details as Record<string, string | number | boolean>,
+    };
   }
 
   /**
@@ -54,7 +69,15 @@ export class MonitoringServiceCore {
     errorMessage?: string;
     details?: Record<string, string | number | boolean>;
   }> {
-    return this.sqliteRepo.systemHealth.getAll();
+    const healthList = this.sqliteRepo.systemHealth.getAll();
+    return healthList.map(health => ({
+      component: health.component,
+      status: health.status,
+      lastCheck: health.lastCheck,
+      responseTimeMs: health.responseTimeMs,
+      errorMessage: health.errorMessage,
+      details: health.details as Record<string, string | number | boolean>,
+    }));
   }
 
   /**
@@ -68,7 +91,15 @@ export class MonitoringServiceCore {
     errorMessage?: string;
     details?: Record<string, string | number | boolean>;
   }> {
-    return this.sqliteRepo.systemHealth.getUnhealthyComponents();
+    const healthList = this.sqliteRepo.systemHealth.getUnhealthyComponents();
+    return healthList.map(health => ({
+      component: health.component,
+      status: health.status,
+      lastCheck: health.lastCheck,
+      responseTimeMs: health.responseTimeMs,
+      errorMessage: health.errorMessage,
+      details: health.details as Record<string, string | number | boolean>,
+    }));
   }
 
   /**
@@ -149,12 +180,24 @@ export class MonitoringServiceCore {
     const defaultStartTime = startTime || now - 24 * 60 * 60 * 1000; // 默认24小时
     const defaultEndTime = endTime || now;
 
-    return this.sqliteRepo.systemMetrics.getAggregatedMetrics(
+    const result = this.sqliteRepo.systemMetrics.getAggregatedMetrics(
       metricName,
       defaultStartTime,
       defaultEndTime,
       aggregationType,
     );
+    
+    if (result && 'min' in result) {
+      return result as unknown as { min: number; max: number; avg: number; sum: number; count: number; };
+    }
+    
+    return {
+      min: 0,
+      max: 0,
+      avg: 0,
+      sum: 0,
+      count: 0,
+    };
   }
 
   /**
@@ -178,11 +221,23 @@ export class MonitoringServiceCore {
     sum: number;
     count: number;
   } {
-    return this.sqliteRepo.systemMetrics.getMetricStats(
+    const result = this.sqliteRepo.systemMetrics.getMetricStats(
       metricName,
       startTime,
       endTime,
     );
+    
+    if (result && 'min' in result) {
+      return result as unknown as { min: number; max: number; avg: number; sum: number; count: number; };
+    }
+    
+    return {
+      min: 0,
+      max: 0,
+      avg: 0,
+      sum: 0,
+      count: 0,
+    };
   }
 
   /**

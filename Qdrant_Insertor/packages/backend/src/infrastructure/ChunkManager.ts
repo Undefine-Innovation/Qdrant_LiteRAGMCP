@@ -205,7 +205,7 @@ export class ChunkManager {
     // 这里应该从DocumentManager获取文档
     // 暂时直接从docs表获取
     // 需要通过SQLiteRepoCore访问docs表
-    return (this.core as { docs?: { getById: (id: DocId) => {
+    const doc = (this.core as { docs?: { getById: (id: DocId) => {
       docId: DocId;
       name: string;
       collectionId: CollectionId;
@@ -218,6 +218,18 @@ export class ChunkManager {
       synced_at?: number;
       deleted_at?: number;
     } } }).docs?.getById(docId);
+    
+    if (!doc) {
+      throw new Error(`Document ${docId} not found`);
+    }
+    
+    return {
+      docId: doc.docId,
+      name: doc.name,
+      collectionId: doc.collectionId,
+      key: doc.key,
+      mime: doc.mime,
+    };
   }
 
   /**

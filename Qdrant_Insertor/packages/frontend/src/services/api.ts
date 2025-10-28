@@ -1,6 +1,9 @@
 // 导出API客户端和基础类型
 export {
   apiClient,
+} from './api-client.js';
+
+export type {
   ApiResponse,
   ApiError,
   PaginationQueryParams,

@@ -131,8 +131,8 @@ export const deepClone = <T>(obj: T): T => {
  */
 export const getErrorMessage = (error: unknown): string => {
   if (typeof error === 'string') return error;
-  if (error?.message) return error.message;
-  if (error?.error) return error.error;
+  if ((error as any)?.message) return (error as any).message;
+  if ((error as any)?.error) return (error as any).error;
   return '发生未知错误';
 };
 

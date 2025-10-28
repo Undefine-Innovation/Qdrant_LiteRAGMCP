@@ -21,7 +21,7 @@ export const batchApi = {
     const formData = new FormData();
 
     // 添加文件
-    data.files.forEach(file => {
+    data.files.forEach((file: File) => {
       formData.append('files', file);
     });
 

@@ -33,7 +33,7 @@ export class PersistentSyncStateMachine {
 
     // 注入执行方法
     this.errorHandler.setExecuteSyncMethod((docId: string) =>
-      this.executeSync(docId),
+      this.executeSync(docId as DocId),
     );
   }
 

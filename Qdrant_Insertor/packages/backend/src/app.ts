@@ -8,12 +8,16 @@ import { SearchService } from './application/SearchService.js';
 import { GraphService } from './application/GraphService.js';
 import { CollectionService } from './application/CollectionService.js';
 import { DocumentService } from './application/DocumentService.js';
+import { FileProcessingService } from './application/FileProcessingService.js';
 import { MonitoringApiService } from './application/MonitoringApiService.js';
+import { BatchService } from './application/BatchService.js';
 import { AutoGCService } from './application/AutoGCService.js';
 import { ISearchService } from './domain/ISearchService.js';
 import { IGraphService } from './domain/graph.js';
 import { ICollectionService } from './domain/ICollectionService.js';
 import { IDocumentService } from './domain/IDocumentService.js';
+import { IFileProcessingService } from './domain/IFileProcessingService.js';
+import { IBatchService } from './domain/IBatchService.js';
 
 /**
  * 应用程序服务接口
@@ -24,6 +28,8 @@ export interface AppServices {
   graphService: IGraphService;
   collectionService: ICollectionService;
   documentService: IDocumentService;
+  fileProcessingService: IFileProcessingService;
+  batchService: IBatchService;
   monitoringApiService: MonitoringApiService;
   autoGCService: AutoGCService;
 }

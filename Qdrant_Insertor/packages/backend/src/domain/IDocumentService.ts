@@ -4,6 +4,7 @@ import {
   CollectionId,
   PaginationQuery,
   PaginatedResponse,
+  DocumentChunk,
 } from '../domain/types.js';
 
 /**
@@ -47,7 +48,7 @@ export interface IDocumentService {
    * @param docId - 文档ID
    * @returns 文档块数组
    */
-  getDocumentChunks(docId: DocId): any[];
+  getDocumentChunks(docId: DocId): DocumentChunk[];
 
   /**
    * 分页获取文档的块列表
@@ -58,7 +59,7 @@ export interface IDocumentService {
   getDocumentChunksPaginated(
     docId: DocId,
     query: PaginationQuery,
-  ): PaginatedResponse<any>;
+  ): PaginatedResponse<DocumentChunk>;
 
   /**
    * 删除文档

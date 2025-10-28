@@ -6,11 +6,14 @@ import {
 } from '../types';
 
 interface BatchDeleteProps {
-  type: 'documents' | 'collections';
-  items: Array<{ id: string; name: string; title?: string }>;
-  selectedItems: string[];
-  onSelectionChange: (selectedItems: string[]) => void;
-  onBatchDelete: (
+  onComplete?: () => void;
+  mode?: 'documents' | 'collections';
+  collectionId?: string;
+  type?: 'documents' | 'collections';
+  items?: Array<{ id: string; name: string; title?: string }>;
+  selectedItems?: string[];
+  onSelectionChange?: (selectedItems: string[]) => void;
+  onBatchDelete?: (
     itemIds: string[],
   ) => Promise<BatchDeleteDocsResponse | BatchDeleteCollectionsResponse>;
   onRefresh?: () => void;
@@ -22,12 +25,13 @@ interface BatchDeleteProps {
  * 支持批量选择和删除文档或集合
  */
 const BatchDelete = ({
-  type,
-  items,
-  selectedItems,
-  onSelectionChange,
+  type = 'documents',
+  items = [],
+  selectedItems = [],
+  onSelectionChange = () => {},
   onBatchDelete,
   onRefresh,
+  onComplete,
   className = '',
 }: BatchDeleteProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,6 +80,9 @@ const BatchDelete = ({
     });
 
     try {
+      if (!onBatchDelete) {
+        throw new Error('批量删除函数未定义');
+      }
       const result = await onBatchDelete(selectedItems);
 
       setDeleteProgress({
@@ -93,6 +100,7 @@ const BatchDelete = ({
         onSelectionChange([]);
         setDeleteProgress(null);
         onRefresh?.();
+        onComplete?.();
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量删除失败');
@@ -130,10 +138,13 @@ const BatchDelete = ({
                 checked={
                   items.length > 0 && selectedItems.length === items.length
                 }
-                indeterminate={
-                  selectedItems.length > 0 &&
-                  selectedItems.length < items.length
-                }
+                ref={(input) => {
+                  if (input) {
+                    input.indeterminate =
+                      selectedItems.length > 0 &&
+                      selectedItems.length < items.length;
+                  }
+                }}
                 onChange={e => handleSelectAll(e.target.checked)}
               />
               <span className="ml-2 text-sm text-secondary-700">

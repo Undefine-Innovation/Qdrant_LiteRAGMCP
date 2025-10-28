@@ -48,6 +48,8 @@ export interface Document {
   createdAt: number;
   updatedAt?: number;
   isDeleted?: boolean;
+  status?: 'new' | 'processing' | 'completed' | 'failed' | 'dead';
+  errorMessage?: string;
 }
 
 /**
@@ -100,6 +102,17 @@ export interface PaginationParams {
 }
 
 /**
+ * API 分页查询参数接口
+ */
+export interface PaginationQueryParams extends Record<string, string | number | boolean | undefined> {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  offset?: number;
+}
+
+/**
  * API 分页响应接口
  */
 export interface PaginatedResponse<T> {
@@ -147,6 +160,7 @@ export interface ApiResponse<T = unknown> {
  */
 export interface Chunk {
   pointId: string;
+  id: string;
   docId: string;
   chunkIndex: number;
   content: string;
@@ -154,6 +168,23 @@ export interface Chunk {
   title?: string;
   contentHash?: string;
   createdAt?: number;
+  tokenCount?: number;
+}
+
+/**
+ * 文档块接口（用于文档详情）
+ */
+export interface DocumentChunk {
+  id: string;
+  pointId: string;
+  docId: string;
+  chunkIndex: number;
+  content: string;
+  titleChain: string;
+  title?: string;
+  contentHash?: string;
+  createdAt?: number;
+  tokenCount?: number;
 }
 
 /**
@@ -170,6 +201,7 @@ export interface UploadDocumentResponse {
  */
 export interface HealthCheckResponse {
   ok: boolean;
+  status?: 'ok' | 'degraded' | 'unhealthy';
 }
 
 /**
@@ -189,6 +221,11 @@ export interface BatchUploadResult {
   docId?: string;
   collectionId?: string;
   error?: string;
+  total?: number;
+  successful?: number;
+  failed?: number;
+  success?: boolean;
+  results?: BatchUploadResult[];
 }
 
 /**
@@ -200,6 +237,7 @@ export interface BatchUploadResponse {
   successful: number;
   failed: number;
   results: BatchUploadResult[];
+  operationId?: string;
 }
 
 /**
@@ -220,6 +258,7 @@ export interface BatchDeleteDocsResponse {
   successful: number;
   failed: number;
   results: BatchDeleteResult[];
+  operationId?: string;
 }
 
 /**
@@ -231,6 +270,7 @@ export interface BatchDeleteCollectionsResponse {
   successful: number;
   failed: number;
   results: BatchDeleteResult[];
+  operationId?: string;
 }
 
 /**
@@ -239,7 +279,7 @@ export interface BatchDeleteCollectionsResponse {
 export interface BatchOperationProgress {
   operationId: string;
   type: 'upload' | 'delete';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   total: number;
   processed: number;
   successful: number;
@@ -247,6 +287,9 @@ export interface BatchOperationProgress {
   startTime: number;
   endTime?: number;
   estimatedTimeRemaining?: number;
+  percentage?: number;
+  error?: string;
+  details?: any[];
 }
 
 /**
@@ -259,4 +302,85 @@ export interface BatchUploadProgress extends UploadProgress {
   failed: number;
   status: 'processing' | 'completed' | 'completed_with_errors' | 'failed';
   results?: BatchUploadResult[];
+}
+
+/**
+ * 批量上传请求接口
+ */
+export interface BatchUploadRequest {
+  files: File[];
+  collectionId: string;
+}
+
+/**
+ * 批量删除文档请求接口
+ */
+export interface BatchDeleteDocumentsRequest {
+  docIds: string[];
+}
+
+/**
+ * 批量删除集合请求接口
+ */
+export interface BatchDeleteCollectionsRequest {
+  collectionIds: string[];
+}
+
+/**
+ * 批量删除响应接口
+ */
+export interface BatchDeleteResponse {
+  success: boolean;
+  total: number;
+  successful: number;
+  failed: number;
+  results: BatchDeleteResult[];
+}
+
+/**
+ * 批量操作历史接口
+ */
+export interface BatchOperationHistory {
+  id: string;
+  type: 'upload' | 'delete';
+  timestamp: number;
+  status: 'completed' | 'failed' | 'completed_with_errors';
+  total: number;
+  successful: number;
+  failed: number;
+  details?: BatchUploadResult[];
+}
+
+/**
+ * 文档状态信息接口
+ */
+export interface DocumentStatusInfo {
+  text: string;
+  className: string;
+}
+
+/**
+ * 文档缩略图属性接口
+ */
+export interface DocumentThumbnailProps {
+  documentId: string;
+  onClick: () => void;
+  className?: string;
+}
+
+/**
+ * 批量删除属性接口
+ */
+export interface BatchDeleteProps {
+  onComplete: () => void;
+  mode?: 'documents' | 'collections';
+  collectionId?: string;
+}
+
+/**
+ * 批量文档上传属性接口
+ */
+export interface BatchDocumentUploadProps {
+  onComplete: () => void;
+  collectionId?: string;
 }

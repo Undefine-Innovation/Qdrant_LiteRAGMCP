@@ -400,7 +400,7 @@ export function createDocumentRoutes(
         page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
         sort: (req.query.sort as string) || 'chunkIndex',
-        order: (req.query.order as string) || 'asc',
+        order: ((req.query.order as string) || 'asc') as 'asc' | 'desc',
       };
 
       const paginatedChunks = documentService.getDocumentChunksPaginated(

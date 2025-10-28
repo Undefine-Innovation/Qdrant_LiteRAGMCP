@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, KeyboardEvent, FocusEvent, MouseEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, KeyboardEvent, FocusEvent } from 'react';
 import { SearchResult } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
 import { defaultSearchLimiter, SearchHistory } from '../utils/searchLimiter';
@@ -231,7 +231,7 @@ const SearchBox = ({
 
   // 点击外部关闭下拉框
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       if (
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)

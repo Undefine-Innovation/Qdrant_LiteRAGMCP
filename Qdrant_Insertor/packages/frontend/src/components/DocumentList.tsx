@@ -103,7 +103,7 @@ const DocumentList = ({
         onDocumentView={onView || (() => {})}
         onDocumentRetry={onRetry || (() => {})}
         onDocumentDelete={onDelete || (() => {})}
-        getStatusInfo={DocumentListCore.getStatusInfo}
+        getStatusInfo={(status?: string) => DocumentListCore.getStatusInfo(status as any)}
       />
 
       {/* 分页控件 */}

@@ -236,7 +236,7 @@ export class SyncStateMachine {
       errorCategory,
       job.retries,
       retryStrategy,
-      () => this.executeSync(docId),
+      () => this.executeSync(docId as DocId),
     );
 
     this.logger.info(

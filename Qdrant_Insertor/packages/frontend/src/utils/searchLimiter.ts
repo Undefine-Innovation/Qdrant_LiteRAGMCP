@@ -5,10 +5,10 @@
 /**
  * 请求状态接口
  */
-interface PendingRequest {
+interface PendingRequest<T> {
   timestamp: number;
   controller: AbortController;
-  resolve: (value: unknown) => void;
+  resolve: (value: T) => void;
   reject: (reason: unknown) => void;
 }
 
@@ -29,8 +29,8 @@ interface SearchLimiterConfig {
 /**
  * 搜索限速器类
  */
-export class SearchLimiter {
-  private pendingRequests = new Map<string, PendingRequest>();
+export class SearchLimiter<T = unknown> {
+  private pendingRequests = new Map<string, PendingRequest<T>>();
   private requestQueue: Array<() => void> = [];
   private activeRequestsCount = 0;
   private config: SearchLimiterConfig;
@@ -74,7 +74,7 @@ export class SearchLimiter {
   /**
    * 执行搜索请求（带限速和去重）
    */
-  public async execute<T>(
+  public async execute(
     query: string,
     searchFunction: (signal: AbortSignal) => Promise<T>,
     collectionId?: string,

@@ -155,12 +155,10 @@ export function createCollectionRoutes(
       params: CollectionIdParamsSchema,
       body: UpdateCollectionSchema,
     }),
-    async (req, res) => {
-      const validated = req as any;
-      const params = validated.params as z.infer<
-        typeof CollectionIdParamsSchema
-      >;
-      const body = validated.body as z.infer<typeof UpdateCollectionSchema>;
+    async (req: ValidatedRequest<z.infer<typeof UpdateCollectionSchema>, z.infer<typeof CollectionIdParamsSchema>>, res) => {
+      const validated = req.validated;
+      const params = validated?.params;
+      const body = validated?.body;
 
       if (!params || !body) {
         return res.status(422).json({
@@ -171,7 +169,7 @@ export function createCollectionRoutes(
         });
       }
 
-      const { collectionId } = params;
+      const { collectionId } = params as { collectionId: CollectionId };
       const { name, description } = body;
 
       try {
@@ -229,12 +227,10 @@ export function createCollectionRoutes(
       params: CollectionIdParamsSchema,
       body: UpdateCollectionSchema,
     }),
-    async (req, res) => {
-      const validated = req as any;
-      const params = validated.params as z.infer<
-        typeof CollectionIdParamsSchema
-      >;
-      const body = validated.body as z.infer<typeof UpdateCollectionSchema>;
+    async (req: ValidatedRequest<z.infer<typeof UpdateCollectionSchema>, z.infer<typeof CollectionIdParamsSchema>>, res) => {
+      const validated = req.validated;
+      const params = validated?.params;
+      const body = validated?.body;
 
       if (!params || !body) {
         return res.status(422).json({
@@ -245,7 +241,7 @@ export function createCollectionRoutes(
         });
       }
 
-      const { collectionId } = params;
+      const { collectionId } = params as { collectionId: CollectionId };
       const { name, description } = body;
 
       try {

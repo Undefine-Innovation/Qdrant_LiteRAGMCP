@@ -11,7 +11,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "lint": "npx eslint \"src/**/*.ts\"",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "clean-build" : "tsc --build --clean"
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.15.0",

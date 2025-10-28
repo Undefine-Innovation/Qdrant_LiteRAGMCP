@@ -70,12 +70,12 @@ export class SQLiteRepo {
     this.alertHistory = new AlertHistoryTable(db);
 
     this.collectionManager = new CollectionManager(
-      this.collections,
+      this.collections as any,
       this.core,
       this.logger,
     );
     this.documentManager = new DocumentManager(
-      this.docs,
+      this.docs as any,
       this.core,
       this.logger,
     );

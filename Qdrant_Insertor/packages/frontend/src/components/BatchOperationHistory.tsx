@@ -170,11 +170,9 @@ const BatchOperationHistory: React.FC<BatchOperationHistoryProps> = ({
                     className={`h-2 rounded-full transition-all duration-300 ${
                       operation.status === 'completed'
                         ? 'bg-green-500'
-                        : operation.status === 'completed_with_errors'
-                          ? 'bg-yellow-500'
-                          : operation.status === 'failed'
-                            ? 'bg-red-500'
-                            : 'bg-gray-500'
+                        : operation.status === 'failed'
+                          ? 'bg-red-500'
+                          : 'bg-gray-500'
                     }`}
                     style={{ width: `${getSuccessRate(operation)}%` }}
                   />
@@ -205,7 +203,7 @@ const BatchOperationHistory: React.FC<BatchOperationHistoryProps> = ({
                 </div>
 
                 {/* 展开/收起按钮 */}
-                {operation.details && operation.details.length > 0 && (
+                {(operation as any).details && (operation as any).details.length > 0 && (
                   <button
                     onClick={() => toggleExpanded(operation.id)}
                     className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
@@ -215,9 +213,9 @@ const BatchOperationHistory: React.FC<BatchOperationHistoryProps> = ({
                 )}
 
                 {/* 详细信息 */}
-                {expandedItems.has(operation.id) && operation.details && (
+                {expandedItems.has(operation.id) && (operation as any).details && (
                   <div className="bg-gray-50 rounded-md p-3 text-sm space-y-1 max-h-32 overflow-y-auto">
-                    {operation.details.map((detail, index) => (
+                    {(operation as any).details.map((detail: any, index: number) => (
                       <div key={index} className="flex items-center space-x-2">
                         <span
                           className={`w-2 h-2 rounded-full ${

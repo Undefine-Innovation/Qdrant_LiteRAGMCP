@@ -16,14 +16,18 @@ import { GraphService } from './application/GraphService.js';
 import { AutoGCService } from './application/AutoGCService.js';
 import { CollectionService } from './application/CollectionService.js';
 import { DocumentService } from './application/DocumentService.js';
+import { FileProcessingService } from './application/FileProcessingService.js';
 import { PersistentSyncStateMachine } from './application/PersistentSyncStateMachine.js';
 import { MonitoringService } from './application/MonitoringService.js';
 import { AlertService } from './application/AlertService.js';
 import { MonitoringApiService } from './application/MonitoringApiService.js';
+import { BatchService } from './application/BatchService.js';
 import { ISearchService } from './domain/ISearchService.js';
 import { IGraphService } from './domain/graph.js';
 import { ICollectionService } from './domain/ICollectionService.js';
 import { IDocumentService } from './domain/IDocumentService.js';
+import { IFileProcessingService } from './domain/IFileProcessingService.js';
+import { IBatchService } from './domain/IBatchService.js';
 import { AppServices } from './app.js';
 
 /**
@@ -148,6 +152,9 @@ export async function initializeServices(
     qdrantRepo, // Add QdrantRepo dependency
   );
 
+  const fileProcessingService: IFileProcessingService =
+    new FileProcessingService(dbRepo, logger);
+
   // 初始化监控服务
   const monitoringService = new MonitoringService(
     dbRepo,
@@ -162,6 +169,14 @@ export async function initializeServices(
     dbRepo.syncJobs,
   );
 
+  // 创建批量操作服务
+  const batchService: IBatchService = new BatchService(
+    importService,
+    collectionService,
+    documentService,
+    logger,
+  );
+
   logger.info('应用服务已初始化。');
 
   return {
@@ -170,6 +185,8 @@ export async function initializeServices(
     graphService,
     collectionService,
     documentService,
+    fileProcessingService,
+    batchService,
     monitoringApiService,
     autoGCService,
   };

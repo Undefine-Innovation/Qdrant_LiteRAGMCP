@@ -106,7 +106,7 @@ export const documentsApi = {
     const response = await apiClient.get(`/docs/${id}/download`, {
       params,
       responseType: 'blob',
-    });
+    }) as any;
 
     // 从响应头获取文件名
     const contentDisposition = response.headers?.['content-disposition'] || '';
@@ -118,9 +118,9 @@ export const documentsApi = {
       : `document.${params?.format || 'original'}`;
 
     return {
-      content: response,
+      content: response as Blob,
       mimeType:
-        response.headers?.['content-type'] || 'application/octet-stream',
+        (response.headers?.['content-type'] as string) || 'application/octet-stream',
       filename,
     };
   },
