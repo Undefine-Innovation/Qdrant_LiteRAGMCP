@@ -113,14 +113,25 @@ API 层是系统的对外接口，负责接收来自前端或其他客户端的�
 
 ## 2.4 主要端点（REST 版）
 
-| 方法   | 路径              | 功能                | 状态码 | 备注                                |
-| ------ | ----------------- | ------------------- | ------ | ----------------------------------- |
-| POST   | `/upload`         | 上传文件            | 201    | `multipart/form-data`；返回 `docId` |
-| DELETE | `/doc/:id`        | 删除文档            | 204    | 触发同步状态机进行清理              |
-| GET    | `/doc/:id/chunks` | 查询文档 Chunk 列表 | 200    | 支持分页                            |
-| GET    | `/search`         | 向量检索            | 200    | 返回 `RetrievalResultDTO`           |
-| GET    | `/healthz`        | 健康检查            | 200    | 检查 Qdrant 和 SQLite 是否可达      |
-| GET    | `/metrics`        | Prometheus 指标暴露 | 200    | 可选启用                            |
+| 方法   | 路径                        | 功能                | 状态码 | 备注                                |
+| ------ | --------------------------- | ------------------- | ------ | ----------------------------------- |
+| POST   | `/upload`                   | 上传文件            | 201    | `multipart/form-data`；返回 `docId` |
+| POST   | `/upload/batch`              | 批量上传文件        | 200    | 支持多文件上传，返回操作ID         |
+| DELETE | `/docs/batch`                | 批量删除文档        | 200    | 支持批量删除，返回操作结果         |
+| DELETE | `/collections/batch`         | 批量删除集合        | 200    | 支持批量删除，返回操作结果         |
+| GET    | `/batch/progress/:operationId` | 获取批量操作进度    | 200    | 返回操作进度和状态信息             |
+| GET    | `/docs/:id/preview`         | 获取文档预览        | 200    | 支持多种格式预览                   |
+| GET    | `/docs/:id/download`        | 下载文档            | 200    | 支持原始格式或转换后格式下载       |
+| GET    | `/docs/:id/thumbnail`       | 获取文档缩略图      | 200    | 支持自定义尺寸                     |
+| GET    | `/docs/:id/format`          | 获取文档格式信息    | 200    | 返回文件MIME类型和扩展名          |
+| DELETE | `/doc/:id`                 | 删除文档            | 204    | 触发同步状态机进行清理              |
+| GET    | `/doc/:id/chunks`           | 查询文档 Chunk 列表 | 200    | 支持分页                            |
+| GET    | `/docs`                     | 查询文档列表        | 200    | 支持分页和过滤                     |
+| GET    | `/search`                   | 向量检索            | 200    | 返回 `RetrievalResultDTO`           |
+| GET    | `/search/paginated`          | 分页向量检索        | 200    | 支持大规模结果集的分页检索         |
+| POST   | `/docs/:docId/extract-graph` | 提取文档图谱        | 202    | 异步提取知识图谱                   |
+| GET    | `/healthz`                  | 健康检查            | 200    | 检查 Qdrant 和 SQLite 是否可达      |
+| GET    | `/metrics`                  | Prometheus 指标暴露 | 200    | 可选启用                            |
 
 ## 2.5 统一错误格式
 

@@ -73,6 +73,10 @@ tags:
     description: 文档上传、管理和操作相关端点
   - name: 集合管理
     description: 集合创建、管理和操作相关端点
+  - name: 批量操作
+    description: 批量上传、删除等操作相关端点
+  - name: 文档预览
+    description: 文档预览、下载和缩略图相关端点
 
 paths:
   /health:
@@ -190,6 +194,18 @@ paths:
   /upload:
     $ref: './paths/upload.yaml#/upload'
 
+  /upload/batch:
+    $ref: './paths/batch.yaml#/upload'
+
+  /docs/batch:
+    $ref: './paths/batch.yaml#/deleteDocs'
+
+  /collections/batch:
+    $ref: './paths/batch.yaml#/deleteCollections'
+
+  /batch/progress/{operationId}:
+    $ref: './paths/batch.yaml#/getProgress'
+
   /collections/{collectionId}/docs:
     $ref: './paths/documents.yaml#/uploadToCollection'
 
@@ -207,6 +223,18 @@ paths:
 
   /docs/{docId}/chunks:
     $ref: './paths/documents.yaml#/docChunks'
+
+  /docs/{docId}/preview:
+    $ref: './paths/preview.yaml#/preview'
+
+  /docs/{docId}/download:
+    $ref: './paths/preview.yaml#/download'
+
+  /docs/{docId}/thumbnail:
+    $ref: './paths/preview.yaml#/thumbnail'
+
+  /docs/{docId}/format:
+    $ref: './paths/preview.yaml#/format'
 
   /collections:
     get:
@@ -248,6 +276,24 @@ components:
       $ref: './components/schemas/search.yaml#/RetrievalResultDTO'
     ErrorResponse:
       $ref: './components/schemas/error.yaml#/ErrorResponse'
+    BatchUploadRequest:
+      $ref: './components/schemas/batch.yaml#/BatchUploadRequest'
+    BatchUploadResponse:
+      $ref: './components/schemas/batch.yaml#/BatchUploadResponse'
+    BatchDeleteDocsRequest:
+      $ref: './components/schemas/batch.yaml#/BatchDeleteDocsRequest'
+    BatchDeleteDocsResponse:
+      $ref: './components/schemas/batch.yaml#/BatchDeleteDocsResponse'
+    BatchDeleteCollectionsRequest:
+      $ref: './components/schemas/batch.yaml#/BatchDeleteCollectionsRequest'
+    BatchDeleteCollectionsResponse:
+      $ref: './components/schemas/batch.yaml#/BatchDeleteCollectionsResponse'
+    BatchOperationProgress:
+      $ref: './components/schemas/batch.yaml#/BatchOperationProgress'
+    DocumentPreviewResponse:
+      $ref: './components/schemas/preview.yaml#/DocumentPreviewResponse'
+    FileFormatInfoResponse:
+      $ref: './components/schemas/preview.yaml#/FileFormatInfoResponse'
 
   responses:
     ValidationError:

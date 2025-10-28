@@ -1,246 +1,430 @@
 # Qdrant MCP RAG API 文档
 
-## 📚 文档导航
+## 概述
 
-### 🚀 快速开始
-- [快速开始指南](./quick-start.md) - 5分钟快速上手，包含完整示例和常见场景
-- [API调用示例](./api-examples.md) - 多语言API调用示例，包含JavaScript、Python和curl
-- [API使用指南](./api-usage-guide.md) - 快速上手API，包含基本使用示例
-- [API测试检查清单](./api-testing-checklist.md) - 完整的API测试清单和工具
+本文档描述了Qdrant MCP RAG项目的RESTful API接口，包括端点定义、请求/响应格式和使用示例。
 
-### 📖 核心文档
-- [OpenAPI规范](./openapi.yaml) - 完整的API规范文档
-- [错误处理指南](./error-handling-guide.md) - 详细的错误处理和最佳实践
+## API 基础信息
 
-### 🔧 API参考
-- [集合管理API](./paths/collections.yaml) - 集合的创建、查询、更新和删除
-- [文档管理API](./paths/documents.yaml) - 文档的上传、查询、同步和删除
-- [文档上传API](./paths/upload.yaml) - 文档上传到默认集合或指定集合
-- [搜索API](./paths/search.yaml) - 基本搜索和分页搜索功能
+- **基础URL**: `http://localhost:3000/api`
+- **内容类型**: `application/json`
+- **认证方式**: Bearer Token (JWT)
+- **API版本**: v1
 
-### 📋 数据模型
-- [文档模型](./components/schemas/document.yaml) - 文档和文本块的数据结构
-- [集合模型](./components/schemas/collection.yaml) - 集合的数据结构
-- [搜索模型](./components/schemas/search.yaml) - 搜索结果的数据结构
-- [错误模型](./components/schemas/error.yaml) - 错误响应的数据结构
+## 核心功能模块
 
-### 🔄 响应定义
-- [通用响应](./components/responses/common.yaml) - 标准化的响应定义
+### 1. 文档管理
 
-## 🎯 API概览
+#### 上传文档
+```http
+POST /upload
+Content-Type: multipart/form-data
 
-Qdrant MCP RAG API 提供了完整的文档管理和语义搜索功能，主要包括：
+Response:
+{
+  "success": true,
+  "data": {
+    "docId": "doc_123",
+    "name": "document.pdf",
+    "size": 1024000,
+    "status": "processing"
+  }
+}
+```
 
-### 核心功能
-- **集合管理**: 创建、查询、更新和删除文档集合
-- **文档管理**: 上传、查询、同步和删除文档
-- **语义搜索**: 基于向量嵌入的智能搜索
-- **文档分块**: 自动将文档分割为可搜索的文本块
+#### 批量上传文档
+```http
+POST /upload/batch
+Content-Type: multipart/form-data
 
-### 技术特点
-- **向量搜索**: 基于Qdrant向量数据库的高效语义搜索
-- **自动分块**: 智能文档分割，保持上下文完整性
-- **异步处理**: 文档上传后异步处理，不影响用户体验
-- **RESTful API**: 标准的REST API设计，易于集成
+Response:
+{
+  "success": true,
+  "data": {
+    "operationId": "batch_op_456",
+    "total": 10,
+    "processed": 10,
+    "successful": 8,
+    "failed": 2,
+    "results": [
+      {
+        "fileName": "doc1.pdf",
+        "success": true,
+        "docId": "doc_123"
+      },
+      {
+        "fileName": "doc2.pdf",
+        "success": false,
+        "error": "File too large"
+      }
+    ]
+  }
+}
+```
 
-## 🚀 快速体验
+#### 获取文档列表
+```http
+GET /docs?page=1&limit=20&collectionId=col_123
 
-想要快速体验API功能？请参考我们的[快速开始指南](./quick-start.md)，其中包含：
+Response:
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "docId": "doc_123",
+        "name": "document.pdf",
+        "size": 1024000,
+        "status": "synced",
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T01:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 100,
+      "totalPages": 5
+    }
+  }
+}
+```
 
-- 环境设置和启动指南
-- 5分钟快速上手教程
-- 常见使用场景的完整示例
-- 调试和故障排除方法
+#### 文档预览
+```http
+GET /docs/{docId}/preview?format=html
 
-### 基础示例
+Response:
+{
+  "success": true,
+  "data": {
+    "content": "<html>...</html>",
+    "mimeType": "text/html",
+    "format": "html"
+  }
+}
+```
 
-#### 1. 创建集合
-```bash
-curl -X POST http://localhost:3000/api/collections \
-  -H "Content-Type: application/json" \
-  -d '{
+#### 文档下载
+```http
+GET /docs/{docId}/download?format=original
+
+Response:
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="document.pdf"
+[Binary file content]
+```
+
+#### 文档缩略图
+```http
+GET /docs/{docId}/thumbnail?width=200&height=200
+
+Response:
+Content-Type: image/png
+[Binary image content]
+```
+
+### 2. 集合管理
+
+#### 创建集合
+```http
+POST /collections
+
+Request:
+{
+  "name": "技术文档",
+  "description": "技术相关文档集合"
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "collectionId": "col_123",
     "name": "技术文档",
-    "description": "技术相关的文档集合"
-  }'
+    "description": "技术相关文档集合",
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z"
+  }
+}
 ```
 
-#### 2. 上传文档
+#### 获取集合列表
+```http
+GET /collections?page=1&limit=20
+
+Response:
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "collectionId": "col_123",
+        "name": "技术文档",
+        "description": "技术相关文档集合",
+        "documentCount": 25,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 5,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### 3. 搜索功能
+
+#### 向量搜索
+```http
+GET /search?q=TypeScript&collectionId=col_123&limit=10
+
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "docId": "doc_123",
+      "chunkId": "chunk_456",
+      "content": "TypeScript是一种...",
+      "score": 0.95,
+      "metadata": {
+        "title": "TypeScript指南",
+        "tags": ["programming", "typescript"]
+      }
+    }
+  ]
+}
+```
+
+#### 分页搜索
+```http
+GET /search/paginated?q=TypeScript&page=1&limit=20
+
+Response:
+{
+  "success": true,
+  "data": {
+    "items": [...],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 150,
+      "totalPages": 8
+    }
+  }
+}
+```
+
+### 4. 批量操作
+
+#### 批量删除文档
+```http
+DELETE /docs/batch
+
+Request:
+{
+  "docIds": ["doc_123", "doc_456", "doc_789"]
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "operationId": "batch_del_789",
+    "total": 3,
+    "successful": 3,
+    "failed": 0,
+    "results": [
+      {
+        "docId": "doc_123",
+        "success": true
+      },
+      {
+        "docId": "doc_456",
+        "success": true
+      },
+      {
+        "docId": "doc_789",
+        "success": true
+      }
+    ]
+  }
+}
+```
+
+#### 获取批量操作进度
+```http
+GET /batch/progress/{operationId}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "operationId": "batch_del_789",
+    "total": 3,
+    "processed": 2,
+    "successful": 2,
+    "failed": 0,
+    "percentage": 66,
+    "status": "processing",
+    "startedAt": "2024-01-01T12:00:00Z",
+    "estimatedCompletion": "2024-01-01T12:05:00Z"
+  }
+}
+```
+
+### 5. 系统监控
+
+#### 健康检查
+```http
+GET /health
+
+Response:
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "timestamp": "2024-01-01T12:00:00Z",
+    "version": "1.0.0"
+  }
+}
+```
+
+#### 详细健康检查
+```http
+GET /healthz
+
+Response:
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "timestamp": "2024-01-01T12:00:00Z",
+    "version": "1.0.0",
+    "services": {
+      "database": "healthy",
+      "qdrant": "healthy",
+      "filesystem": "healthy"
+    },
+    "metrics": {
+      "uptime": 86400,
+      "memoryUsage": "45%",
+      "diskUsage": "23%"
+    }
+  }
+}
+```
+
+## 错误处理
+
+### 标准错误格式
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "请求参数验证失败",
+    "details": {
+      "field": "q",
+      "issue": "required field is missing"
+    }
+  }
+}
+```
+
+### 常见错误代码
+
+| 错误代码 | HTTP状态码 | 描述 |
+|---------|---------|------|
+| `VALIDATION_ERROR` | 400 | 请求参数验证失败 |
+| `NOT_FOUND` | 404 | 资源不存在 |
+| `UNAUTHORIZED` | 401 | 未授权访问 |
+| `FORBIDDEN` | 403 | 禁止访问 |
+| `RATE_LIMITED` | 429 | 请求频率超限 |
+| `INTERNAL_ERROR` | 500 | 服务器内部错误 |
+| `SERVICE_UNAVAILABLE` | 503 | 服务不可用 |
+
+## 限流和缓存
+
+### 搜索限流
+
+- **默认限制**: 每秒最多3个搜索请求
+- **突发限制**: 每分钟最多60个搜索请求
+- **去重机制**: 相同查询在300ms内只执行一次
+
+### 缓存策略
+
+- **文档元数据**: 缓存5分钟
+- **搜索结果**: 缓存2分钟
+- **集合列表**: 缓存10分钟
+
+## SDK 和客户端库
+
+### JavaScript/TypeScript 客户端
+
+```typescript
+import { apiClient, collectionsApi, documentsApi } from '@qdrant-mcp-rag/frontend';
+
+// 使用示例
+const collections = await collectionsApi.getCollections();
+const documents = await documentsApi.getDocuments({ page: 1, limit: 20 });
+```
+
+### Python 客户端 (计划中)
+
+```python
+from qdrant_mcp_rag_client import QdrantMCPClient
+
+client = QdrantMCPClient(base_url="http://localhost:3000/api")
+collections = client.collections.list()
+```
+
+## 开发和测试
+
+### 本地开发
+
+1. 启动后端服务：
 ```bash
-curl -X POST http://localhost:3000/api/collections/技术文档/docs \
-  -F "file=@技术文档.md"
+cd packages/backend
+npm run dev
 ```
 
-#### 3. 搜索内容
+2. 启动前端服务：
 ```bash
-curl "http://localhost:3000/api/search?q=安装步骤&collectionId=技术文档"
+cd packages/frontend
+npm run dev
 ```
 
-> 💡 **提示**: 查看更多详细示例，请访问[API调用示例](./api-examples.md)文档。
+### API 测试
 
-## 📊 API架构
+使用提供的Postman集合或OpenAPI规范进行测试：
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   前端应用      │    │   API网关       │    │   后端服务      │
-│                │    │                │    │                │
-│ - 文档上传      │───▶│ - 路由管理      │───▶│ - 文档处理      │
-│ - 搜索界面      │    │ - 认证授权      │    │ - 向量嵌入      │
-│ - 集合管理      │    │ - 限流控制      │    │ - 搜索服务      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                                                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   文件存储      │    │   SQLite数据库   │    │  Qdrant向量库   │
-│                │    │                │    │                │
-│ - 原始文档      │    │ - 文档元数据    │    │ - 向量嵌入      │
-│ - 上传文件      │    │ - 集合信息      │    │ - 相似度搜索    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-## 🔧 开发环境设置
-
-### 1. 环境要求
-- Node.js 18+
-- Qdrant 向量数据库
-- SQLite 数据库
-
-### 2. 安装和启动
 ```bash
-# 安装依赖
-npm install
+# 运行API测试
+npm run test:api
 
-# 启动后端服务
-npm run start
-
-# 启动前端服务（可选）
-cd packages/frontend && npm run dev
+# 生成API文档
+npm run docs:api
 ```
 
-### 3. 环境配置
-参考 `.env.example` 文件配置环境变量：
-```env
-# 服务器配置
-PORT=3000
-HOST=localhost
+## 版本历史
 
-# 数据库配置
-DATABASE_PATH=./data/qdrant_mcp.db
+### v1.0.0 (当前版本)
+- 基础CRUD操作
+- 文档上传和预览
+- 向量搜索
+- 批量操作
+- 健康检查
 
-# Qdrant配置
-QDRANT_URL=http://localhost:6333
-QDRANT_COLLECTION_NAME=qdrant_mcp_collection
-
-# 嵌入模型配置
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_API_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL_NAME=text-embedding-ada-002
-```
-
-## 📝 开发指南
-
-### API设计原则
-- **RESTful**: 遵循REST API设计原则
-- **一致性**: 统一的请求/响应格式
-- **可扩展性**: 支持水平扩展和负载均衡
-- **安全性**: 完整的认证和授权机制
-
-### 错误处理
-- **标准化**: 统一的错误响应格式
-- **详细性**: 提供详细的错误信息和上下文
-- **可追踪**: 包含请求ID和时间戳
-- **友好性**: 人类可读的错误信息
-
-### 性能优化
-- **异步处理**: 文档处理异步进行
-- **分页支持**: 大数据量分页返回
-- **缓存策略**: 合理的缓存机制
-- **限流控制**: API调用频率限制
-
-## 🧪 测试
-
-### 单元测试
-```bash
-# 运行单元测试
-npm test
-
-# 运行测试并生成覆盖率报告
-npm run test:coverage
-```
-
-### 集成测试
-```bash
-# 运行集成测试
-npm run test:integration
-```
-
-### API测试
-参考 [API测试检查清单](./api-testing-checklist.md) 进行完整的API测试。
-
-## 📈 监控和日志
-
-### 应用监控
-- **健康检查**: `/api/health` 端点
-- **性能指标**: 响应时间、吞吐量等
-- **错误率**: API错误统计和报警
-
-### 日志记录
-- **结构化日志**: JSON格式的结构化日志
-- **日志级别**: DEBUG、INFO、WARN、ERROR
-- **日志轮转**: 自动日志文件轮转和清理
-
-## 🔒 安全性
-
-### 认证和授权
-- **JWT令牌**: 基于JWT的认证机制
-- **权限控制**: 基于角色的访问控制
-- **令牌刷新**: 自动令牌刷新机制
-
-### 数据安全
-- **输入验证**: 严格的输入参数验证
-- **SQL注入防护**: 参数化查询防止SQL注入
-- **文件上传安全**: 文件类型和大小限制
-
-## 🤝 贡献指南
-
-### 代码规范
-- **ESLint**: 代码风格检查
-- **Prettier**: 代码格式化
-- **TypeScript**: 强类型检查
-
-### 提交规范
-- **Conventional Commits**: 标准化的提交信息格式
-- **代码审查**: 所有代码变更需要审查
-- **测试覆盖**: 新功能需要相应的测试
-
-## 📞 支持和反馈
-
-### 问题报告
-- **GitHub Issues**: 使用GitHub Issues报告问题
-- **Bug报告**: 提供详细的复现步骤和环境信息
-- **功能请求**: 描述新功能的用途和预期行为
-
-### 联系方式
-- **技术支持**: support@example.com
-- **文档反馈**: docs@example.com
-- **社区讨论**: [GitHub Discussions](https://github.com/example/qdrant-mcp-rag/discussions)
+### v0.9.0
+- 初始版本
+- 基础架构搭建
 
 ---
 
-## 📚 推荐阅读路径
-
-### 新手入门
-1. [快速开始指南](./quick-start.md) - 从零开始，5分钟上手
-2. [API调用示例](./api-examples.md) - 查看多语言代码示例
-3. [OpenAPI规范](./openapi.yaml) - 了解完整的API规范
-
-### 进阶开发
-1. [错误处理指南](./error-handling-guide.md) - 实现健壮的错误处理
-2. [API测试检查清单](./api-testing-checklist.md) - 确保API质量
-3. [数据模型文档](./components/schemas/) - 深入了解数据结构
-
-### 生产部署
-1. [监控和日志](#-监控和日志) - 监控API性能和健康状态
-2. [安全性](#-安全性) - 实施安全最佳实践
-3. [性能优化](#性能优化) - 优化API响应速度
-
-**更多详细信息请参考各个专门的文档页面。**
+*本文档会随着API功能更新而持续维护。*

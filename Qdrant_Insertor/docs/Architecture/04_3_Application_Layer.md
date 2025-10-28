@@ -11,6 +11,8 @@
 - **GraphService**
 - **CollectionService**
 - **DocumentService**
+- **BatchService**
+- **FileProcessingService**
 - **SyncStateMachine**
 - **AutoGC**
 

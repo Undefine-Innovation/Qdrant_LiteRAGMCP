@@ -47,6 +47,8 @@ graph TD
     SyncSM[Sync StateMachine]
     CollectionSvc[CollectionService]
     DocumentSvc[DocumentService]
+    BatchSvc[BatchService]
+    FileProcessingSvc[FileProcessingService]
   end
   Controller --> ImportSvc
   Controller --> SearchSvc
@@ -147,6 +149,44 @@ graph TD
 
 > **本次重构重点模块**
 
+#### 代码规范优化
+- 严格遵循TypeScript类型定义，避免使用`any`类型
+- 实现文件行数限制（400-500行）
+- 采用模块化设计，将大型组件拆分为小型、可重用的模块
+- 统一命名约定：camelCase、PascalCase、SCREAMING_SNAKE_CASE
+- 完善JSDoc注释，提高代码可读性
+
+#### API服务模块化重构
+- 将大型API服务文件拆分为功能模块：
+  - `api-client.ts`: 核心HTTP客户端和拦截器
+  - `collections-api.ts`: 集合相关API
+  - `documents-api.ts`: 文档相关API
+  - `search-api.ts`: 搜索相关API
+  - `batch-api.ts`: 批量操作API
+  - `monitoring-api.ts`: 监控相关API
+  - `graph-api.ts`: 图谱相关API
+  - `common-api.ts`: 通用API
+
+#### 文件处理服务重构
+- 将FileProcessingService拆分为专门模块：
+  - `FileFormatDetector.ts`: 文件格式检测
+  - `ThumbnailGenerator.ts`: 缩略图生成
+  - `ContentConverter.ts`: 内容转换
+  - 重构后的`FileProcessingService.ts`: 协调各模块
+
+#### 前端组件模块化
+- 将BatchDocumentUpload组件拆分为小型组件：
+  - `FileUploadArea.tsx`: 文件上传区域
+  - `FileList.tsx`: 文件列表显示
+  - `UploadProgress.tsx`: 上传进度显示
+  - `UploadResults.tsx`: 上传结果显示
+  - `fileValidator.ts`: 文件验证工具
+
+#### 搜索功能优化
+- 实现搜索限速和防抖机制
+- 添加搜索历史记录和建议功能
+- 优化搜索请求的性能和用户体验
+
 #### 组成结构
 
 1. **Router & Middleware**
@@ -162,14 +202,25 @@ graph TD
 
 4. **主要端点（REST 版）**
 
-   | 方法   | 路径              | 功能                | 状态码 | 备注                                |
-   | ------ | ----------------- | ------------------- | ------ | ----------------------------------- |
-   | POST   | `/upload`         | 上传文件            | 201    | `multipart/form-data`；返回 `docId` |
-   | DELETE | `/doc/:id`        | 删除文档            | 204    | 触发同步状态机进行清理              |
-   | GET    | `/doc/:id/chunks` | 查询文档 Chunk 列表 | 200    | 支持分页                            |
-   | GET    | `/search`         | 向量检索            | 200    | 返回 `RetrievalResultDTO`           |
-   | GET    | `/healthz`        | 健康检查            | 200    | 检查 Qdrant 和 SQLite 是否可达      |
-   | GET    | `/metrics`        | Prometheus 指标暴露 | 200    | 可选启用                            |
+   | 方法   | 路径                        | 功能                | 状态码 | 备注                                |
+   | ------ | --------------------------- | ------------------- | ------ | ----------------------------------- |
+   | POST   | `/upload`                   | 上传文件            | 201    | `multipart/form-data`；返回 `docId` |
+   | POST   | `/upload/batch`              | 批量上传文件        | 200    | 支持多文件上传，返回操作ID         |
+   | DELETE | `/docs/batch`                | 批量删除文档        | 200    | 支持批量删除，返回操作结果         |
+   | DELETE | `/collections/batch`         | 批量删除集合        | 200    | 支持批量删除，返回操作结果         |
+   | GET    | `/batch/progress/:operationId` | 获取批量操作进度    | 200    | 返回操作进度和状态信息             |
+   | GET    | `/docs/:id/preview`         | 获取文档预览        | 200    | 支持多种格式预览                   |
+   | GET    | `/docs/:id/download`        | 下载文档            | 200    | 支持原始格式或转换后格式下载       |
+   | GET    | `/docs/:id/thumbnail`       | 获取文档缩略图      | 200    | 支持自定义尺寸                     |
+   | GET    | `/docs/:id/format`          | 获取文档格式信息    | 200    | 返回文件MIME类型和扩展名          |
+   | DELETE | `/doc/:id`                 | 删除文档            | 204    | 触发同步状态机进行清理              |
+   | GET    | `/doc/:id/chunks`           | 查询文档 Chunk 列表 | 200    | 支持分页                            |
+   | GET    | `/docs`                     | 查询文档列表        | 200    | 支持分页和过滤                     |
+   | GET    | `/search`                   | 向量检索            | 200    | 返回 `RetrievalResultDTO`           |
+   | GET    | `/search/paginated`          | 分页向量检索        | 200    | 支持大规模结果集的分页检索         |
+   | POST   | `/docs/:docId/extract-graph` | 提取文档图谱        | 202    | 异步提取知识图谱                   |
+   | GET    | `/healthz`                  | 健康检查            | 200    | 检查 Qdrant 和 SQLite 是否可达      |
+   | GET    | `/metrics`                  | Prometheus 指标暴露 | 200    | 可选启用                            |
 
 5. **统一错误格式**
 
@@ -198,6 +249,8 @@ graph TD
 - `GraphService`：构建和查询图谱信息
 - `CollectionService`：管理 Collection 的 CRUD 操作
 - `DocumentService`：管理 Document 的 CRUD 操作（非导入/删除）
+- `BatchService`：处理批量操作，包括批量上传、批量删除等
+- `FileProcessingService`：处理文档预览、下载和缩略图生成
 - `SyncStateMachine`：驱动向量与元数据同步流程
 - `AutoGC`：负责兜底、修补及清理历史垃圾
   - 采用 **Level-2：双端比对（推荐）**
@@ -284,6 +337,7 @@ graph TD
 - `EmbeddingProvider`：调用 OpenAI/HuggingFace 接口生成向量
 - `GraphRepo Impl.`：基于内存或 Neo4j 的图存储实现，实现 GraphRepository 接口
 - `Winston Logger`：结构化日志输出（控制台 + 文件）
+- `Pagination Utils`：统一分页处理工具，支持参数解析和 SQL 生成
 
 ---
 

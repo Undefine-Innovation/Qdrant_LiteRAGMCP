@@ -1,0 +1,292 @@
+# Batch Operations Paths
+
+upload:
+  post:
+    operationId: batchUploadDocuments
+    tags:
+      - 批量操作
+    summary: 批量上传文档
+    description: |
+      批量上传多个文档到指定集合或默认集合，使用multipart/form-data格式。
+      
+      ## 批量上传特点
+      
+      - **异步处理**: 批量上传采用异步处理模式，避免长时间阻塞请求
+      - **进度跟踪**: 提供操作ID，可用于跟踪上传进度
+      - **部分失败**: 单个文件失败不影响其他文件的处理
+      - **结果汇总**: 返回每个文件的处理结果和统计信息
+      
+      ## 使用场景
+      
+      - **批量导入**: 快速导入大量文档到系统中
+      - **数据迁移**: 从其他系统迁移文档数据
+      - **定期更新**: 批量更新现有文档内容
+      - **多格式处理**: 同时处理多种格式的文档
+      
+      ## 注意事项
+      
+      - 最多支持50个文件同时上传
+      - 单个文件大小限制为10MB
+      - 处理时间取决于文件数量和大小
+      - 建议分批处理大量文件
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              files:
+                type: array
+                items:
+                  type: string
+                  format: binary
+                description: |
+                  要上传的文档文件数组。
+                  
+                  **支持格式**: TXT, MD, MARKDOWN等文本文件
+                  **数量限制**: 最多50个文件
+                  **大小限制**: 每个文件最大10MB
+              collectionId:
+                type: string
+                description: |
+                  目标集合的ID（可选）。
+                  
+                  **注意**: 如果不提供，将使用默认集合
+            required:
+              - files
+          example:
+            files: ["document1.txt", "document2.md", "document3.markdown"]
+            collectionId: "tech-docs"
+    responses:
+      '200':
+        description: 批量上传成功，返回操作结果
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/batch.yaml#/BatchUploadResponse'
+            example:
+              success: true
+              operationId: "batch-upload-uuid-12345"
+              total: 3
+              successful: 2
+              failed: 1
+              results:
+                - fileName: "document1.txt"
+                  docId: "doc-abc123"
+                  collectionId: "tech-docs"
+                - fileName: "document2.md"
+                  docId: "doc-def456"
+                  collectionId: "tech-docs"
+                - fileName: "document3.exe"
+                  error: "File type application/octet-stream is not supported"
+      '413':
+        $ref: '../components/responses/common.yaml#/FileTooLargeError'
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+deleteDocs:
+  delete:
+    operationId: batchDeleteDocuments
+    tags:
+      - 批量操作
+    summary: 批量删除文档
+    description: |
+      批量删除多个文档及其所有关联的文本块和向量嵌入。
+      
+      ## 批量删除特点
+      
+      - **级联删除**: 自动删除文档关联的所有文本块和向量数据
+      - **原子操作**: 确保删除操作的原子性，避免部分删除
+      - **进度跟踪**: 提供操作ID，可用于跟踪删除进度
+      - **结果汇总**: 返回每个文档的删除结果和统计信息
+      
+      ## 使用场景
+      
+      - **批量清理**: 清理不再需要的多个文档
+      - **数据维护**: 定期清理过期或无效文档
+      - **隐私保护**: 批量删除包含敏感信息的文档
+      - **存储管理**: 释放大量存储空间
+      
+      ## 注意事项
+      
+      - 删除操作不可逆，请谨慎操作
+      - 大量删除可能影响系统性能
+      - 建议在低峰期执行大规模删除操作
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/batch.yaml#/BatchDeleteDocsRequest'
+          example:
+            docIds: ["doc-abc123", "doc-def456", "doc-ghi789"]
+    responses:
+      '200':
+        description: 批量删除成功，返回操作结果
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/batch.yaml#/BatchDeleteDocsResponse'
+            example:
+              success: true
+              operationId: "batch-delete-docs-uuid-12345"
+              total: 3
+              successful: 3
+              failed: 0
+              results:
+                - docId: "doc-abc123"
+                  success: true
+                - docId: "doc-def456"
+                  success: true
+                - docId: "doc-ghi789"
+                  success: true
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+deleteCollections:
+  delete:
+    operationId: batchDeleteCollections
+    tags:
+      - 批量操作
+    summary: 批量删除集合
+    description: |
+      批量删除多个集合及其所有关联的文档和文本块。
+      
+      ## 批量删除特点
+      
+      - **级联删除**: 自动删除集合中的所有文档、文本块和向量数据
+      - **原子操作**: 确保删除操作的原子性，避免部分删除
+      - **进度跟踪**: 提供操作ID，可用于跟踪删除进度
+      - **结果汇总**: 返回每个集合的删除结果和统计信息
+      
+      ## 使用场景
+      
+      - **项目清理**: 删除整个项目相关的所有集合
+      - **数据归档**: 批量归档旧项目数据
+      - **存储优化**: 清理不再需要的大量数据
+      - **重组数据**: 重新组织数据结构前的清理工作
+      
+      ## 注意事项
+      
+      - 删除操作不可逆，请谨慎操作
+      - 删除集合会同时删除其中的所有文档
+      - 大量删除可能影响系统性能
+      - 建议在低峰期执行大规模删除操作
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/batch.yaml#/BatchDeleteCollectionsRequest'
+          example:
+            collectionIds: ["collection-1", "collection-2", "collection-3"]
+    responses:
+      '200':
+        description: 批量删除成功，返回操作结果
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/batch.yaml#/BatchDeleteCollectionsResponse'
+            example:
+              success: true
+              operationId: "batch-delete-collections-uuid-12345"
+              total: 3
+              successful: 3
+              failed: 0
+              results:
+                - collectionId: "collection-1"
+                  success: true
+                - collectionId: "collection-2"
+                  success: true
+                - collectionId: "collection-3"
+                  success: true
+      '422':
+        $ref: '../components/responses/common.yaml#/ValidationError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+getProgress:
+  get:
+    operationId: getBatchOperationProgress
+    tags:
+      - 批量操作
+    summary: 获取批量操作进度
+    description: |
+      获取指定批量操作的进度信息，包括处理状态、已处理项目数等。
+      
+      ## 进度信息特点
+      
+      - **实时状态**: 提供操作的实时状态信息
+      - **详细统计**: 包含成功、失败和处理中的项目数量
+      - **时间估算**: 提供预估剩余完成时间
+      - **错误详情**: 包含失败项目的详细错误信息
+      
+      ## 使用场景
+      
+      - **进度监控**: 在前端界面显示操作进度
+      - **状态查询**: 定期查询长时间运行的操作状态
+      - **错误诊断**: 查看失败项目的具体错误原因
+      - **性能分析**: 分析操作执行时间和效率
+      
+      ## 状态说明
+      
+      - **pending**: 操作已创建，等待开始处理
+      - **processing**: 操作正在处理中
+      - **completed**: 操作已完成
+      - **failed**: 操作因错误而终止
+    parameters:
+      - in: path
+        name: operationId
+        schema:
+          type: string
+        required: true
+        description: |
+          要查询进度的操作ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "batch-upload-uuid-12345"
+        example: "batch-upload-uuid-12345"
+    responses:
+      '200':
+        description: 操作进度获取成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/batch.yaml#/BatchOperationProgress'
+            example:
+              operationId: "batch-upload-uuid-12345"
+              type: "upload"
+              status: "processing"
+              total: 10
+              processed: 6
+              successful: 5
+              failed: 1
+              startTime: 1640995200000
+              estimatedTimeRemaining: 30
+              results:
+                - fileName: "document1.txt"
+                  status: "completed"
+                  docId: "doc-abc123"
+                - fileName: "document2.md"
+                  status: "completed"
+                  docId: "doc-def456"
+                - fileName: "document3.exe"
+                  status: "failed"
+                  error: "File type application/octet-stream is not supported"
+      '404':
+        description: 指定的操作不存在或已过期
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/common.yaml#/NotFoundError'
+            example:
+              error:
+                code: NOT_FOUND
+                message: "操作 'non-existent-operation' 不存在或已过期"
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
