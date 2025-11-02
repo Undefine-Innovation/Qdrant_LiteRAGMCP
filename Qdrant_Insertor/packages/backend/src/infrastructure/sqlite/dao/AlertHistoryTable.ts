@@ -33,20 +33,25 @@ interface AlertHistoryRow {
 }
 
 /**
- * 告警历史数据库访问对象
+ * 告警历史数据库访问对�?
  */
 export class AlertHistoryTable {
+  /**
+   *
+   * @param db
+   */
   constructor(private db: Database.Database) {}
 
   /**
    * 创建告警历史记录
+   * @param alert
    */
   create(alert: Omit<AlertHistory, 'id' | 'createdAt'>): string {
     const id = `alert_hist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const stmt = this.db.prepare(`
       INSERT INTO alert_history (
-        id, rule_id, metric_value, threshold_value, severity, 
+        id, rule_id, metric_value, threshold_value, severity,
         status, message, triggered_at, resolved_at, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
@@ -69,6 +74,8 @@ export class AlertHistoryTable {
 
   /**
    * 更新告警历史记录
+   * @param id
+   * @param updates
    */
   update(
     id: string,
@@ -95,7 +102,7 @@ export class AlertHistoryTable {
     values.push(id);
 
     const stmt = this.db.prepare(`
-      UPDATE alert_history 
+      UPDATE alert_history
       SET ${fields.join(', ')}
       WHERE id = ?
     `);
@@ -106,6 +113,7 @@ export class AlertHistoryTable {
 
   /**
    * 根据ID获取告警历史记录
+   * @param id
    */
   getById(id: string): AlertHistory | null {
     const stmt = this.db.prepare('SELECT * FROM alert_history WHERE id = ?');
@@ -117,6 +125,8 @@ export class AlertHistoryTable {
 
   /**
    * 根据规则ID获取告警历史记录
+   * @param ruleId
+   * @param limit
    */
   getByRuleId(ruleId: string, limit?: number): AlertHistory[] {
     let query =
@@ -135,7 +145,9 @@ export class AlertHistoryTable {
   }
 
   /**
-   * 获取所有告警历史记录
+   * 获取所有告警历史记�?
+   * @param limit
+   * @param offset
    */
   getAll(limit?: number, offset?: number): AlertHistory[] {
     let query = 'SELECT * FROM alert_history ORDER BY triggered_at DESC';
@@ -158,7 +170,9 @@ export class AlertHistoryTable {
   }
 
   /**
-   * 根据状态获取告警历史记录
+   * 根据状态获取告警历史记�?
+   * @param status
+   * @param limit
    */
   getByStatus(status: string, limit?: number): AlertHistory[] {
     let query =
@@ -178,6 +192,9 @@ export class AlertHistoryTable {
 
   /**
    * 根据时间范围获取告警历史记录
+   * @param startTime
+   * @param endTime
+   * @param limit
    */
   getByTimeRange(
     startTime: number,
@@ -185,8 +202,8 @@ export class AlertHistoryTable {
     limit?: number,
   ): AlertHistory[] {
     let query = `
-      SELECT * FROM alert_history 
-      WHERE triggered_at >= ? AND triggered_at <= ? 
+      SELECT * FROM alert_history
+      WHERE triggered_at >= ? AND triggered_at <= ?
       ORDER BY triggered_at DESC
     `;
     const params = [startTime, endTime];
@@ -204,6 +221,7 @@ export class AlertHistoryTable {
 
   /**
    * 获取告警统计信息
+   * @param days
    */
   getStats(days: number = 7): {
     total: number;
@@ -214,14 +232,14 @@ export class AlertHistoryTable {
     const startTime = Date.now() - days * 24 * 60 * 60 * 1000;
 
     const totalStmt = this.db.prepare(`
-      SELECT COUNT(*) as count FROM alert_history 
+      SELECT COUNT(*) as count FROM alert_history
       WHERE triggered_at >= ?
     `);
     const totalResult = totalStmt.get(startTime) as { count: number };
 
     const statusStmt = this.db.prepare(`
-      SELECT status, COUNT(*) as count FROM alert_history 
-      WHERE triggered_at >= ? 
+      SELECT status, COUNT(*) as count FROM alert_history
+      WHERE triggered_at >= ?
       GROUP BY status
     `);
     const statusResults = statusStmt.all(startTime) as {
@@ -230,8 +248,8 @@ export class AlertHistoryTable {
     }[];
 
     const severityStmt = this.db.prepare(`
-      SELECT severity, COUNT(*) as count FROM alert_history 
-      WHERE triggered_at >= ? 
+      SELECT severity, COUNT(*) as count FROM alert_history
+      WHERE triggered_at >= ?
       GROUP BY severity
     `);
     const severityResults = severityStmt.all(startTime) as {
@@ -240,8 +258,8 @@ export class AlertHistoryTable {
     }[];
 
     const resolutionTimeStmt = this.db.prepare(`
-      SELECT AVG(resolved_at - triggered_at) as avg_resolution_time 
-      FROM alert_history 
+      SELECT AVG(resolved_at - triggered_at) as avg_resolution_time
+      FROM alert_history
       WHERE triggered_at >= ? AND resolved_at IS NOT NULL
     `);
     const resolutionTimeResult = resolutionTimeStmt.get(startTime) as {
@@ -268,6 +286,7 @@ export class AlertHistoryTable {
 
   /**
    * 删除告警历史记录
+   * @param id
    */
   delete(id: string): boolean {
     const stmt = this.db.prepare('DELETE FROM alert_history WHERE id = ?');
@@ -276,7 +295,8 @@ export class AlertHistoryTable {
   }
 
   /**
-   * 清理过期的告警历史记录
+   * 清理过期的告警历史记�?
+   * @param olderThanDays
    */
   cleanup(olderThanDays: number = 30): number {
     const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
@@ -291,6 +311,7 @@ export class AlertHistoryTable {
 
   /**
    * 将数据库行映射为AlertHistory对象
+   * @param row
    */
   private mapRowToAlertHistory(row: AlertHistoryRow): AlertHistory {
     return {

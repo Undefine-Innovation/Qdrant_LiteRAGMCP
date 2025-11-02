@@ -1,12 +1,13 @@
 import express from 'express';
-import { IImportService } from '../../domain/IImportService.js';
-import { ISearchService } from '../../domain/ISearchService.js';
-import { IGraphService } from '../../domain/graph.js';
-import { ICollectionService } from '../../domain/ICollectionService.js';
-import { IDocumentService } from '../../domain/IDocumentService.js';
-import { IFileProcessingService } from '../../domain/IFileProcessingService.js';
-import { IBatchService } from '../../domain/IBatchService.js';
-import { MonitoringApiService } from '../../application/MonitoringApiService.js';
+import { IImportService } from '@domain/repositories/IImportService.js';
+import { ISearchService } from '@domain/repositories/ISearchService.js';
+import { IGraphService } from '@domain/entities/graph.js';
+import { ICollectionService } from '@domain/repositories/ICollectionService.js';
+import { IDocumentService } from '@domain/repositories/IDocumentService.js';
+import { IFileProcessingService } from '@domain/repositories/IFileProcessingService.js';
+import { IBatchService } from '@domain/repositories/IBatchService.js';
+import { MonitoringApiService } from '@application/services/MonitoringApiService.js';
+import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
 import { createCollectionRoutes } from './collections.js';
 import { createDocumentRoutes } from './documents.js';
 import { createSearchRoutes } from './search.js';
@@ -14,11 +15,14 @@ import { createGraphRoutes } from './graph.js';
 import { createPreviewRoutes } from './preview.js';
 import { createCommonRoutes } from './common.js';
 import { createBatchRoutes } from './batch.js';
-import { createMonitoringRoutes } from '../monitoring.js';
+import { createMonitoringRoutes } from '@api/monitoring.js';
+import { IScrapeService } from '@domain/entities/scrape.js';
+import { Logger } from '@logging/logger.js';
+import { createScrapeRoutes } from './scrape.js';
 
 /**
  * @interface ApiServices
- * @description API 层所需的应用服务接口集合
+ * API 层所需的应用服务接口集合，遵循依赖倒置原则
  */
 interface ApiServices {
   importService: IImportService;
@@ -28,16 +32,21 @@ interface ApiServices {
   documentService: IDocumentService;
   fileProcessingService: IFileProcessingService;
   batchService: IBatchService;
+  scrapeService: IScrapeService;
+  logger: Logger;
+  stateMachineService?: {
+    getEngine: () => unknown;
+  };
   monitoringApiService?: MonitoringApiService;
 }
 
 /**
  * @function createApiRouter
- * @description 创建并配置 Express API 路由。
- *   此函数作为 Express 控制器层，负责接收请求、解构参数、调用应用服务、封装响应。
- *   它不包含任何业务逻辑，也不应包含 try...catch 块，错误将由全局错误处理中间件统一处理。
- * @param {ApiServices} services - 包含所有必要应用服务实例的对象。
- * @returns {express.Router} 配置好的 Express 路由实例。
+ * 创建并配置Express API 路由器
+ *   此函数作�?Express 控制器层，负责接收请求、解构参数、调用应用服务、封装响应�?
+ *   它不包含任何业务逻辑，也不应包含 try...catch 块，错误将由全局错误处理中间件统一处理�?
+ * @param {ApiServices} services - 包含所有必要应用服务实例的对象�?
+ * @returns 配置好的 Express 路由器实例
  */
 export function createApiRouter(services: ApiServices): express.Router {
   const router = express.Router();
@@ -64,11 +73,17 @@ export function createApiRouter(services: ApiServices): express.Router {
   // 图谱路由
   router.use('/', createGraphRoutes(services.graphService));
 
-  // 预览和下载路由
+  // 预览和下载路�?
   router.use('/', createPreviewRoutes(services.fileProcessingService));
 
   // 批量操作路由
   router.use('/', createBatchRoutes(services.batchService));
+
+  // 爬虫路由
+  router.use('/scrape', createScrapeRoutes(
+    services.scrapeService,
+    services.logger
+  ));
 
   // 监控路由
   if (services.monitoringApiService) {

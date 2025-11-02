@@ -195,24 +195,103 @@
   - 调用 `Winston Logger` 记录日志。
 - **数据流**：ImportService -> SyncStateMachine -> SyncJob Table。
 
-#### 2.3.4.3 关键实现与技术栈
+#### 2.3.4.3 当前实现状态
 
-- **状态机**：借助 `xstate` 定义状态转移逻辑。
-- **异步任务**：通过异步任务轮询驱动状态演进。
+**已实现功能**：
+- ✅ 基于状态转换表的状态机实现 ([`SyncStateMachineCore`](packages/backend/src/application/SyncStateMachineCore.ts:13))
+- ✅ 7种状态定义 ([`SyncJobStatus`](packages/backend/src/domain/sync/types.ts:6))
+- ✅ 状态持久化到数据库
+- ✅ 错误分类和重试机制 ([`ErrorClassifier`](packages/backend/src/domain/sync/ErrorClassifier.ts:14))
+- ✅ 指数退避重试策略 ([`RetryScheduler`](packages/backend/src/domain/sync/RetryScheduler.ts:22))
 
-#### 2.3.4.4 开发需求与约定
+**技术债务**：
+- ⚠️ 基于状态转换表，扩展性有限
+- ⚠️ 错误处理基于规则分类，不够智能
+- ⚠️ 状态机逻辑集中，难以复用
+- ⚠️ 不支持不同类型异步任务的统一管理
+
+#### 2.3.4.4 🔄 计划改进 (A2. 策略模式状态机 + A3. 错误工厂模式)
+
+**目标**：为文档导入、爬虫任务等异步任务提供统一、可靠的生命周期管理
+
+**改进方案**：
+```typescript
+// 基础状态机引擎
+export abstract class BaseStateMachineEngine<TState, TEvent> {
+  protected strategies: Map<TState, StateStrategy<TState, TEvent>>;
+  
+  async processEvent(event: TEvent): Promise<TState> {
+    const currentState = this.getCurrentState();
+    const strategy = this.strategies.get(currentState);
+    
+    if (!strategy) {
+      throw new Error(`No strategy found for state: ${currentState}`);
+    }
+    
+    return await strategy.handleEvent(event, this.context);
+  }
+}
+
+// 文档导入策略
+export class ImportJobStrategy implements StateStrategy<ImportState, ImportEvent> {
+  async handleEvent(event: ImportEvent, context: ImportContext): Promise<ImportState> {
+    switch (event.type) {
+      case 'DOCUMENT_UPLOADED':
+        return await this.handleDocumentUploaded(event, context);
+      case 'CHUNKS_SAVED':
+        return await this.handleChunksSaved(event, context);
+      case 'EMBEDDING_COMPLETED':
+        return await this.handleEmbeddingCompleted(event, context);
+      case 'ERROR_OCCURRED':
+        return await this.handleErrorOccurred(event, context);
+      default:
+        return context.currentState;
+    }
+  }
+}
+
+// 错误工厂模式
+export class AppErrorFactory {
+  static createError(originalError: Error, context: ErrorContext): AppError {
+    if (this.isTransientError(originalError)) {
+      return new TransientAppError(originalError, context);
+    } else {
+      return new PermanentAppError(originalError, context);
+    }
+  }
+}
+```
+
+**实施步骤**：
+1. **基础引擎设计**：实现 `BaseStateMachineEngine` 抽象类
+2. **策略接口定义**：定义 `StateStrategy` 接口和通用事件类型
+3. **具体策略实现**：实现 `ImportJobStrategy`、`ScrapeJobStrategy` 等
+4. **错误工厂实现**：创建 `AppErrorFactory` 和结构化错误类型
+5. **状态机重构**：将现有状态机迁移到策略模式
+
+**预期收益**：
+- 提高状态机逻辑的可扩展性和复用性
+- 支持多种异步任务的统一管理
+- 智能错误分类和重试决策
+- 更好的代码组织和维护性
+
+#### 2.3.4.5 开发需求与约定
 
 - **编码规范**：
   - 清晰定义状态机的状态和事件，确保状态转移逻辑的正确性。
   - 状态机应具有可扩展性，便于未来添加新的状态或事件。
+  - **🆕 策略模式**：每个状态一个策略类，保持职责单一
 - **错误处理**：
   - 在状态转移过程中捕获异常，并根据错误类型进行状态回滚或标记为失败。
   - 实现重试机制，处理临时性错误。
+  - **🆕 错误工厂**：使用结构化错误类型，支持智能决策
 - **测试策略**：
   - 对状态机进行单元测试，验证所有状态转移路径和事件处理的正确性。
   - 集成测试应验证 `SyncJob` 状态在数据库中的持久化。
+  - **🆕 策略测试**：独立测试每个状态策略的逻辑
 - **性能考量**：
   - 优化状态机轮询的频率和效率，避免资源浪费。
+  - **🆕 并发处理**：支持多个状态机实例并行运行
 
 ### 2.3.5 AutoGC
 

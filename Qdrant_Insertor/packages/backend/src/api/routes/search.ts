@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
-import { CollectionId } from '../../domain/types.js';
-import { ISearchService } from '../../domain/ISearchService.js';
+import { CollectionId } from '../../domain/entities/types.js';
+import { ISearchService } from '../../domain/repositories/ISearchService.js';
 import { validate, ValidatedRequest } from '../../middlewares/validate.js';
 import {
   SearchQuerySchema,
@@ -12,7 +12,7 @@ import {
  * @function createSearchRoutes
  * @description 创建搜索相关的API路由
  * @param {ISearchService} searchService - 搜索服务实例
- * @returns {express.Router} 配置好的 Express 路由实例。
+ * @returns {express.Router} 配置好的 Express 路由实例�?
  */
 export function createSearchRoutes(
   searchService: ISearchService,
@@ -22,24 +22,24 @@ export function createSearchRoutes(
   /**
    * @api {get} /search 执行向量搜索
    * @apiGroup Search
-   * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索。支持分页参数。
-   * @apiParam {string} q - 搜索查询字符串。
-   * @apiParam {string} collectionId - 要在其中执行搜索的集合的 ID。
-   * @apiParam {number} [limit=10] - 返回结果的最大数量（非分页模式）。
-   * @apiParam {number} [page=1] - 页码，从1开始（分页模式）。
-   * @apiParam {number} [limit=20] - 每页数量，最大100（分页模式）。
-   * @apiParam {string} [sort=score] - 排序字段（分页模式）。
-   * @apiParam {string} [order=desc] - 排序方向，asc或desc（分页模式）。
-   * @apiSuccess {SearchResult[]} results - 搜索结果数组（非分页模式）。
-   * @apiSuccess {Object} response - 分页响应对象（分页模式）。
-   * @apiSuccess {SearchResult[]} response.data - 搜索结果数组（分页模式）。
-   * @apiSuccess {Object} response.pagination - 分页元数据（分页模式）。
-   * @apiSuccess {number} response.pagination.page - 当前页码。
-   * @apiSuccess {number} response.pagination.limit - 每页数量。
-   * @apiSuccess {number} response.pagination.total - 总记录数。
-   * @apiSuccess {number} response.pagination.totalPages - 总页数。
-   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页。
-   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页。
+   * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索。支持分页参数�?
+   * @apiParam {string} q - 搜索查询字符串�?
+   * @apiParam {string} collectionId - 要在其中执行搜索的集合的 ID�?
+   * @apiParam {number} [limit=10] - 返回结果的最大数量（非分页模式）�?
+   * @apiParam {number} [page=1] - 页码，从1开始（分页模式）�?
+   * @apiParam {number} [limit=20] - 每页数量，最�?00（分页模式）�?
+   * @apiParam {string} [sort=score] - 排序字段（分页模式）�?
+   * @apiParam {string} [order=desc] - 排序方向，asc或desc（分页模式）�?
+   * @apiSuccess {SearchResult[]} results - 搜索结果数组（非分页模式）�?
+   * @apiSuccess {Object} response - 分页响应对象（分页模式）�?
+   * @apiSuccess {SearchResult[]} response.data - 搜索结果数组（分页模式）�?
+   * @apiSuccess {Object} response.pagination - 分页元数据（分页模式）�?
+   * @apiSuccess {number} response.pagination.page - 当前页码�?
+   * @apiSuccess {number} response.pagination.limit - 每页数量�?
+   * @apiSuccess {number} response.pagination.total - 总记录数�?
+   * @apiSuccess {number} response.pagination.totalPages - 总页数�?
+   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页�?
+   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -82,22 +82,22 @@ export function createSearchRoutes(
   /**
    * @api {get} /search/paginated 执行分页向量搜索
    * @apiGroup Search
-   * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索，支持分页。
-   * @apiParam {string} q - 搜索查询字符串。
-   * @apiParam {string} collectionId - 要在其中执行搜索的集合的 ID。
-   * @apiParam {number} [page=1] - 页码，从1开始。
-   * @apiParam {number} [limit=20] - 每页数量，最大100。
-   * @apiParam {string} [sort=score] - 排序字段。
-   * @apiParam {string} [order=desc] - 排序方向，asc或desc。
-   * @apiSuccess {Object} response - 分页响应对象。
-   * @apiSuccess {SearchResult[]} response.data - 搜索结果数组。
-   * @apiSuccess {Object} response.pagination - 分页元数据。
-   * @apiSuccess {number} response.pagination.page - 当前页码。
-   * @apiSuccess {number} response.pagination.limit - 每页数量。
-   * @apiSuccess {number} response.pagination.total - 总记录数。
-   * @apiSuccess {number} response.pagination.totalPages - 总页数。
-   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页。
-   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页。
+   * @apiDescription 根据查询和可选的 Collection ID 执行向量相似度搜索，支持分页�?
+   * @apiParam {string} q - 搜索查询字符串�?
+   * @apiParam {string} collectionId - 要在其中执行搜索的集合的 ID�?
+   * @apiParam {number} [page=1] - 页码，从1开始�?
+   * @apiParam {number} [limit=20] - 每页数量，最�?00�?
+   * @apiParam {string} [sort=score] - 排序字段�?
+   * @apiParam {string} [order=desc] - 排序方向，asc或desc�?
+   * @apiSuccess {Object} response - 分页响应对象�?
+   * @apiSuccess {SearchResult[]} response.data - 搜索结果数组�?
+   * @apiSuccess {Object} response.pagination - 分页元数据�?
+   * @apiSuccess {number} response.pagination.page - 当前页码�?
+   * @apiSuccess {number} response.pagination.limit - 每页数量�?
+   * @apiSuccess {number} response.pagination.total - 总记录数�?
+   * @apiSuccess {number} response.pagination.totalPages - 总页数�?
+   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页�?
+   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {

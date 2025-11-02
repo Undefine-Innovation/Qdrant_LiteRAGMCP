@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS chunks (
   content TEXT NOT NULL,
   FOREIGN KEY (docId) REFERENCES docs(docId) ON DELETE CASCADE,
   FOREIGN KEY (collectionId) REFERENCES collections(collectionId) ON DELETE CASCADE
-);
-`;
+);`;
 
 /**
  * 批量插入到 CHUNKS 表的 SQL 语句
@@ -24,29 +23,25 @@ CREATE TABLE IF NOT EXISTS chunks (
 export const INSERT_CHUNKS_BATCH = `
 INSERT INTO chunks (
   content, title, pointId, docId, collectionId, chunkIndex
-) VALUES (?, ?, ?, ?, ?, ?)
-`;
+) VALUES (?, ?, ?, ?, ?, ?)`;
 
 /**
  * 根据 pointIds 查询 CHUNKS 表的 SQL 语句
  */
 export const SELECT_CHUNKS_BY_POINT_IDS = `
-SELECT pointId, content, title FROM chunks WHERE pointId IN (?)
-`;
+SELECT pointId, content, title FROM chunks WHERE pointId IN (?)`;
 
 /**
  * 根据 pointIds 删除 CHUNKS 表的 SQL 语句
  */
 export const DELETE_CHUNKS_BY_POINT_IDS = `
-DELETE FROM chunks WHERE pointId IN (?)
-`;
+DELETE FROM chunks WHERE pointId IN (?)`;
 
 /**
  * 统计块数量的 SQL 语句
  */
 export const COUNT_CHUNKS = `
-SELECT COUNT(*) FROM chunk_meta
-`;
+SELECT COUNT(*) FROM chunk_meta`;
 
 /**
  * 根据 pointIds 查询块详细信息的基础 SQL 语句（不包含动态部分）
@@ -65,8 +60,7 @@ JOIN chunks c ON cm.pointId = c.pointId
 JOIN docs d ON cm.docId = d.docId
 WHERE cm.pointId IN (?)
   AND cm.collectionId = ?
-  AND d.is_deleted = 0
-`;
+  AND d.is_deleted = 0`;
 
 /**
  * 根据文档ID查询块的SQL语句
@@ -81,5 +75,4 @@ SELECT
   content
 FROM chunks
 WHERE docId = ?
-ORDER BY chunkIndex ASC
-`;
+ORDER BY chunkIndex ASC`;

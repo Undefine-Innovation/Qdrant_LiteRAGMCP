@@ -3,7 +3,7 @@ import { CollectionIdParamsSchema } from './collection.js';
 import { DocIdParamsSchema } from './document.js';
 
 /**
- * 批量文档上传请求的 Schema
+ * 批量文档上传请求Schema
  * 用于验证 `POST /upload/batch` 的请求体
  */
 export const BatchUploadRequestSchema = z.object({
@@ -14,7 +14,7 @@ export const BatchUploadRequestSchema = z.object({
 });
 
 /**
- * 批量文档上传响应的 Schema
+ * 批量文档上传响应Schema
  */
 export const BatchUploadResponseSchema = z.object({
   success: z.boolean().describe('批量上传是否成功'),
@@ -34,7 +34,7 @@ export const BatchUploadResponseSchema = z.object({
 });
 
 /**
- * 批量删除文档请求的 Schema
+ * 批量删除文档请求Schema
  * 用于验证 `DELETE /docs/batch` 的请求体
  */
 export const BatchDeleteDocsRequestSchema = z.object({
@@ -42,7 +42,7 @@ export const BatchDeleteDocsRequestSchema = z.object({
 });
 
 /**
- * 批量删除文档响应的 Schema
+ * 批量删除文档响应Schema
  */
 export const BatchDeleteDocsResponseSchema = z.object({
   success: z.boolean().describe('批量删除是否成功'),
@@ -61,7 +61,7 @@ export const BatchDeleteDocsResponseSchema = z.object({
 });
 
 /**
- * 批量删除集合请求的 Schema
+ * 批量删除集合请求Schema
  * 用于验证 `DELETE /collections/batch` 的请求体
  */
 export const BatchDeleteCollectionsRequestSchema = z.object({
@@ -69,7 +69,7 @@ export const BatchDeleteCollectionsRequestSchema = z.object({
 });
 
 /**
- * 批量删除集合响应的 Schema
+ * 批量删除集合响应Schema
  */
 export const BatchDeleteCollectionsResponseSchema = z.object({
   success: z.boolean().describe('批量删除是否成功'),
@@ -88,7 +88,7 @@ export const BatchDeleteCollectionsResponseSchema = z.object({
 });
 
 /**
- * 批量操作进度响应的 Schema
+ * 批量操作进度响应Schema
  */
 export const BatchOperationProgressSchema = z.object({
   operationId: z.string().describe('操作ID'),

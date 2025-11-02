@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { MonitoringApiService } from '../application/MonitoringApiService.js';
+import { MonitoringApiService } from '../application/services/MonitoringApiService.js';
+import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
 import { validate, ValidatedRequest } from '../middlewares/validate.js';
 import {
   HealthCheckRequestSchema,
@@ -20,9 +21,14 @@ import {
   DashboardDataRequest,
   CreateNotificationChannelRequest,
   TestNotificationRequest,
-} from '../api/contracts/monitoring.js';
-import { logger } from '../logger.js';
+} from '@api/contracts/monitoring.js';
+import { logger } from '@logging/logger.js';
 
+/**
+ * 创建监控相关的API路由
+ * @param {MonitoringApiService} monitoringApiService - 监控API服务实例
+ * @returns {Router} Express路由器实例
+ */
 export function createMonitoringRoutes(
   monitoringApiService: MonitoringApiService,
 ): Router {

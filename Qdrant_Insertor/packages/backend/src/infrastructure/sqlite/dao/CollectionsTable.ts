@@ -12,31 +12,31 @@ import type {
   CollectionId,
   PaginationQuery,
   PaginatedResponse,
-} from '../../../domain/types.js';
-import { makeCollectionId } from '../../../domain/utils/id.js';
+} from '@domain/entities/types.js';
+import { makeCollectionId } from '@domain/utils/id.js';
 import {
   parsePaginationQuery,
   buildSqlPagination,
 } from '../../../utils/pagination.js';
 
 /**
- * `collections` 表的数据访问对象 (DAO)。
- * 封装了所有集合的 SQL 交互。
+ * collections 表的数据访问对象 (DAO)�?
+ * 封装了所有集合的 SQL 交互�?
  */
 export class CollectionsTable {
   private db: Database;
 
   /**
-   * @param db - 数据库实例。
+   * @param db - 数据库实例�?
    */
   constructor(db: Database) {
     this.db = db;
   }
 
   /**
-   * 创建一个新的集合记录。
-   * @param data - 新集合的数据。
-   * @returns 新创建集合的 ID。
+   * 创建一个新的集合记录�?
+   * @param data - 新集合的数据�?
+   * @returns 新创建集合的 ID�?
    */
   create(data: Omit<Collection, 'collectionId' | 'created_at'>): CollectionId {
     const collectionId = makeCollectionId() as CollectionId;
@@ -48,9 +48,9 @@ export class CollectionsTable {
   }
 
   /**
-   * 根据 ID 检索集合。
-   * @param collectionId - 要检索的集合 ID。
-   * @returns 集合对象，如果未找到则返回 undefined。
+   * 根据 ID 检索集合�?
+   * @param collectionId - 要检索的集合 ID�?
+   * @returns 集合对象，如果未找到则返�?undefined�?
    */
   getById(collectionId: CollectionId): Collection | undefined {
     const stmt = this.db.prepare(SELECT_COLLECTION_BY_ID);
@@ -59,9 +59,9 @@ export class CollectionsTable {
   }
 
   /**
-   * 根据名称检索集合。
-   * @param name - 要检索的集合名称。
-   * @returns 集合对象，如果未找到则返回 undefined。
+   * 根据名称检索集合�?
+   * @param name - 要检索的集合名称�?
+   * @returns 集合对象，如果未找到则返�?undefined�?
    */
   getByName(name: string): Collection | undefined {
     const stmt = this.db.prepare(SELECT_COLLECTION_BY_NAME);
@@ -70,8 +70,8 @@ export class CollectionsTable {
   }
 
   /**
-   * 从数据库中检索所有集合。
-   * @returns 所有集合的数组。
+   * 从数据库中检索所有集合�?
+   * @returns 所有集合的数组�?
    */
   listAll(): Collection[] {
     const stmt = this.db.prepare(SELECT_ALL_COLLECTIONS);
@@ -83,15 +83,15 @@ export class CollectionsTable {
    * @returns 集合总数
    */
   getCount(): number {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM collections');
+    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM collections`);
     const result = stmt.get() as { count: number };
     return result.count;
   }
 
   /**
-   * 分页检索集合
+   * 分页检索集�?
    * @param query - 分页查询参数
-   * @returns 分页的集合响应
+   * @returns 分页的集合响�?
    */
   listPaginated(query: PaginationQuery): PaginatedResponse<Collection> {
     const { page, limit, sort, order } = parsePaginationQuery(query);
@@ -100,10 +100,11 @@ export class CollectionsTable {
     // 获取总数
     const total = this.getCount();
 
-    // 构建排序和分页查询
+    // 构建排序和分页查�?
     const validSortFields = ['name', 'created_at', 'description'];
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
+
 
     const sql = `
       SELECT
@@ -134,9 +135,9 @@ export class CollectionsTable {
   }
 
   /**
-   * 更新现有集合。
-   * @param collectionId - 要更新的集合 ID。
-   * @param data - 要更新的数据。只有提供的字段会被更新。
+   * 更新现有集合�?
+   * @param collectionId - 要更新的集合 ID�?
+   * @param data - 要更新的数据。只有提供的字段会被更新�?
    */
   update(
     collectionId: CollectionId,
@@ -147,8 +148,8 @@ export class CollectionsTable {
   }
 
   /**
-   * 根据 ID 删除集合。
-   * @param collectionId - 要删除的集合 ID。
+   * 根据 ID 删除集合�?
+   * @param collectionId - 要删除的集合 ID�?
    */
   delete(collectionId: CollectionId): void {
     const stmt = this.db.prepare(DELETE_COLLECTION_BY_ID);
@@ -156,12 +157,12 @@ export class CollectionsTable {
   }
 
   /**
-   * 检查数据库连接是否存活。
-   * @returns 如果连接响应正常则返回 true，否则返回 false。
+   * 检查数据库连接是否存活�?
+   * @returns 如果连接响应正常则返�?true，否则返�?false�?
    */
   ping(): boolean {
     try {
-      this.db.prepare('SELECT 1').get();
+      this.db.prepare(`SELECT 1`).get();
       return true;
     } catch (e) {
       console.error('Database ping failed:', e);
@@ -169,3 +170,4 @@ export class CollectionsTable {
     }
   }
 }
+

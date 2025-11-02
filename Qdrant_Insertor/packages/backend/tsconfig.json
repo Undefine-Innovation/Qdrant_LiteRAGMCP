@@ -10,7 +10,16 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/*"],
-      "@domain/*": ["./src/domain/*"]
+      "@domain/*": ["./src/domain/*"],
+      "@application/*": ["./src/application/*"],
+      "@infrastructure/*": ["./src/infrastructure/*"],
+      "@api/*": ["./src/api/*"],
+      "@config/*": ["./src/infrastructure/config/*"],
+      "@logging/*": ["./src/infrastructure/logging/*"],
+      "@di/*": ["./src/infrastructure/di/*"],
+      "@lifecycle/*": ["./src/infrastructure/lifecycle/*"],
+      "@scheduling/*": ["./src/infrastructure/scheduling/*"],
+      "@middleware/*": ["./src/api/middleware/*"]
     }
   },
   "include": ["src/**/*"],

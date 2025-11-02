@@ -47,13 +47,18 @@ interface AlertRuleRow {
 }
 
 /**
- * 告警规则数据库访问对象
+ * 告警规则数据库访问对�?
  */
 export class AlertRulesTable {
+  /**
+   *
+   * @param db
+   */
   constructor(private db: Database.Database) {}
 
   /**
    * 创建告警规则
+   * @param rule
    */
   create(rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>): string {
     const id = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -86,6 +91,8 @@ export class AlertRulesTable {
 
   /**
    * 更新告警规则
+   * @param id
+   * @param updates
    */
   update(
     id: string,
@@ -136,7 +143,7 @@ export class AlertRulesTable {
     values.push(id);
 
     const stmt = this.db.prepare(`
-      UPDATE alert_rules 
+      UPDATE alert_rules
       SET ${fields.join(', ')}
       WHERE id = ?
     `);
@@ -147,6 +154,7 @@ export class AlertRulesTable {
 
   /**
    * 根据ID获取告警规则
+   * @param id
    */
   getById(id: string): AlertRule | null {
     const stmt = this.db.prepare('SELECT * FROM alert_rules WHERE id = ?');
@@ -158,6 +166,7 @@ export class AlertRulesTable {
 
   /**
    * 根据名称获取告警规则
+   * @param name
    */
   getByName(name: string): AlertRule | null {
     const stmt = this.db.prepare('SELECT * FROM alert_rules WHERE name = ?');
@@ -168,7 +177,8 @@ export class AlertRulesTable {
   }
 
   /**
-   * 获取所有告警规则
+   * 获取所有告警规�?
+   * @param activeOnly
    */
   getAll(activeOnly?: boolean): AlertRule[] {
     let query = 'SELECT * FROM alert_rules ORDER BY created_at DESC';
@@ -186,6 +196,7 @@ export class AlertRulesTable {
 
   /**
    * 获取告警规则总数
+   * @param activeOnly
    */
   getCount(activeOnly?: boolean): number {
     let query = 'SELECT COUNT(*) as count FROM alert_rules';
@@ -201,6 +212,11 @@ export class AlertRulesTable {
 
   /**
    * 分页获取告警规则
+   * @param page
+   * @param limit
+   * @param sort
+   * @param order
+   * @param activeOnly
    */
   listPaginated(
     page: number,
@@ -242,12 +258,13 @@ export class AlertRulesTable {
   }
 
   /**
-   * 根据指标名称获取活跃的告警规则
+   * 根据指标名称获取活跃的告警规�?
+   * @param metricName
    */
   getActiveByMetricName(metricName: string): AlertRule[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM alert_rules 
-      WHERE metric_name = ? AND is_active = 1 
+      SELECT * FROM alert_rules
+      WHERE metric_name = ? AND is_active = 1
       ORDER BY severity DESC, created_at DESC
     `);
 
@@ -257,6 +274,7 @@ export class AlertRulesTable {
 
   /**
    * 删除告警规则
+   * @param id
    */
   delete(id: string): boolean {
     const stmt = this.db.prepare('DELETE FROM alert_rules WHERE id = ?');
@@ -265,12 +283,14 @@ export class AlertRulesTable {
   }
 
   /**
-   * 激活/停用告警规则
+   * 激�?停用告警规则
+   * @param id
+   * @param isActive
    */
   setActive(id: string, isActive: boolean): boolean {
     const stmt = this.db.prepare(`
-      UPDATE alert_rules 
-      SET is_active = ?, updated_at = ? 
+      UPDATE alert_rules
+      SET is_active = ?, updated_at = ?
       WHERE id = ?
     `);
 
@@ -279,7 +299,8 @@ export class AlertRulesTable {
   }
 
   /**
-   * 检查告警规则是否存在
+   * 检查告警规则是否存�?
+   * @param id
    */
   exists(id: string): boolean {
     const stmt = this.db.prepare(
@@ -289,7 +310,9 @@ export class AlertRulesTable {
   }
 
   /**
-   * 检查告警规则名称是否存在
+   * 检查告警规则名称是否存�?
+   * @param name
+   * @param excludeId
    */
   nameExists(name: string, excludeId?: string): boolean {
     let query = 'SELECT 1 FROM alert_rules WHERE name = ? LIMIT 1';
@@ -352,6 +375,7 @@ export class AlertRulesTable {
 
   /**
    * 将数据库行映射为AlertRule对象
+   * @param row
    */
   private mapRowToAlertRule(row: AlertRuleRow): AlertRule {
     return {

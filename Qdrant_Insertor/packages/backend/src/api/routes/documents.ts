@@ -1,10 +1,10 @@
 import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { CollectionId, DocId } from '../../domain/types.js';
-import { IImportService } from '../../domain/IImportService.js';
-import { ICollectionService } from '../../domain/ICollectionService.js';
-import { IDocumentService } from '../../domain/IDocumentService.js';
+import { CollectionId, DocId } from '@domain/entities/types.js';
+import { IImportService } from '@domain/repositories/IImportService.js';
+import { ICollectionService } from '@domain/repositories/ICollectionService.js';
+import { IDocumentService } from '@domain/repositories/IDocumentService.js';
 import { validate, ValidatedRequest } from '../../middlewares/validate.js';
 import {
   UploadToCollectionSchema,
@@ -14,12 +14,12 @@ import {
 import { AppError } from '../../api/contracts/error.js';
 
 /**
- * @function createDocumentRoutes
- * @description 创建文档相关的API路由
- * @param {IImportService} importService - 导入服务实例
- * @param {ICollectionService} collectionService - 集合服务实例
- * @param {IDocumentService} documentService - 文档服务实例
- * @returns {express.Router} 配置好的 Express 路由实例。
+ * 创建文档相关的API路由
+ *
+ * @param importService - 导入服务实例
+ * @param collectionService - 集合服务实例
+ * @param documentService - 文档服务实例
+ * @returns 配置好的 Express 路由实例
  */
 export function createDocumentRoutes(
   importService: IImportService,
@@ -37,14 +37,14 @@ export function createDocumentRoutes(
   });
 
   /**
-   * @api {post} /collections/:collectionId/docs 上传文档到指定集合
+   * @api {post} /collections/:collectionId/docs 上传文档到指定集�?
    * @apiGroup Documents
-   * @apiDescription 上传一个新文档到指定的集合，使用multipart/form-data格式。
-   * @apiParam {string} collectionId - 目标集合的ID。
-   * @apiParam (FormData) {File} file - 要上传的文档文件。
-   * @apiSuccess {string} docId - 上传成功后返回的文档 ID。
-   * @apiSuccess {string} name - 上传的文件名。
-   * @apiSuccess {string} collectionId - 所属集合的 ID。
+   * @apiDescription 上传一个新文档到指定的集合，使用multipart/form-data格式
+   * @apiParam {string} collectionId - 目标集合的ID
+   * @apiParam (FormData) {File} file - 要上传的文档文件
+   * @apiSuccess {string} docId - 上传成功后返回的文档 ID
+   * @apiSuccess {string} name - 上传的文件名
+   * @apiSuccess {string} collectionId - 所属集合的 ID
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 201 Created
    *     {
@@ -117,13 +117,13 @@ export function createDocumentRoutes(
   );
 
   /**
-   * @api {post} /upload 上传文档到默认集合
+   * @api {post} /upload 上传文档到默认集�?
    * @apiGroup Documents
-   * @apiDescription 上传一个新文档，使用multipart/form-data格式，自动添加到默认集合。
-   * @apiParam (FormData) {File} file - 要上传的文档文件。
-   * @apiSuccess {string} docId - 上传成功后返回的文档 ID。
-   * @apiSuccess {string} name - 上传的文件名。
-   * @apiSuccess {string} collectionId - 所属集合的 ID。
+   * @apiDescription 上传一个新文档，使用multipart/form-data格式，自动添加到默认集合
+   * @apiParam (FormData) {File} file - 要上传的文档文件
+   * @apiSuccess {string} docId - 上传成功后返回的文档 ID
+   * @apiSuccess {string} name - 上传的文件名
+   * @apiSuccess {string} collectionId - 所属集合的 ID
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 201 Created
    *     {
@@ -194,12 +194,12 @@ export function createDocumentRoutes(
   });
 
   /**
-   * @api {post} /docs 导入新文档 (已弃用)
+   * @api {post} /docs 导入新文�?(已弃�?
    * @apiGroup Documents
-   * @apiDescription 从文件路径导入一个新文档到指定的 Collection。此端点已弃用，请使用 /upload。
-   * @apiBody {string} filePath - 文档源文件的路径。
-   * @apiBody {string} collectionId - 文档所属 Collection 的 ID。
-   * @apiSuccess {Doc} document - 导入成功的文档对象。
+   * @apiDescription 从文件路径导入一个新文档到指定的 Collection。此端点已弃用，请使用/upload
+   * @apiBody {string} filePath - 文档源文件的路径
+   * @apiBody {string} collectionId - 文档所属Collection的ID
+   * @apiSuccess {Doc} document - 导入成功的文档对象
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 201 Created
    *     {
@@ -219,23 +219,23 @@ export function createDocumentRoutes(
   });
 
   /**
-   * @api {get} /docs 列出所有文档
+   * @api {get} /docs 列出所有文�?
    * @apiGroup Documents
-   * @apiDescription 获取所有文档的列表。支持分页参数和集合过滤。
-   * @apiParam {number} [page=1] - 页码，从1开始。
-   * @apiParam {number} [limit=20] - 每页数量，最大100。
-   * @apiParam {string} [sort=created_at] - 排序字段。
-   * @apiParam {string} [order=desc] - 排序方向，asc或desc。
-   * @apiParam {string} [collectionId] - 可选的集合ID，用于过滤特定集合的文档。
-   * @apiSuccess {Object} response - 分页响应对象。
-   * @apiSuccess {Doc[]} response.data - 文档对象的数组。
-   * @apiSuccess {Object} response.pagination - 分页元数据。
-   * @apiSuccess {number} response.pagination.page - 当前页码。
-   * @apiSuccess {number} response.pagination.limit - 每页数量。
-   * @apiSuccess {number} response.pagination.total - 总记录数。
-   * @apiSuccess {number} response.pagination.totalPages - 总页数。
-   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页。
-   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页。
+   * @apiDescription 获取所有文档的列表。支持分页参数和集合过滤
+   * @apiParam {number} [page=1] - 页码，从1开始
+   * @apiParam {number} [limit=20] - 每页数量，最多100
+   * @apiParam {string} [sort=created_at] - 排序字段
+   * @apiParam {string} [order=desc] - 排序方向，asc或desc
+   * @apiParam {string} [collectionId] - 可选的集合ID，用于过滤特定集合的文档
+   * @apiSuccess {Object} response - 分页响应对象
+   * @apiSuccess {Doc[]} response.data - 文档对象的数组
+   * @apiSuccess {Object} response.pagination - 分页元数据
+   * @apiSuccess {number} response.pagination.page - 当前页码
+   * @apiSuccess {number} response.pagination.limit - 每页数量
+   * @apiSuccess {number} response.pagination.total - 总记录数量
+   * @apiSuccess {number} response.pagination.totalPages - 总页数
+   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页
+   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -286,11 +286,11 @@ export function createDocumentRoutes(
   );
 
   /**
-   * @api {get} /docs/:docId 获取指定的文档
+   * @api {get} /docs/:docId 获取指定的文�?
    * @apiGroup Documents
-   * @apiDescription 根据文档 ID 获取单个文档。
-   * @apiParam {string} docId - 要获取的文档的唯一标识符。
-   * @apiSuccess {Doc} document - 找到的文档对象。
+   * @apiDescription 根据文档 ID 获取单个文档�?
+   * @apiParam {string} docId - 要获取的文档的唯一标识符�?
+   * @apiSuccess {Doc} document - 找到的文档对象�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -298,7 +298,7 @@ export function createDocumentRoutes(
    *       "name": "My Document",
    *       "collectionId": "coll-xxxx"
    *     }
-   * @apiError (404 Not Found) DocumentNotFound - 如果找不到具有给定 ID 的文档。
+   * @apiError (404 Not Found) DocumentNotFound - 如果找不到具有给�?ID 的文档�?
    */
   router.get('/docs/:docId', async (req, res) => {
     const { docId } = req.params;
@@ -310,9 +310,9 @@ export function createDocumentRoutes(
   /**
    * @api {put} /docs/:docId/resync 重新同步文档
    * @apiGroup Documents
-   * @apiDescription 根据文档 ID 重新同步文档内容（从其源文件）。
-   * @apiParam {string} docId - 要重新同步的文档的唯一标识符。
-   * @apiSuccess {Doc} document - 更新后的文档对象。
+   * @apiDescription 根据文档 ID 重新同步文档内容（从其源文件）
+   * @apiParam {string} docId - 要重新同步的文档的唯一标识符
+   * @apiSuccess {Doc} document - 更新后的文档对象
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -330,8 +330,8 @@ export function createDocumentRoutes(
   /**
    * @api {delete} /docs/:docId 删除文档
    * @apiGroup Documents
-   * @apiDescription 根据文档 ID 删除文档。
-   * @apiParam {string} docId - 要删除的文档的唯一标识符。
+   * @apiDescription 根据文档 ID 删除文档
+   * @apiParam {string} docId - 要删除的文档的唯一标识符
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 204 No Content
    */
@@ -344,27 +344,27 @@ export function createDocumentRoutes(
   /**
    * @api {get} /docs/:docId/chunks 获取文档的块列表
    * @apiGroup Documents
-   * @apiDescription 根据文档ID获取该文档的所有块。支持分页参数。
-   * @apiParam {string} docId - 文档的唯一标识符。
-   * @apiParam {number} [page=1] - 页码，从1开始。
-   * @apiParam {number} [limit=20] - 每页数量，最大100。
-   * @apiParam {string} [sort=chunkIndex] - 排序字段。
-   * @apiParam {string} [order=asc] - 排序方向，asc或desc。
-   * @apiSuccess {Object} response - 分页响应对象。
-   * @apiSuccess {Object[]} response.data - 文档块数组。
-   * @apiSuccess {string} response.data.pointId - 块的点ID。
-   * @apiSuccess {string} response.data.docId - 文档ID。
-   * @apiSuccess {string} response.data.collectionId - 集合ID。
-   * @apiSuccess {number} response.data.chunkIndex - 块索引。
-   * @apiSuccess {string} response.data.title - 块标题（可选）。
-   * @apiSuccess {string} response.data.content - 块内容。
-   * @apiSuccess {Object} response.pagination - 分页元数据。
-   * @apiSuccess {number} response.pagination.page - 当前页码。
-   * @apiSuccess {number} response.pagination.limit - 每页数量。
-   * @apiSuccess {number} response.pagination.total - 总记录数。
-   * @apiSuccess {number} response.pagination.totalPages - 总页数。
-   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页。
-   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页。
+   * @apiDescription 根据文档ID获取该文档的所有块。支持分页参数
+   * @apiParam {string} docId - 文档的唯一标识符
+   * @apiParam {number} [page=1] - 页码，从1开始
+   * @apiParam {number} [limit=20] - 每页数量，最多100
+   * @apiParam {string} [sort=chunkIndex] - 排序字段
+   * @apiParam {string} [order=asc] - 排序方向，asc或desc
+   * @apiSuccess {Object} response - 分页响应对象
+   * @apiSuccess {Object[]} response.data - 文档块数组
+   * @apiSuccess {string} response.data.pointId - 块的点ID
+   * @apiSuccess {string} response.data.docId - 文档ID
+   * @apiSuccess {string} response.data.collectionId - 集合ID
+   * @apiSuccess {number} response.data.chunkIndex - 块索引
+   * @apiSuccess {string} response.data.title - 块标题（可选）
+   * @apiSuccess {string} response.data.content - 块内容
+   * @apiSuccess {Object} response.pagination - 分页元数据
+   * @apiSuccess {number} response.pagination.page - 当前页码
+   * @apiSuccess {number} response.pagination.limit - 每页数量
+   * @apiSuccess {number} response.pagination.total - 总记录数量
+   * @apiSuccess {number} response.pagination.totalPages - 总页数
+   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页
+   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {

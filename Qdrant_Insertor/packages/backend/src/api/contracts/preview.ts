@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 /**
- * 文档预览查询参数的 Schema。
- * 用于验证 `GET /docs/:docId/preview` 的查询参数。
+ * 文档预览查询参数的Schema
+ * 用于验证 `GET /docs/:docId/preview` 的查询参数
  */
 export const DocumentPreviewQuerySchema = z.object({
   format: z
@@ -13,8 +13,8 @@ export const DocumentPreviewQuerySchema = z.object({
 });
 
 /**
- * 文档下载查询参数的 Schema。
- * 用于验证 `GET /docs/:docId/download` 的查询参数。
+ * 文档下载查询参数的Schema
+ * 用于验证 `GET /docs/:docId/download` 的查询参数
  */
 export const DocumentDownloadQuerySchema = z.object({
   format: z
@@ -25,8 +25,8 @@ export const DocumentDownloadQuerySchema = z.object({
 });
 
 /**
- * 文档缩略图查询参数的 Schema。
- * 用于验证 `GET /docs/:docId/thumbnail` 的查询参数。
+ * 文档缩略图查询参数的Schema
+ * 用于验证 `GET /docs/:docId/thumbnail` 的查询参数
  */
 export const DocumentThumbnailQuerySchema = z.object({
   width: z
@@ -48,7 +48,7 @@ export const DocumentThumbnailQuerySchema = z.object({
 });
 
 /**
- * 文档预览响应的 Schema。
+ * 文档预览响应的Schema
  */
 export const DocumentPreviewResponseSchema = z.object({
   content: z.string().describe('预览内容'),
@@ -57,7 +57,7 @@ export const DocumentPreviewResponseSchema = z.object({
 });
 
 /**
- * 文件格式信息的 Schema。
+ * 文件格式信息的Schema
  */
 export const FileFormatInfoSchema = z.object({
   mimeType: z.string().describe('文件MIME类型'),
@@ -68,7 +68,7 @@ export const FileFormatInfoSchema = z.object({
 });
 
 /**
- * 文件格式信息响应的 Schema。
+ * 文件格式信息响应的Schema
  */
 export const FileFormatInfoResponseSchema = z.object({
   format: FileFormatInfoSchema.describe('文件格式信息'),

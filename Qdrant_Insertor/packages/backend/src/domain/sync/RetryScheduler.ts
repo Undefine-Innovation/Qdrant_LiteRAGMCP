@@ -5,7 +5,7 @@ import {
   ErrorCategory,
   DEFAULT_RETRY_STRATEGY,
 } from './retry.js';
-import { Logger } from '../../logger.js';
+import { Logger } from '@logging/logger.js';
 import { IRetryScheduler } from './RetrySchedulerInterface.js';
 import {
   calculateDelay,
@@ -31,6 +31,10 @@ export class RetryScheduler implements IRetryScheduler {
   };
   private retryTimes: number[] = []; // 用于计算平均重试时间
 
+  /**
+   *
+   * @param logger
+   */
   constructor(private readonly logger: Logger) {
     // 初始化统计对象
     Object.values(ErrorCategory).forEach((category) => {
@@ -41,6 +45,12 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 调度重试任务
+   * @param docId
+   * @param error
+   * @param errorCategory
+   * @param retryCount
+   * @param strategy
+   * @param callback
    */
   scheduleRetry(
     docId: string,
@@ -94,7 +104,6 @@ export class RetryScheduler implements IRetryScheduler {
 
         // 移除任务
         this.retryTasks.delete(taskId);
-
         this.logger.error(`[${docId}] 重试失败 (第${retryCount}次重试)`, {
           taskId,
           errorCategory,
@@ -113,7 +122,7 @@ export class RetryScheduler implements IRetryScheduler {
     this.retryStats.lastRetryAt = Date.now();
 
     this.logger.info(
-      `[${docId}] 已调度重试 (${retryCount}/${strategy.maxRetries})`,
+      `[${docId}] 已调度重试(${retryCount}/${strategy.maxRetries})`,
       {
         taskId,
         errorCategory,
@@ -128,6 +137,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 取消重试任务
+   * @param taskId
    */
   cancelRetry(taskId: string): boolean {
     const task = this.retryTasks.get(taskId);
@@ -140,7 +150,6 @@ export class RetryScheduler implements IRetryScheduler {
     }
 
     this.retryTasks.delete(taskId);
-
     this.logger.info(`[${task.docId}] 重试任务已取消`, {
       taskId,
       errorCategory: task.errorCategory,
@@ -171,7 +180,6 @@ export class RetryScheduler implements IRetryScheduler {
           clearTimeout(task.timeoutId);
         }
         this.retryTasks.delete(taskId);
-
         this.logger.warn(`清理过期重试任务`, {
           taskId,
           docId: task.docId,
@@ -190,6 +198,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 取消指定文档的所有重试任务
+   * @param docId
    */
   public cancelAllRetriesForDoc(docId: string): number {
     const tasks = this.getTasksByDocId(docId);
@@ -206,6 +215,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取任务详情
+   * @param taskId
    */
   public getTask(taskId: string): RetryTask | undefined {
     return this.retryTasks.get(taskId);
@@ -220,6 +230,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取指定文档的重试任务
+   * @param docId
    */
   public getTasksByDocId(docId: string): RetryTask[] {
     return Array.from(this.retryTasks.values()).filter(
@@ -229,6 +240,8 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 更新成功统计
+   * @param errorCategory
+   * @param duration
    */
   private updateSuccessStats(
     errorCategory: ErrorCategory,
@@ -246,6 +259,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 更新失败统计
+   * @param errorCategory
    */
   private updateFailureStats(errorCategory: ErrorCategory): void {
     this.retryStats.failedRetries++;
@@ -253,7 +267,8 @@ export class RetryScheduler implements IRetryScheduler {
 }
 
 /**
- * 创建重试调度器实例
+ * 创建重试调度器实现
+ * @param logger
  */
 export function createRetryScheduler(logger: Logger): IRetryScheduler {
   return new RetryScheduler(logger);

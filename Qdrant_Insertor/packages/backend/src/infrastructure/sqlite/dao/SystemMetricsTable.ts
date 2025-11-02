@@ -27,13 +27,18 @@ interface SystemMetricRow {
 }
 
 /**
- * 系统指标数据库访问对象
+ * 系统指标数据库访问对�?
  */
 export class SystemMetricsTable {
+  /**
+   *
+   * @param db
+   */
   constructor(private db: Database.Database) {}
 
   /**
    * 创建系统指标记录
+   * @param metric
    */
   create(metric: Omit<SystemMetric, 'id' | 'createdAt'>): string {
     const id = `metric_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -58,6 +63,7 @@ export class SystemMetricsTable {
 
   /**
    * 批量创建系统指标记录
+   * @param metrics
    */
   createBatch(metrics: Omit<SystemMetric, 'id' | 'createdAt'>[]): void {
     const stmt = this.db.prepare(`
@@ -85,7 +91,11 @@ export class SystemMetricsTable {
   }
 
   /**
-   * 根据指标名称和时间范围获取指标
+   * 根据指标名称和时间范围获取指�?
+   * @param metricName
+   * @param startTime
+   * @param endTime
+   * @param limit
    */
   getByNameAndTimeRange(
     metricName: string,
@@ -94,7 +104,7 @@ export class SystemMetricsTable {
     limit?: number,
   ): SystemMetric[] {
     let query = `
-      SELECT * FROM system_metrics 
+      SELECT * FROM system_metrics
       WHERE metric_name = ? AND timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp DESC
     `;
@@ -112,13 +122,14 @@ export class SystemMetricsTable {
   }
 
   /**
-   * 获取最新的指标值
+   * 获取最新的指标�?
+   * @param metricName
    */
   getLatestByName(metricName: string): SystemMetric | null {
     const stmt = this.db.prepare(`
-      SELECT * FROM system_metrics 
-      WHERE metric_name = ? 
-      ORDER BY timestamp DESC 
+      SELECT * FROM system_metrics
+      WHERE metric_name = ?
+      ORDER BY timestamp DESC
       LIMIT 1
     `);
 
@@ -130,6 +141,10 @@ export class SystemMetricsTable {
 
   /**
    * 获取指标聚合数据
+   * @param metricName
+   * @param startTime
+   * @param endTime
+   * @param aggregationType
    */
   getAggregatedMetrics(
     metricName: string,
@@ -152,12 +167,12 @@ export class SystemMetricsTable {
             : 'SUM';
 
     const stmt = this.db.prepare(`
-      SELECT 
+      SELECT
         ${aggFunction}(metric_value) as value,
         COUNT(*) as count,
         MIN(timestamp) as start_time,
         MAX(timestamp) as end_time
-      FROM system_metrics 
+      FROM system_metrics
       WHERE metric_name = ? AND timestamp >= ? AND timestamp <= ?
     `);
 
@@ -178,14 +193,15 @@ export class SystemMetricsTable {
   }
 
   /**
-   * 获取多个指标的最新值
+   * 获取多个指标的最新�?
+   * @param metricNames
    */
   getLatestByNames(metricNames: string[]): Record<string, SystemMetric | null> {
     if (metricNames.length === 0) return {};
 
     const placeholders = metricNames.map(() => '?').join(',');
     const stmt = this.db.prepare(`
-      SELECT * FROM system_metrics 
+      SELECT * FROM system_metrics
       WHERE metric_name IN (${placeholders})
       GROUP BY metric_name
       HAVING timestamp = MAX(timestamp)
@@ -199,7 +215,7 @@ export class SystemMetricsTable {
       result[name] = null;
     });
 
-    // 填充实际值
+    // 填充实际�?
     rows.forEach((row) => {
       result[row.metric_name] = this.mapRowToMetric(row);
     });
@@ -208,7 +224,8 @@ export class SystemMetricsTable {
   }
 
   /**
-   * 清理过期的指标数据
+   * 清理过期的指标数�?
+   * @param olderThanDays
    */
   cleanup(olderThanDays: number = 30): number {
     const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
@@ -222,7 +239,7 @@ export class SystemMetricsTable {
   }
 
   /**
-   * 获取所有指标名称
+   * 获取所有指标名�?
    */
   getAllMetricNames(): string[] {
     const stmt = this.db.prepare(`
@@ -235,6 +252,9 @@ export class SystemMetricsTable {
 
   /**
    * 获取指标统计信息
+   * @param metricName
+   * @param startTime
+   * @param endTime
    */
   getMetricStats(
     metricName: string,
@@ -248,12 +268,12 @@ export class SystemMetricsTable {
     latest: SystemMetric | null;
   } | null {
     let query = `
-      SELECT 
+      SELECT
         COUNT(*) as count,
         AVG(metric_value) as avg,
         MIN(metric_value) as min,
         MAX(metric_value) as max
-      FROM system_metrics 
+      FROM system_metrics
       WHERE metric_name = ?
     `;
 
@@ -292,6 +312,7 @@ export class SystemMetricsTable {
 
   /**
    * 将数据库行映射为SystemMetric对象
+   * @param row
    */
   private mapRowToMetric(row: SystemMetricRow): SystemMetric {
     return {

@@ -5,7 +5,7 @@ import type {
   CollectionId,
   PaginationQuery,
   PaginatedResponse,
-} from '../../../domain/types.js';
+} from '@domain/entities/types.js';
 import { makeDocId } from '../../../domain/utils/id.js';
 import {
   INSERT_DOC,
@@ -19,23 +19,23 @@ import {
 import { parsePaginationQuery } from '../../../utils/pagination.js';
 
 /**
- * `docs` 表的数据访问对象 (DAO)。
- * 封装了所有文档的 SQL 交互。
+ * docs 表的数据访问对象 (DAO)�?
+ * 封装了所有文档的 SQL 交互�?
  */
 export class DocsTable {
   private db: Database;
 
   /**
-   * @param db - 数据库实例。
+   * @param db - 数据库实例�?
    */
   constructor(db: Database) {
     this.db = db;
   }
 
   /**
-   * 创建一个新的文档记录。
-   * @param data - 新文档的数据。
-   * @returns 新创建文档的 ID。
+   * 创建一个新的文档记录�?
+   * @param data - 新文档的数据�?
+   * @returns 新创建文档的 ID�?
    */
   create(
     data: Omit<
@@ -62,9 +62,9 @@ export class DocsTable {
   }
 
   /**
-   * 根据 ID 检索文档。
-   * @param docId - 要检索的文档 ID。
-   * @returns 文档对象，如果未找到则返回 undefined。
+   * 根据 ID 检索文档�?
+   * @param docId - 要检索的文档 ID�?
+   * @returns 文档对象，如果未找到则返�?undefined�?
    */
   getById(docId: DocId): Doc | undefined {
     const stmt = this.db.prepare(SELECT_DOC_BY_ID);
@@ -76,9 +76,9 @@ export class DocsTable {
   }
 
   /**
-   * 检索给定集合的所有文档。
-   * @param collectionId - 集合的 ID。
-   * @returns 文档数组。
+   * 检索给定集合的所有文档�?
+   * @param collectionId - 集合�?ID�?
+   * @returns 文档数组�?
    */
   listByCollection(collectionId: CollectionId): Doc[] {
     const stmt = this.db.prepare(SELECT_DOCS_BY_COLLECTION_ID);
@@ -90,13 +90,13 @@ export class DocsTable {
   }
 
   /**
-   * 从数据库中检索所有文档。
-   * @returns 所有文档的数组。
+   * 从数据库中检索所有文档�?
+   * @returns 所有文档的数组�?
    */
   listAll(): Doc[] {
-    const stmt = this.db.prepare(
-      'SELECT * FROM docs WHERE is_deleted = 0 ORDER BY created_at DESC',
-    );
+    const stmt = this.db.prepare(`
+      SELECT * FROM docs WHERE is_deleted = 0 ORDER BY created_at DESC
+    `);
     const rows = stmt.all() as Doc[];
     return rows.map((row) => ({
       ...row,
@@ -106,11 +106,11 @@ export class DocsTable {
 
   /**
    * 获取文档总数
-   * @param collectionId - 可选的集合ID，如果提供则只统计该集合的文档
+   * @param collectionId - 可选的集合ID，如果提供则只统计该集合的文�?
    * @returns 文档总数
    */
   getCount(collectionId?: CollectionId): number {
-    let sql = 'SELECT COUNT(*) as count FROM docs WHERE is_deleted = 0';
+    let sql = `SELECT COUNT(*) as count FROM docs WHERE is_deleted = 0`;
     const params: unknown[] = [];
 
     if (collectionId) {
@@ -124,10 +124,10 @@ export class DocsTable {
   }
 
   /**
-   * 分页检索文档
+   * 分页检索文�?
    * @param query - 分页查询参数
-   * @param collectionId - 可选的集合ID，如果提供则只返回该集合的文档
-   * @returns 分页的文档响应
+   * @param collectionId - 可选的集合ID，如果提供则只返回该集合的文�?
+   * @returns 分页的文档响�?
    */
   listPaginated(
     query: PaginationQuery,
@@ -139,7 +139,7 @@ export class DocsTable {
     // 获取总数
     const total = this.getCount(collectionId);
 
-    // 构建排序和分页查询
+    // 构建排序和分页查�?
     const validSortFields = [
       'name',
       'created_at',
@@ -148,7 +148,7 @@ export class DocsTable {
     ];
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
-
+
     let sql = `
       SELECT * FROM docs
       WHERE is_deleted = 0
@@ -159,7 +159,7 @@ export class DocsTable {
       sql += ' AND collectionId = ?';
       params.push(collectionId);
     }
-
+
     sql += ` ORDER BY ${sortField} ${sortOrder} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
@@ -189,9 +189,9 @@ export class DocsTable {
   }
 
   /**
-   * 更新现有文档。
-   * @param docId - 要更新的文档 ID。
-   * @param data - 要更新的数据。只有“name”和“mime”会被更新。
+   * 更新现有文档�?
+   * @param docId - 要更新的文档 ID�?
+   * @param data - 要更新的数据。只有“name”和“mime”会被更新�?
    */
   update(
     docId: DocId,
@@ -203,8 +203,8 @@ export class DocsTable {
   }
 
   /**
-   * 根据 ID 软删除文档。
-   * @param docId - 要软删除的文档 ID。
+   * 根据 ID 软删除文档�?
+   * @param docId - 要软删除的文�?ID�?
    */
   delete(docId: DocId): void {
     const stmt = this.db.prepare(SOFT_DELETE_DOC_BY_ID);
@@ -212,8 +212,8 @@ export class DocsTable {
   }
 
   /**
-   * 根据 ID 永久删除文档。
-   * @param docId - 要删除的文档 ID。
+   * 根据 ID 永久删除文档�?
+   * @param docId - 要删除的文档 ID�?
    */
   hardDelete(docId: DocId): void {
     const stmt = this.db.prepare(DELETE_DOC_BY_ID);
@@ -221,8 +221,8 @@ export class DocsTable {
   }
 
   /**
-   * 检索所有已软删除的文档。
-   * @returns 已软删除文档的数组。
+   * 检索所有已软删除的文档�?
+   * @returns 已软删除文档的数组�?
    */
   listDeletedDocs(): Doc[] {
     const stmt = this.db.prepare(SELECT_DELETED_DOCS);
@@ -232,4 +232,4 @@ export class DocsTable {
       is_deleted: Boolean(row.is_deleted),
     }));
   }
-}
+}

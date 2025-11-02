@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 
 /**
- * 系统健康状态枚举
+ * 系统健康状态枚�?
  */
 export enum HealthStatus {
   HEALTHY = 'healthy',
@@ -10,7 +10,7 @@ export enum HealthStatus {
 }
 
 /**
- * 系统健康状态数据接口
+ * 系统健康状态数据接�?
  */
 export interface SystemHealth {
   id: string;
@@ -43,18 +43,23 @@ interface SystemHealthRow {
  * 系统健康状态数据库访问对象
  */
 export class SystemHealthTable {
+  /**
+   *
+   * @param db
+   */
   constructor(private db: Database.Database) {}
 
   /**
-   * 创建或更新系统健康状态
+   * 创建或更新系统健康状�?
+   * @param health
    */
   upsert(health: Omit<SystemHealth, 'id' | 'createdAt' | 'updatedAt'>): string {
     const now = Date.now();
 
     // 首先尝试更新现有记录
     const updateStmt = this.db.prepare(`
-      UPDATE system_health 
-      SET status = ?, last_check = ?, response_time_ms = ?, 
+      UPDATE system_health
+      SET status = ?, last_check = ?, response_time_ms = ?,
           error_message = ?, details = ?, updated_at = ?
       WHERE component = ?
     `);
@@ -69,12 +74,12 @@ export class SystemHealthTable {
       health.component,
     );
 
-    // 如果没有更新任何记录，则插入新记录
+    // 如果没有更新任何记录，则插入新记�?
     if (updateResult.changes === 0) {
       const id = `health_${health.component}_${Date.now()}`;
       const insertStmt = this.db.prepare(`
         INSERT INTO system_health (
-          id, component, status, last_check, response_time_ms, 
+          id, component, status, last_check, response_time_ms,
           error_message, details, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
@@ -105,7 +110,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 根据组件名称获取健康状态
+   * 根据组件名称获取健康状�?
+   * @param component
    */
   getByComponent(component: string): SystemHealth | null {
     const stmt = this.db.prepare(
@@ -118,7 +124,7 @@ export class SystemHealthTable {
   }
 
   /**
-   * 获取所有组件的健康状态
+   * 获取所有组件的健康状�?
    */
   getAll(): SystemHealth[] {
     const stmt = this.db.prepare(
@@ -130,7 +136,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 根据状态获取组件列表
+   * 根据状态获取组件列�?
+   * @param status
    */
   getByStatus(status: HealthStatus): SystemHealth[] {
     const stmt = this.db.prepare(
@@ -146,13 +153,13 @@ export class SystemHealthTable {
    */
   getUnhealthyComponents(): SystemHealth[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM system_health 
-      WHERE status != ? 
-      ORDER BY 
-        CASE status 
-          WHEN 'unhealthy' THEN 1 
-          WHEN 'degraded' THEN 2 
-          ELSE 3 
+      SELECT * FROM system_health
+      WHERE status != ?
+      ORDER BY
+        CASE status
+          WHEN 'unhealthy' THEN 1
+          WHEN 'degraded' THEN 2
+          ELSE 3
         END,
         component
     `);
@@ -162,7 +169,7 @@ export class SystemHealthTable {
   }
 
   /**
-   * 获取系统整体健康状态
+   * 获取系统整体健康状�?
    */
   getOverallHealth(): {
     status: HealthStatus;
@@ -197,7 +204,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 删除组件的健康状态记录
+   * 删除组件的健康状态记�?
+   * @param component
    */
   deleteByComponent(component: string): boolean {
     const stmt = this.db.prepare(
@@ -208,7 +216,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 清理过期的健康状态记录
+   * 清理过期的健康状态记�?
+   * @param olderThanDays
    */
   cleanup(olderThanDays: number = 30): number {
     const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
@@ -222,7 +231,9 @@ export class SystemHealthTable {
   }
 
   /**
-   * 获取组件健康状态历史统计
+   * 获取组件健康状态历史统�?
+   * @param component
+   * @param days
    */
   getComponentStats(
     component: string,
@@ -240,7 +251,7 @@ export class SystemHealthTable {
     const current = this.getByComponent(component);
     if (!current) return null;
 
-    // 这里简化实现，实际应用中可能需要历史表来计算准确统计
+    // 这里简化实现，实际应用中可能需要历史表来计算准确统�?
     return {
       component,
       totalChecks: 1,
@@ -253,7 +264,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 批量更新多个组件的健康状态
+   * 批量更新多个组件的健康状�?
+   * @param healthUpdates
    */
   batchUpdate(
     healthUpdates: Omit<SystemHealth, 'id' | 'createdAt' | 'updatedAt'>[],
@@ -268,7 +280,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 检查组件是否存在
+   * 检查组件是否存�?
+   * @param component
    */
   componentExists(component: string): boolean {
     const stmt = this.db.prepare(
@@ -278,7 +291,8 @@ export class SystemHealthTable {
   }
 
   /**
-   * 获取最近检查时间
+   * 获取最近检查时�?
+   * @param component
    */
   getLastCheckTime(component?: string): number | null {
     let query = 'SELECT MAX(last_check) as last_check FROM system_health';
@@ -297,6 +311,7 @@ export class SystemHealthTable {
 
   /**
    * 将数据库行映射为SystemHealth对象
+   * @param row
    */
   private mapRowToSystemHealth(row: SystemHealthRow): SystemHealth {
     return {

@@ -1,7 +1,7 @@
 // src/domain/sync/types.ts
 
 /**
- * 定义同步任务的状态枚举
+ * 定义同步任务的状态枚�?
  */
 export enum SyncJobStatus {
   NEW = 'NEW',
@@ -14,7 +14,7 @@ export enum SyncJobStatus {
 }
 
 /**
- * 定义同步任务的事件枚举
+ * 定义同步任务的事件枚�?
  */
 export enum SyncJobEvent {
   CHUNKS_SAVED = 'chunksSaved',
@@ -40,19 +40,19 @@ export interface SyncJob {
 }
 
 /**
- * 定义状态机上下文 (Context)
+ * 定义状态机上下�?(Context)
  * 可以在状态机内部存储一些运行时数据
  */
 export interface SyncMachineContext {
   docId: string;
-  // 可以在这里添加其他需要传递给状态机的数据
+  // 可以在这里添加其他需要传递给状态机的数�?
   // 例如：当前处理的 chunk 数量，错误信息等
   errorMessage?: string;
 }
 
 /**
  * 定义状态机事件 (Event)
- * 每个事件可以携带不同的 payload
+ * 每个事件可以携带不同�?payload
  */
 export type SyncMachineEvent =
   | { type: SyncJobEvent.CHUNKS_SAVED; docId: string }

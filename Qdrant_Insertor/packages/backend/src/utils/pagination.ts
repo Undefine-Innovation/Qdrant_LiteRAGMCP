@@ -2,7 +2,7 @@ import {
   PaginationQuery,
   PaginationMeta,
   PaginatedResponse,
-} from '../domain/types.js';
+} from '@domain/entities/types.js';
 
 /**
  * 默认分页配置
@@ -15,6 +15,8 @@ export const DEFAULT_PAGINATION_CONFIG = {
 
 /**
  * 解析和验证分页查询参数
+ * @param {PaginationQuery} query - 查询参数
+ * @returns {Required<PaginationQuery>} 解析后的分页查询参数
  */
 export function parsePaginationQuery(
   query: PaginationQuery,
@@ -37,6 +39,10 @@ export function parsePaginationQuery(
 
 /**
  * 计算分页元数据
+ * @param {number} page - 当前页码
+ * @param {number} limit - 每页数量
+ * @param {number} total - 总记录数
+ * @returns {PaginationMeta} 分页元数据
  */
 export function calculatePaginationMeta(
   page: number,
@@ -57,6 +63,10 @@ export function calculatePaginationMeta(
 
 /**
  * 创建分页响应
+ * @param {T[]} data - 数据数组
+ * @param {number} total - 总记录数
+ * @param {PaginationQuery} query - 查询参数
+ * @returns {PaginatedResponse<T>} 分页响应对象
  */
 export function createPaginatedResponse<T>(
   data: T[],
@@ -74,6 +84,9 @@ export function createPaginatedResponse<T>(
 
 /**
  * 构建 SQL 查询的分页部分
+ * @param {PaginationQuery} query - 查询参数
+ * @param {string} [defaultSort='created_at'] - 默认排序字段
+ * @returns {object} SQL分页子句对象
  */
 export function buildSqlPagination(
   query: PaginationQuery,
@@ -102,6 +115,9 @@ export function buildSqlPagination(
 
 /**
  * 验证页码是否有效
+ * @param {number} page - 页码
+ * @param {number} totalPages - 总页数
+ * @returns {boolean} 页码是否有效
  */
 export function isValidPage(page: number, totalPages: number): boolean {
   return page >= 1 && page <= totalPages;
@@ -109,6 +125,9 @@ export function isValidPage(page: number, totalPages: number): boolean {
 
 /**
  * 计算数据库查询的偏移量
+ * @param {number} page - 页码
+ * @param {number} limit - 每页数量
+ * @returns {number} 偏移量
  */
 export function calculateOffset(page: number, limit: number): number {
   return (page - 1) * limit;

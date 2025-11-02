@@ -1,5 +1,5 @@
 /**
- * 数据库架构初始化相关的 SQL 语句
+ * 数据库架构初始化相关的SQL 语句
  */
 
 /**
@@ -90,11 +90,10 @@ CREATE TABLE IF NOT EXISTS chunk_meta (
     created_at INTEGER NOT NULL,
     FOREIGN KEY (docId) REFERENCES docs(docId) ON DELETE CASCADE,
     FOREIGN KEY (collectionId) REFERENCES collections(collectionId) ON DELETE CASCADE
-);
-`;
+);`;
 
 /**
- * 创建监控和持久化功能的 SQL 语句
+ * 创建监控和持久化功能的SQL 语句
  */
 export const CREATE_MONITORING_SCHEMA = `
 ALTER TABLE sync_jobs ADD COLUMN started_at INTEGER;
@@ -263,29 +262,25 @@ INSERT OR IGNORE INTO notification_channels (
     1,
     strftime('%s', 'now'),
     strftime('%s', 'now')
-);
-`;
+);`;
 
 /**
- * 检查表是否存在的 SQL 语句
+ * 检查表是否存在的SQL 语句
  */
 export const CHECK_TABLE_EXISTS = `
-SELECT name FROM sqlite_master 
-WHERE type='table' AND name = ? AND name NOT LIKE 'sqlite_%'
-`;
+SELECT name FROM sqlite_master
+WHERE type='table' AND name = ? AND name NOT LIKE 'sqlite_%'`;
 
 /**
  * 获取所有表名的 SQL 语句
  */
 export const GET_ALL_TABLES = `
-SELECT name FROM sqlite_master 
+SELECT name FROM sqlite_master
 WHERE type='table' AND name NOT LIKE 'sqlite_%'
-ORDER BY name
-`;
+ORDER BY name`;
 
 /**
- * 检查列是否存在的 SQL 语句
+ * 检查列是否存在的SQL 语句
  */
 export const CHECK_COLUMN_EXISTS = `
-PRAGMA table_info(?)
-`;
+PRAGMA table_info(?)`;

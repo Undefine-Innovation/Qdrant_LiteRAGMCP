@@ -58,7 +58,7 @@ export const ERROR_CATEGORY_MAP: Record<ErrorCategory, ErrorType> = {
   [ErrorCategory.NETWORK_CONNECTION]: ErrorType.TEMPORARY,
   [ErrorCategory.NETWORK_DNS]: ErrorType.TEMPORARY,
 
-  // 数据库错误
+  // 数据库错�?
   [ErrorCategory.DATABASE_CONNECTION]: ErrorType.TEMPORARY,
   [ErrorCategory.DATABASE_CONSTRAINT]: ErrorType.PERMANENT,
   [ErrorCategory.DATABASE_TIMEOUT]: ErrorType.TEMPORARY,
@@ -102,7 +102,7 @@ export interface RetryStrategy {
   backoffMultiplier: number;
   // 是否添加随机抖动
   jitter: boolean;
-  // 抖动范围（0-1之间，表示延迟时间的百分比）
+  // 抖动范围（-1到1之间，表示延迟时间的百分比）
   jitterRange: number;
 }
 
@@ -193,7 +193,7 @@ export interface RetryStats {
   failedRetries: number;
   // 平均重试时间（毫秒）
   averageRetryTimeMs: number;
-  // 最后重试时间
+  // 最后重试时�?
   lastRetryAt?: number;
   // 各错误类型的重试次数
   retryCountByCategory: Record<ErrorCategory, number>;

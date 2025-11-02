@@ -6,7 +6,7 @@ import {
 } from './retry.js';
 
 /**
- * 重试调度器接口
+ * 重试调度器接�?
  */
 export interface IRetryScheduler {
   /**
@@ -53,9 +53,9 @@ export interface IRetryScheduler {
   getActiveTaskCount(): number;
 
   /**
-   * 取消指定文档的所有重试任务
+   * 取消指定文档的所有重试任�?
    * @param docId 文档ID
-   * @returns 取消的任务数量
+   * @returns 取消的任务数�?
    */
   cancelAllRetriesForDoc(docId: string): number;
 }

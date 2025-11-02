@@ -196,7 +196,7 @@ export class ErrorClassifier implements IErrorClassifier {
       return DEFAULT_RETRY_STRATEGY;
     }
 
-    // 合并默认策略和特定策略
+    // 合并默认策略和特定策�?
     return {
       ...DEFAULT_RETRY_STRATEGY,
       ...specificStrategy,
@@ -358,7 +358,9 @@ export class ErrorClassifier implements IErrorClassifier {
 }
 
 /**
- * 创建默认错误分类器实例
+ * 创建默认错误分类器实现
+ *
+ * @returns 错误分类器实例
  */
 export function createErrorClassifier(): IErrorClassifier {
   return new ErrorClassifier();

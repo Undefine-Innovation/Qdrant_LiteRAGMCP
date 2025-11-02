@@ -1,10 +1,16 @@
 import { z } from 'zod';
 
 // 健康检查相关
+/**
+ *
+ */
 export const HealthCheckRequestSchema = z.object({
   component: z.string().optional(),
 });
 
+/**
+ *
+ */
 export const HealthCheckResponseSchema = z.object({
   status: z.enum(['healthy', 'degraded', 'unhealthy']),
   timestamp: z.string(),
@@ -20,6 +26,9 @@ export const HealthCheckResponseSchema = z.object({
 });
 
 // 同步作业统计相关
+/**
+ *
+ */
 export const SyncJobStatsRequestSchema = z.object({
   timeRange: z.enum(['1h', '6h', '24h', '7d', '30d']).optional().default('24h'),
   status: z
@@ -36,6 +45,9 @@ export const SyncJobStatsRequestSchema = z.object({
   collectionId: z.string().optional(),
 });
 
+/**
+ *
+ */
 export const SyncJobStatsResponseSchema = z.object({
   timeRange: z.string(),
   totalJobs: z.number(),
@@ -55,6 +67,9 @@ export const SyncJobStatsResponseSchema = z.object({
 });
 
 // 系统指标相关
+/**
+ *
+ */
 export const SystemMetricsRequestSchema = z.object({
   metricName: z.string().optional(),
   timeRange: z.enum(['1h', '6h', '24h', '7d', '30d']).optional().default('24h'),
@@ -65,6 +80,9 @@ export const SystemMetricsRequestSchema = z.object({
   component: z.string().optional(),
 });
 
+/**
+ *
+ */
 export const SystemMetricsResponseSchema = z.object({
   timeRange: z.string(),
   metrics: z.array(
@@ -80,6 +98,9 @@ export const SystemMetricsResponseSchema = z.object({
 });
 
 // 告警规则相关
+/**
+ *
+ */
 export const CreateAlertRuleRequestSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -92,6 +113,9 @@ export const CreateAlertRuleRequestSchema = z.object({
   notificationChannels: z.array(z.string()).optional(),
 });
 
+/**
+ *
+ */
 export const AlertRuleResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -108,10 +132,16 @@ export const AlertRuleResponseSchema = z.object({
   lastTriggered: z.string().optional(),
 });
 
+/**
+ *
+ */
 export const UpdateAlertRuleRequestSchema =
   CreateAlertRuleRequestSchema.partial();
 
 // 告警历史相关
+/**
+ *
+ */
 export const AlertHistoryRequestSchema = z.object({
   timeRange: z.enum(['1h', '6h', '24h', '7d', '30d']).optional().default('24h'),
   severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
@@ -121,6 +151,9 @@ export const AlertHistoryRequestSchema = z.object({
   offset: z.number().min(0).optional().default(0),
 });
 
+/**
+ *
+ */
 export const AlertHistoryResponseSchema = z.object({
   alerts: z.array(
     z.object({
@@ -144,10 +177,16 @@ export const AlertHistoryResponseSchema = z.object({
 });
 
 // 仪表板数据相关
+/**
+ *
+ */
 export const DashboardDataRequestSchema = z.object({
   timeRange: z.enum(['1h', '6h', '24h', '7d', '30d']).optional().default('24h'),
 });
 
+/**
+ *
+ */
 export const DashboardDataResponseSchema = z.object({
   overview: z.object({
     totalSyncJobs: z.number(),
@@ -192,6 +231,9 @@ export const DashboardDataResponseSchema = z.object({
 });
 
 // 通知渠道相关
+/**
+ *
+ */
 export const CreateNotificationChannelRequestSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['log', 'webhook', 'email', 'slack']),
@@ -199,6 +241,9 @@ export const CreateNotificationChannelRequestSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+/**
+ *
+ */
 export const NotificationChannelResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -210,10 +255,16 @@ export const NotificationChannelResponseSchema = z.object({
   lastUsed: z.string().optional(),
 });
 
+/**
+ *
+ */
 export const UpdateNotificationChannelRequestSchema =
   CreateNotificationChannelRequestSchema.partial();
 
 // 测试通知相关
+/**
+ *
+ */
 export const TestNotificationRequestSchema = z.object({
   channelId: z.string(),
   message: z
@@ -226,6 +277,9 @@ export const TestNotificationRequestSchema = z.object({
     .default('medium'),
 });
 
+/**
+ *
+ */
 export const TestNotificationResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -233,35 +287,89 @@ export const TestNotificationResponseSchema = z.object({
 });
 
 // 导出类型
+/**
+ *
+ */
 export type HealthCheckRequest = z.infer<typeof HealthCheckRequestSchema>;
+/**
+ *
+ */
 export type HealthCheckResponse = z.infer<typeof HealthCheckResponseSchema>;
+/**
+ *
+ */
 export type SyncJobStatsRequest = z.infer<typeof SyncJobStatsRequestSchema>;
+/**
+ *
+ */
 export type SyncJobStatsResponse = z.infer<typeof SyncJobStatsResponseSchema>;
+/**
+ *
+ */
 export type SystemMetricsRequest = z.infer<typeof SystemMetricsRequestSchema>;
+/**
+ *
+ */
 export type SystemMetricsResponse = z.infer<typeof SystemMetricsResponseSchema>;
+/**
+ *
+ */
 export type CreateAlertRuleRequest = z.infer<
   typeof CreateAlertRuleRequestSchema
 >;
+/**
+ *
+ */
 export type AlertRuleResponse = z.infer<typeof AlertRuleResponseSchema>;
+/**
+ *
+ */
 export type UpdateAlertRuleRequest = z.infer<
   typeof UpdateAlertRuleRequestSchema
 >;
+/**
+ *
+ */
 export type AlertHistoryRequest = z.infer<typeof AlertHistoryRequestSchema>;
+/**
+ *
+ */
 export type AlertHistoryResponse = z.infer<typeof AlertHistoryResponseSchema>;
+/**
+ *
+ */
 export type DashboardDataRequest = z.infer<typeof DashboardDataRequestSchema>;
+/**
+ *
+ */
 export type DashboardDataResponse = z.infer<typeof DashboardDataResponseSchema>;
+/**
+ *
+ */
 export type CreateNotificationChannelRequest = z.infer<
   typeof CreateNotificationChannelRequestSchema
 >;
+/**
+ *
+ */
 export type NotificationChannelResponse = z.infer<
   typeof NotificationChannelResponseSchema
 >;
+/**
+ *
+ */
 export type UpdateNotificationChannelRequest = z.infer<
   typeof UpdateNotificationChannelRequestSchema
 >;
+/**
+ *
+ */
 export type TestNotificationRequest = z.infer<
   typeof TestNotificationRequestSchema
 >;
+/**
+ *
+ */
 export type TestNotificationResponse = z.infer<
   typeof TestNotificationResponseSchema
 >;

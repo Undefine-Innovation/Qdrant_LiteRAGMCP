@@ -1,37 +1,47 @@
 import express from 'express';
-import { Logger } from './logger.js';
-import { AppConfig } from './config.js';
-import { createApiRouter } from './api.js';
-import { errorHandler } from './error-handler.js';
-import { ImportService } from './application/ImportService.js';
-import { SearchService } from './application/SearchService.js';
-import { GraphService } from './application/GraphService.js';
-import { CollectionService } from './application/CollectionService.js';
-import { DocumentService } from './application/DocumentService.js';
-import { FileProcessingService } from './application/FileProcessingService.js';
-import { MonitoringApiService } from './application/MonitoringApiService.js';
-import { BatchService } from './application/BatchService.js';
-import { AutoGCService } from './application/AutoGCService.js';
-import { ISearchService } from './domain/ISearchService.js';
-import { IGraphService } from './domain/graph.js';
-import { ICollectionService } from './domain/ICollectionService.js';
-import { IDocumentService } from './domain/IDocumentService.js';
-import { IFileProcessingService } from './domain/IFileProcessingService.js';
-import { IBatchService } from './domain/IBatchService.js';
+import { Logger } from '@logging/logger.js';
+import { AppConfig } from '@config/config.js';
+import { createApiRouter, ApiServices } from './api.js';
+import { errorHandler } from '@middleware/error-handler.js';
+import { ImportService } from '@application/services/ImportService.js';
+import { SearchService } from '@application/services/SearchService.js';
+import { GraphService } from '@application/services/GraphService.js';
+import { CollectionService } from '@application/services/CollectionService.js';
+import { DocumentService } from '@application/services/DocumentService.js';
+import { FileProcessingService } from '@application/services/FileProcessingService.js';
+import { MonitoringApiService } from '@application/services/MonitoringApiService.js';
+import { BatchService } from '@application/services/BatchService.js';
+import { StateMachineService } from '@application/services/StateMachineService.js';
+import { AutoGCService } from '@application/services/AutoGCService.js';
+import { ISearchService } from '@domain/repositories/ISearchService.js';
+import { IGraphService } from '@domain/entities/graph.js';
+import { ICollectionService } from '@domain/repositories/ICollectionService.js';
+import { IDocumentService } from '@domain/repositories/IDocumentService.js';
+import { IFileProcessingService } from '@domain/repositories/IFileProcessingService.js';
+import { IBatchService } from '@domain/repositories/IBatchService.js';
+import { IImportService } from '@domain/repositories/IImportService.js';
+import { IStateMachineService } from '@domain/repositories/IStateMachineService.js';
+import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
+import { IAutoGCService } from '@domain/repositories/IAutoGCService.js';
+import { IScrapeService } from '@domain/entities/scrape.js';
 
 /**
  * 应用程序服务接口
+ * @description 迁移到Domain层接口，遵循依赖倒置原则
  */
 export interface AppServices {
-  importService: ImportService;
+  importService: IImportService;
   searchService: ISearchService;
   graphService: IGraphService;
   collectionService: ICollectionService;
   documentService: IDocumentService;
   fileProcessingService: IFileProcessingService;
   batchService: IBatchService;
-  monitoringApiService: MonitoringApiService;
-  autoGCService: AutoGCService;
+  stateMachineService: IStateMachineService; // ✅ 已实现接口
+  monitoringApiService: IMonitoringApiService; // ✅ 已实现接口
+  autoGCService: IAutoGCService; // ✅ 已实现接口
+  scrapeService: IScrapeService;
+  logger: Logger;
 }
 
 /**
@@ -52,8 +62,9 @@ export function createApp(
   // 配置中间件
   app.use(express.json());
 
-  // 创建API路由器
-  const apiRouter = createApiRouter(services);
+  // 创建API路由 (使用类型转换以兼容具体服务类型要求)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const apiRouter = createApiRouter(services as any);
 
   // 挂载路由
   app.use('/api', apiRouter);
@@ -61,7 +72,7 @@ export function createApp(
   // 添加错误处理中间件
   app.use(errorHandler);
 
-  logger.info('Express 应用程序已配置路由和错误处理。');
+  logger.info('Express 应用程序已配置路由和错误处理');
 
   return app;
 }

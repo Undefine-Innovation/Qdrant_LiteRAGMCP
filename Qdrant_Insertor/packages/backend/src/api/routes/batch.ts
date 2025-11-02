@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { IBatchService } from '../../domain/IBatchService.js';
+import { IBatchService } from '@domain/repositories/IBatchService.js';
 import { validate, ValidatedRequest } from '../../middlewares/validate.js';
 import {
   BatchUploadRequestSchema,
@@ -12,15 +12,15 @@ import {
   BatchDeleteCollectionsResponseSchema,
   BatchOperationQuerySchema,
   BatchOperationProgressSchema,
-} from '../../api/contracts/batch.js';
-import { AppError } from '../../api/contracts/error.js';
-import { DocId, CollectionId } from '../../domain/types.js';
+} from '@api/contracts/batch.js';
+import { AppError } from '@api/contracts/error.js';
+import { DocId, CollectionId } from '@domain/entities/types.js';
 
 /**
- * @function createBatchRoutes
- * @description 创建批量操作相关的API路由
- * @param {IBatchService} batchService - 批量操作服务实例
- * @returns {express.Router} 配置好的 Express 路由实例。
+ * 创建批量操作相关的API路由
+ *
+ * @param batchService - 批量操作服务实例
+ * @returns 配置好的 Express 路由实例
  */
 export function createBatchRoutes(batchService: IBatchService): express.Router {
   const router = express.Router();
@@ -37,18 +37,18 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
   /**
    * @api {post} /upload/batch 批量上传文档
    * @apiGroup Batch Operations
-   * @apiDescription 批量上传多个文档到指定集合或默认集合，使用multipart/form-data格式。
-   * @apiParam (FormData) {File[]} files - 要上传的文档文件数组。
-   * @apiParam (FormData) {string} [collectionId] - 目标集合的ID（可选）。
-   * @apiSuccess {boolean} success - 批量上传是否成功。
-   * @apiSuccess {number} total - 总文件数。
-   * @apiSuccess {number} successful - 成功上传的文件数。
-   * @apiSuccess {number} failed - 上传失败的文件数。
-   * @apiSuccess {Object[]} results - 每个文件的上传结果。
-   * @apiSuccess {string} results.fileName - 文件名。
-   * @apiSuccess {string} [results.docId] - 上传成功后返回的文档 ID。
-   * @apiSuccess {string} [results.collectionId] - 所属集合的 ID。
-   * @apiSuccess {string} [results.error] - 上传失败时的错误信息。
+   * @apiDescription 批量上传多个文档到指定集合或默认集合，使用multipart/form-data格式
+   * @apiParam (FormData) {File[]} files - 要上传的文档文件数组
+   * @apiParam (FormData) {string} [collectionId] - 目标集合的ID（可选）
+   * @apiSuccess {boolean} success - 批量上传是否成功
+   * @apiSuccess {number} total - 总文件数量
+   * @apiSuccess {number} successful - 成功上传的文件数量
+   * @apiSuccess {number} failed - 上传失败的文件数量
+   * @apiSuccess {Object[]} results - 每个文件的上传结果
+   * @apiSuccess {string} results.fileName - 文件名
+   * @apiSuccess {string} [results.docId] - 上传成功后返回的文档 ID
+   * @apiSuccess {string} [results.collectionId] - 所属集合的 ID
+   * @apiSuccess {string} [results.error] - 上传失败时的错误信息
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -75,7 +75,7 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
    *     }
    */
   router.post(
-    '/upload/batch',
+    '/batch/upload',
     upload.array('files', 50), // 最多50个文件
     validate({ body: BatchUploadRequestSchema }),
     async (
@@ -116,16 +116,16 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
   /**
    * @api {delete} /docs/batch 批量删除文档
    * @apiGroup Batch Operations
-   * @apiDescription 批量删除多个文档。
-   * @apiBody {string[]} docIds - 要删除的文档ID列表。
-   * @apiSuccess {boolean} success - 批量删除是否成功。
-   * @apiSuccess {number} total - 总文档数。
-   * @apiSuccess {number} successful - 成功删除的文档数。
-   * @apiSuccess {number} failed - 删除失败的文档数。
-   * @apiSuccess {Object[]} results - 每个文档的删除结果。
-   * @apiSuccess {string} results.docId - 文档ID。
-   * @apiSuccess {boolean} results.success - 删除是否成功。
-   * @apiSuccess {string} [results.error] - 删除失败时的错误信息。
+   * @apiDescription 批量删除多个文档
+   * @apiBody {string[]} docIds - 要删除的文档ID列表
+   * @apiSuccess {boolean} success - 批量删除是否成功
+   * @apiSuccess {number} total - 总文档数量
+   * @apiSuccess {number} successful - 成功删除的文档数量
+   * @apiSuccess {number} failed - 删除失败的文档数量
+   * @apiSuccess {Object[]} results - 每个文档的删除结果
+   * @apiSuccess {string} results.docId - 文档ID
+   * @apiSuccess {boolean} results.success - 删除是否成功
+   * @apiSuccess {string} [results.error] - 删除失败时的错误信息
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -177,16 +177,16 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
   /**
    * @api {delete} /collections/batch 批量删除集合
    * @apiGroup Batch Operations
-   * @apiDescription 批量删除多个集合及其所有相关文档和块。
-   * @apiBody {string[]} collectionIds - 要删除的集合ID列表。
-   * @apiSuccess {boolean} success - 批量删除是否成功。
-   * @apiSuccess {number} total - 总集合数。
-   * @apiSuccess {number} successful - 成功删除的集合数。
-   * @apiSuccess {number} failed - 删除失败的集合数。
-   * @apiSuccess {Object[]} results - 每个集合的删除结果。
-   * @apiSuccess {string} results.collectionId - 集合ID。
-   * @apiSuccess {boolean} results.success - 删除是否成功。
-   * @apiSuccess {string} [results.error] - 删除失败时的错误信息。
+   * @apiDescription 批量删除多个集合及其所有相关文档和块
+   * @apiBody {string[]} collectionIds - 要删除的集合ID列表
+   * @apiSuccess {boolean} success - 批量删除是否成功
+   * @apiSuccess {number} total - 总集合数量
+   * @apiSuccess {number} successful - 成功删除的集合数量
+   * @apiSuccess {number} failed - 删除失败的集合数量
+   * @apiSuccess {Object[]} results - 每个集合的删除结果
+   * @apiSuccess {string} results.collectionId - 集合ID
+   * @apiSuccess {boolean} results.success - 删除是否成功
+   * @apiSuccess {string} [results.error] - 删除失败时的错误信息
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -239,18 +239,18 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
   /**
    * @api {get} /batch/progress 获取批量操作进度
    * @apiGroup Batch Operations
-   * @apiDescription 获取指定批量操作的进度信息。
-   * @apiParam {string} operationId - 操作ID。
-   * @apiSuccess {string} operationId - 操作ID。
-   * @apiSuccess {string} type - 操作类型（upload或delete）。
-   * @apiSuccess {string} status - 操作状态（pending、processing、completed或failed）。
-   * @apiSuccess {number} total - 总项目数。
-   * @apiSuccess {number} processed - 已处理的项目数。
-   * @apiSuccess {number} successful - 成功的项目数。
-   * @apiSuccess {number} failed - 失败的项目数。
-   * @apiSuccess {number} startTime - 开始时间戳。
-   * @apiSuccess {number} [endTime] - 结束时间戳。
-   * @apiSuccess {number} [estimatedTimeRemaining] - 预估剩余时间（秒）。
+   * @apiDescription 获取指定批量操作的进度信息
+   * @apiParam {string} operationId - 操作ID
+   * @apiSuccess {string} operationId - 操作ID
+   * @apiSuccess {string} type - 操作类型（upload或delete）
+   * @apiSuccess {string} status - 操作状态（pending、processing、completed或failed）
+   * @apiSuccess {number} total - 总项目数量
+   * @apiSuccess {number} processed - 已处理的项目数量
+   * @apiSuccess {number} successful - 成功的项目数量
+   * @apiSuccess {number} failed - 失败的项目数量
+   * @apiSuccess {number} startTime - 开始时间戳
+   * @apiSuccess {number} [endTime] - 结束时间戳
+   * @apiSuccess {number} [estimatedTimeRemaining] - 预估剩余时间（秒）
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -277,7 +277,7 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
       });
     }
 
-    const progress = batchService.getBatchOperationProgress(operationId);
+    const progress = await batchService.getBatchOperationProgress(operationId);
 
     if (!progress) {
       return res.status(404).json({
@@ -291,6 +291,47 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
     // 验证响应格式
     const validatedResponse = BatchOperationProgressSchema.parse(progress);
     res.status(200).json(validatedResponse);
+  });
+
+  /**
+   * @api {get} /batch/list 获取批量操作任务列表
+   * @apiGroup Batch Operations
+   * @apiDescription 获取批量操作任务列表，支持按状态过滤
+   * @apiParam {string} [status] - 状态过滤器（pending, processing, completed, failed）
+   * @apiSuccess {Object[]} tasks - 任务列表
+   * @apiSuccess {string} tasks.id - 任务ID
+   * @apiSuccess {string} tasks.taskType - 任务类型
+   * @apiSuccess {string} tasks.status - 任务状态
+   * @apiSuccess {number} tasks.progress - 进度百分比
+   * @apiSuccess {number} tasks.createdAt - 创建时间戳
+   * @apiSuccess {number} tasks.updatedAt - 更新时间戳
+   * @apiSuccessExample {json} Success-Response:
+   *     HTTP/1.1 200 OK
+   *     [
+   *       {
+   *         "id": "batch-upload-uuid-12345",
+   *         "taskType": "batch_upload",
+   *         "status": "processing",
+   *         "progress": 45,
+   *         "createdAt": 1640995200000,
+   *         "updatedAt": 1640995260000
+   *       }
+   *     ]
+   */
+  router.get('/list', async (req, res) => {
+    const { status } = req.query;
+
+    try {
+      const tasks = await batchService.getBatchOperationList(status as string);
+      res.status(200).json(tasks);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw AppError.createInternalServerError(
+          `Failed to get batch operation list: ${error.message}`,
+        );
+      }
+      throw error;
+    }
   });
 
   return router;

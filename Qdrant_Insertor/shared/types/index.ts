@@ -3,8 +3,7 @@
  * 提供前后端共用的类型定义
  */
 
-// 重新导出所有域类型，确保前后端类型一致性
-export * from "../../packages/backend/src/domain/types.js";
+// 基础类型定义
 
 // API相关类型定义
 export interface ApiResponse<T = any> {

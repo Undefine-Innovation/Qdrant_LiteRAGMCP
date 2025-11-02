@@ -23,20 +23,25 @@ interface SyncJobRow {
 }
 
 /**
- * 同步作业数据库访问对象
+ * 同步作业数据库访问对�?
  */
 export class SyncJobsTable {
+  /**
+   *
+   * @param db
+   */
   constructor(private db: Database.Database) {}
 
   /**
    * 创建同步作业
+   * @param job
    */
   create(job: Omit<SyncJob, 'id'>): string {
     const id = `sync_${job.docId}_${Date.now()}`;
     const stmt = this.db.prepare(`
       INSERT INTO sync_jobs (
-        id, docId, status, retries, last_attempt_at, error, 
-        created_at, updated_at, started_at, error_category, 
+        id, docId, status, retries, last_attempt_at, error,
+        created_at, updated_at, started_at, error_category,
         last_retry_strategy, progress
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
@@ -61,6 +66,8 @@ export class SyncJobsTable {
 
   /**
    * 更新同步作业
+   * @param id
+   * @param updates
    */
   update(
     id: string,
@@ -125,7 +132,7 @@ export class SyncJobsTable {
     values.push(id);
 
     const stmt = this.db.prepare(`
-      UPDATE sync_jobs 
+      UPDATE sync_jobs
       SET ${fields.join(', ')}
       WHERE id = ?
     `);
@@ -136,6 +143,7 @@ export class SyncJobsTable {
 
   /**
    * 根据ID获取同步作业
+   * @param id
    */
   getById(id: string): SyncJob | null {
     const stmt = this.db.prepare(`
@@ -150,6 +158,7 @@ export class SyncJobsTable {
 
   /**
    * 根据文档ID获取同步作业
+   * @param docId
    */
   getByDocId(docId: string): SyncJob | null {
     const stmt = this.db.prepare(`
@@ -163,7 +172,9 @@ export class SyncJobsTable {
   }
 
   /**
-   * 获取所有同步作业
+   * 获取所有同步作�?
+   * @param limit
+   * @param offset
    */
   getAll(limit?: number, offset?: number): SyncJob[] {
     let query = 'SELECT * FROM sync_jobs ORDER BY updated_at DESC';
@@ -186,16 +197,18 @@ export class SyncJobsTable {
   }
 
   /**
-   * 根据状态获取同步作业
+   * 根据状态获取同步作�?
+   * @param status
+   * @param limit
    */
   getByStatus(status: SyncJobStatus, limit?: number): SyncJob[] {
     let query =
       'SELECT * FROM sync_jobs WHERE status = ? ORDER BY updated_at DESC';
-    const params: (string | number)[] = [status];
+    let params: (string | number)[] = [status];
 
     if (limit !== undefined) {
       query += ' LIMIT ?';
-      params.push(limit);
+      params = [status, limit];
     }
 
     const stmt = this.db.prepare(query);
@@ -206,6 +219,7 @@ export class SyncJobsTable {
 
   /**
    * 获取指定状态的作业数量
+   * @param status
    */
   getCountByStatus(status: SyncJobStatus): number {
     const stmt = this.db.prepare(`
@@ -225,9 +239,9 @@ export class SyncJobsTable {
     avgDuration: number;
     successRate: number;
   } {
-    const totalStmt = this.db.prepare(
-      'SELECT COUNT(*) as count FROM sync_jobs',
-    );
+    const totalStmt = this.db.prepare(`
+      SELECT COUNT(*) as count FROM sync_jobs
+    `);
     const totalResult = totalStmt.get() as { count: number };
 
     const statusStmt = this.db.prepare(`
@@ -239,13 +253,13 @@ export class SyncJobsTable {
     }[];
 
     const durationStmt = this.db.prepare(`
-      SELECT AVG(duration_ms) as avg_duration FROM sync_jobs 
+      SELECT AVG(duration_ms) as avg_duration FROM sync_jobs
       WHERE duration_ms IS NOT NULL
     `);
     const durationResult = durationStmt.get() as { avg_duration: number };
 
     const successStmt = this.db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'SYNCED' THEN 1 ELSE 0 END) as successful
       FROM sync_jobs
@@ -281,14 +295,15 @@ export class SyncJobsTable {
   }
 
   /**
-   * 清理过期的同步作业
+   * 清理过期的同步作�?
+   * @param olderThanDays
    */
   cleanup(olderThanDays: number = 7): number {
     const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
 
     const stmt = this.db.prepare(`
-      DELETE FROM sync_jobs 
-      WHERE updated_at < ? 
+      DELETE FROM sync_jobs
+      WHERE updated_at < ?
       AND status IN ('SYNCED', 'DEAD')
     `);
 
@@ -298,6 +313,7 @@ export class SyncJobsTable {
 
   /**
    * 将数据库行映射为SyncJob对象
+   * @param row
    */
   private mapRowToSyncJob(row: SyncJobRow): SyncJob {
     return {

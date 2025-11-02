@@ -38,7 +38,56 @@
 - **事务管理**：确保数据操作的原子性。
 - **FTS5**：实现全文搜索索引和查询。
 
-#### 2.3.1.4 开发需求与约定
+#### 2.3.1.4 当前实现状态
+
+**已实现功能**：
+- ✅ 基于同步API的数据库操作
+- ✅ DAO模式的数据访问层
+- ✅ 事务包装器 ([`SQLiteRepoCore.transaction()`](packages/backend/src/infrastructure/SQLiteRepoCore.ts:39))
+- ✅ 级联删除操作
+- ✅ FTS5全文搜索支持
+
+**技术债务**：
+- ⚠️ 使用同步 `better-sqlite3` API，可能阻塞事件循环
+- ⚠️ 缺乏连接池管理
+- ⚠️ 事务边界管理不够统一
+- ⚠️ 不支持嵌套事务
+
+#### 2.3.1.5 🔄 计划改进 (A6. 异步DB重构)
+
+**目标**：消除同步I/O导致的事件循环阻塞，实现高并发
+
+**改进方案**：
+```typescript
+// 当前实现 (同步)
+const db = new Database('./data/app.db');
+const stmt = db.prepare('SELECT * FROM docs WHERE id = ?');
+const result = stmt.get(docId);
+
+// 目标实现 (异步)
+import { Database } from 'sqlite3';
+import { open } from 'sqlite';
+
+const db = await open({
+  filename: './data/app.db',
+  driver: Database
+});
+
+const result = await db.get('SELECT * FROM docs WHERE id = ?', [docId]);
+```
+
+**实施步骤**：
+1. **依赖迁移**：从 `better-sqlite3` 迁移到 `sqlite3` + `sqlite` 包装
+2. **连接池实现**：创建 `SQLiteConnectionPool` 类，管理连接生命周期
+3. **DAO层重构**：更新所有DAO类以支持异步操作
+4. **服务层适配**：修改应用层服务以使用异步数据库操作
+
+**预期收益**：
+- 并发处理能力提升N倍（N为连接池大小）
+- 将并发瓶颈从Node.js转移到硬件I/O限制
+- 为统一事务管理器奠定基础
+
+#### 2.3.1.6 开发需求与约定
 
 - **编码规范**：
   - SQL 语句应清晰、安全，避免 SQL 注入。
@@ -52,8 +101,10 @@
 - **性能考量**：
   - 优化 SQL 查询，确保索引的有效使用。
   - 批量插入和更新操作。
+  - **🆕 异步化后**：监控连接池使用率和查询性能
 - **安全考量**：
   - 数据库文件权限管理。
+  - **🆕 异步化后**：连接池安全配置
 
 ### 2.3.2 QdrantRepo
 

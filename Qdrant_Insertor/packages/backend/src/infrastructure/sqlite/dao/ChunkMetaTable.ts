@@ -4,7 +4,7 @@ import type {
   PointId,
   DocId,
   CollectionId,
-} from '../../../domain/types.js';
+} from '@domain/entities/types.js';
 import {
   SELECT_CHUNK_BY_POINT_ID,
   SELECT_CHUNKS_BY_DOC_ID,
@@ -18,22 +18,22 @@ import {
 } from '../sql/chunk_meta.sql.js';
 
 /**
- * `chunk_meta` 表的数据访问对象 (DAO)。
- * 封装了所有块元数据的 SQL 交互。
+ * chunk_meta 表的数据访问对象 (DAO)
+ * 封装了所有块元数据的 SQL 交互
  */
 export class ChunkMetaTable {
   private db: Database;
 
   /**
-   * @param db - 数据库实例。
+   * @param db - 数据库实例
    */
   constructor(db: Database) {
     this.db = db;
   }
 
   /**
-   * 创建一个新的块元数据记录。
-   * @param data - 新块元数据的数据，不包括 'created_at'。
+   * 创建一个新的块元数据记录
+   * @param data - 新块元数据的数据，不包括 'created_at'
    */
   create(data: Omit<ChunkMeta, 'created_at'>): void {
     const now = Date.now();
@@ -50,9 +50,9 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 在单个事务中创建多个块元数据记录。
-   * 这对于性能至关重要，因为一个文档通常被拆分为许多块。
-   * @param data - 要插入的块元数据对象数组。
+   * 在单个事务中创建多个块元数据记录
+   * 这对于性能至关重要，因为一个文档通常被拆分为许多块
+   * @param data - 要插入的块元数据对象数组
    */
   createBatch(data: Omit<ChunkMeta, 'created_at'>[]): void {
     console.log(
@@ -82,58 +82,54 @@ export class ChunkMetaTable {
       (items: Omit<ChunkMeta, 'created_at'>[]) => {
         const now = Date.now();
         for (let i = 0; i < items.length; i++) {
-          const item = items[i];
           console.log(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据:`, {
-            pointId: item.pointId,
-            pointIdType: typeof item.pointId,
-            docId: item.docId,
-            docIdType: typeof item.docId,
-            collectionId: item.collectionId,
-            collectionIdType: typeof item.collectionId,
-            chunkIndex: item.chunkIndex,
-            chunkIndexType: typeof item.chunkIndex,
-            titleChain: item.titleChain,
-            titleChainType: typeof item.titleChain,
-            titleChainValue: item.titleChain,
-            contentHash: item.contentHash,
-            contentHashType: typeof item.contentHash,
+            pointId: items[i].pointId,
+            pointIdType: typeof items[i].pointId,
+            docId: items[i].docId,
+            docIdType: typeof items[i].docId,
+            collectionId: items[i].collectionId,
+            collectionIdType: typeof items[i].collectionId,
+            chunkIndex: items[i].chunkIndex,
+            chunkIndexType: typeof items[i].chunkIndex,
+            titleChain: items[i].titleChain,
+            titleChainType: typeof items[i].titleChain,
+            titleChainValue: items[i].titleChain,
+            contentHash: items[i].contentHash,
+            contentHashType: typeof items[i].contentHash,
           });
 
           try {
             insert.run(
-              item.pointId,
-              item.docId,
-              item.collectionId,
-              item.chunkIndex,
-              item.titleChain,
-              item.contentHash,
+              items[i].pointId,
+              items[i].docId,
+              items[i].collectionId,
+              items[i].chunkIndex,
+              items[i].titleChain,
+              items[i].contentHash,
               now,
             );
           } catch (insertError) {
-            console.error(
-              `[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`,
-              {
-                error: (insertError as Error).message,
-                stack: (insertError as Error).stack,
-                pointId: item.pointId,
-                pointIdType: typeof item.pointId,
-                docId: item.docId,
-                docIdType: typeof item.docId,
-                collectionId: item.collectionId,
-                collectionIdType: typeof item.collectionId,
-                chunkIndex: item.chunkIndex,
-                chunkIndexType: typeof item.chunkIndex,
-                titleChain: item.titleChain,
-                titleChainType: typeof item.titleChain,
-                titleChainValue: item.titleChain,
-                contentHash: item.contentHash,
-                contentHashType: typeof item.contentHash,
-              },
-            );
+            console.error(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`, {
+              error: (insertError as Error).message,
+              stack: (insertError as Error).stack,
+              pointId: items[i].pointId,
+              pointIdType: typeof items[i].pointId,
+              docId: items[i].docId,
+              docIdType: typeof items[i].docId,
+              collectionId: items[i].collectionId,
+              collectionIdType: typeof items[i].collectionId,
+              chunkIndex: items[i].chunkIndex,
+              chunkIndexType: typeof items[i].chunkIndex,
+              titleChain: items[i].titleChain,
+              titleChainType: typeof items[i].titleChain,
+              titleChainValue: items[i].titleChain,
+              contentHash: items[i].contentHash,
+              contentHashType: typeof items[i].contentHash,
+            });
             throw insertError;
           }
         }
-      },
+      }
     );
 
     try {
@@ -150,9 +146,9 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 根据其 pointId 检索块的元数据。
-   * @param pointId - point（和块）的唯一 ID。
-   * @returns 块元数据对象，如果未找到则返回 undefined。
+   * 根据pointId 检索块的元数据
+   * @param pointId - point（和块）的唯一 ID
+   * @returns 块元数据对象，如果未找到则返回undefined
    */
   getByPointId(pointId: PointId): ChunkMeta | undefined {
     const stmt = this.db.prepare(SELECT_CHUNK_BY_POINT_ID);
@@ -160,9 +156,9 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 列出特定文档的所有块元数据。
-   * @param docId - 文档的 ID。
-   * @returns 块元数据对象数组。
+   * 列出特定文档的所有块元数据
+   * @param docId - 文档ID
+   * @returns 块元数据对象数组
    */
   listByDocId(docId: DocId): ChunkMeta[] {
     const stmt = this.db.prepare(SELECT_CHUNKS_BY_DOC_ID);
@@ -170,9 +166,9 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 列出特定集合的所有块元数据。
-   * @param collectionId - 集合的 ID。
-   * @returns 块元数据对象数组。
+   * 列出特定集合的所有块元数据
+   * @param collectionId - 集合ID
+   * @returns 块元数据对象数组
    */
   listByCollectionId(collectionId: CollectionId): ChunkMeta[] {
     const stmt = this.db.prepare(SELECT_CHUNKS_BY_COLLECTION_ID);
@@ -180,8 +176,8 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 删除与特定文档关联的所有块元数据。
-   * @param docId - 要删除其块的文档 ID。
+   * 删除与特定文档关联的所有块元数据
+   * @param docId - 要删除其块的文档 ID
    */
   deleteByDocId(docId: DocId): void {
     const stmt = this.db.prepare(DELETE_CHUNKS_BY_DOC_ID);
@@ -189,17 +185,18 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 删除与特定集合关联的所有块元数据。
-   * @param collectionId - 要删除其块的集合 ID。
+   * 删除与特定集合关联的所有块元数据
+   * @param collectionId - 要删除其块的集合 ID
    */
   deleteByCollectionId(collectionId: CollectionId): void {
     const stmt = this.db.prepare(DELETE_CHUNKS_BY_COLLECTION_ID);
     stmt.run(collectionId);
   }
+
   /**
-   * 根据 pointIds 批量查询块元数据和内容。
-   * @param pointIds - 块 ID 数组。
-   * @returns 包含块元数据和内容的数组。
+   * 根据pointIds 批量查询块元数据和内容
+   * @param pointIds - 点ID数组
+   * @returns 包含块元数据和内容的数组
    */
   getChunksAndContentByPointIds(
     pointIds: PointId[],
@@ -222,10 +219,10 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 根据 pointIds 批量查询块详细信息。
-   * @param pointIds - 块 ID 数组。
-   * @param collectionId - 集合 ID。
-   * @returns 包含块详细信息的数组。
+   * 根据pointIds 批量查询块详细信息
+   * @param pointIds - 点ID数组
+   * @param collectionId - 集合ID
+   * @returns 包含块详细信息的数组
    */
   getChunksDetailsByPointIds(
     pointIds: PointId[],
@@ -244,7 +241,10 @@ export class ChunkMetaTable {
     }
     const placeholders = pointIds.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace('(?)', `(${placeholders})`),
+      SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace(
+        '(?)',
+        `(${placeholders})`,
+      ),
     );
     return stmt.all(...pointIds, collectionId) as Array<{
       pointId: PointId;
@@ -258,8 +258,8 @@ export class ChunkMetaTable {
   }
 
   /**
-   * 根据 pointId 批量删除块元数据。
-   * @param pointIds - 要删除的 pointId 数组。
+   * 根据pointIds 批量删除块元数据
+   * @param pointIds - 要删除的pointId数组
    */
   deleteBatch(pointIds: PointId[]): void {
     if (pointIds.length === 0) {
@@ -267,7 +267,10 @@ export class ChunkMetaTable {
     }
     const placeholders = pointIds.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      DELETE_CHUNKS_META_BATCH.replace('(?)', `(${placeholders})`),
+      DELETE_CHUNKS_META_BATCH.replace(
+        '(?)',
+        `(${placeholders})`,
+      ),
     );
     stmt.run(...pointIds);
   }

@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
-import { CollectionId } from '../../domain/types.js';
-import { ICollectionService } from '../../domain/ICollectionService.js';
+import { CollectionId } from '@domain/entities/types.js';
+import { ICollectionService } from '@domain/repositories/ICollectionService.js';
 import { validate, ValidatedRequest } from '../../middlewares/validate.js';
 import {
   CreateCollectionSchema,
@@ -11,10 +11,10 @@ import {
 } from '../../api/contracts/collection.js';
 
 /**
- * @function createCollectionRoutes
- * @description 创建集合相关的API路由
- * @param {ICollectionService} collectionService - 集合服务实例
- * @returns {express.Router} 配置好的 Express 路由实例。
+ * 创建集合相关的API路由
+ *
+ * @param collectionService - 集合服务实例
+ * @returns 配置好的 Express 路由实例
  */
 export function createCollectionRoutes(
   collectionService: ICollectionService,
@@ -24,10 +24,10 @@ export function createCollectionRoutes(
   /**
    * @api {post} /collections 创建新的 Collection
    * @apiGroup Collections
-   * @apiDescription 创建一个新的 Collection。
-   * @apiBody {string} name - Collection 的名称。
-   * @apiBody {string} [description] - Collection 的描述。
-   * @apiSuccess {Collection} collection - 创建成功的 Collection 对象。
+   * @apiDescription 创建一个新的Collection
+   * @apiBody {string} name - Collection 的名称
+   * @apiBody {string} [description] - Collection 的描述
+   * @apiSuccess {Collection} collection - 创建成功的Collection 对象
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 201 Created
    *     {
@@ -37,29 +37,29 @@ export function createCollectionRoutes(
    *     }
    */
   router.post('/collections', async (req, res) => {
-    // TODO: 添加验证中间件
+    // TODO: 添加验证中间�?
     const { name, description } = req.body;
     const newCollection = collectionService.createCollection(name, description);
     res.status(201).json(newCollection);
   });
 
   /**
-   * @api {get} /collections 列出所有 Collections
+   * @api {get} /collections 列出所�?Collections
    * @apiGroup Collections
-   * @apiDescription 获取所有 Collections 的列表。支持分页参数。
-   * @apiParam {number} [page=1] - 页码，从1开始。
-   * @apiParam {number} [limit=20] - 每页数量，最大100。
-   * @apiParam {string} [sort=created_at] - 排序字段。
-   * @apiParam {string} [order=desc] - 排序方向，asc或desc。
-   * @apiSuccess {Object} response - 分页响应对象。
-   * @apiSuccess {Collection[]} response.data - Collection 对象的数组。
-   * @apiSuccess {Object} response.pagination - 分页元数据。
-   * @apiSuccess {number} response.pagination.page - 当前页码。
-   * @apiSuccess {number} response.pagination.limit - 每页数量。
-   * @apiSuccess {number} response.pagination.total - 总记录数。
-   * @apiSuccess {number} response.pagination.totalPages - 总页数。
-   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页。
-   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页。
+   * @apiDescription 获取所有Collections 的列表。支持分页参数
+   * @apiParam {number} [page=1] - 页码，从1开始
+   * @apiParam {number} [limit=20] - 每页数量，最多100
+   * @apiParam {string} [sort=created_at] - 排序字段
+   * @apiParam {string} [order=desc] - 排序方向，asc或desc
+   * @apiSuccess {Object} response - 分页响应对象
+   * @apiSuccess {Collection[]} response.data - Collection 对象的数组
+   * @apiSuccess {Object} response.pagination - 分页元数据
+   * @apiSuccess {number} response.pagination.page - 当前页码
+   * @apiSuccess {number} response.pagination.limit - 每页数量
+   * @apiSuccess {number} response.pagination.total - 总记录数量
+   * @apiSuccess {number} response.pagination.totalPages - 总页数
+   * @apiSuccess {boolean} response.pagination.hasNext - 是否有下一页
+   * @apiSuccess {boolean} response.pagination.hasPrev - 是否有上一页
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -108,11 +108,11 @@ export function createCollectionRoutes(
   );
 
   /**
-   * @api {get} /collections/:collectionId 获取指定的 Collection
+   * @api {get} /collections/:collectionId 获取指定�?Collection
    * @apiGroup Collections
-   * @apiDescription 根据 Collection ID 获取单个 Collection。
-   * @apiParam {string} collectionId - 要获取的 Collection 的唯一标识符。
-   * @apiSuccess {Collection} collection - 找到的 Collection 对象。
+   * @apiDescription 根据 Collection ID 获取单个 Collection�?
+   * @apiParam {string} collectionId - 要获取的 Collection 的唯一标识符�?
+   * @apiSuccess {Collection} collection - 找到�?Collection 对象�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -120,7 +120,7 @@ export function createCollectionRoutes(
    *       "name": "My Collection",
    *       "description": "Description of my collection."
    *     }
-   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给定 ID 的 Collection。
+   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给�?ID �?Collection�?
    */
   router.get('/collections/:collectionId', async (req, res) => {
     const { collectionId } = req.params;
@@ -134,11 +134,11 @@ export function createCollectionRoutes(
   /**
    * @api {put} /collections/:collectionId 更新 Collection
    * @apiGroup Collections
-   * @apiDescription 根据 Collection ID 更新一个 Collection。
-   * @apiParam {string} collectionId - 要更新的 Collection 的唯一标识符。
-   * @apiBody {string} name - Collection 的新名称。
-   * @apiBody {string} [description] - Collection 的新描述。
-   * @apiSuccess {Collection} collection - 更新后的 Collection 对象。
+   * @apiDescription 根据 Collection ID 更新一�?Collection�?
+   * @apiParam {string} collectionId - 要更新的 Collection 的唯一标识符�?
+   * @apiBody {string} name - Collection 的新名称�?
+   * @apiBody {string} [description] - Collection 的新描述�?
+   * @apiSuccess {Collection} collection - 更新后的 Collection 对象�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -146,8 +146,8 @@ export function createCollectionRoutes(
    *       "name": "Updated Collection Name",
    *       "description": "Updated description"
    *     }
-   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给定 ID 的 Collection。
-   * @apiError (422 Unprocessable Entity) ValidationError - 如果名称已存在。
+   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给�?ID �?Collection�?
+   * @apiError (422 Unprocessable Entity) ValidationError - 如果名称已存在�?
    */
   router.put(
     '/collections/:collectionId',
@@ -206,11 +206,11 @@ export function createCollectionRoutes(
   /**
    * @api {patch} /collections/:collectionId 部分更新 Collection
    * @apiGroup Collections
-   * @apiDescription 根据 Collection ID 部分更新一个 Collection。
-   * @apiParam {string} collectionId - 要更新的 Collection 的唯一标识符。
-   * @apiBody {string} [name] - Collection 的新名称。
-   * @apiBody {string} [description] - Collection 的新描述。
-   * @apiSuccess {Collection} collection - 更新后的 Collection 对象。
+   * @apiDescription 根据 Collection ID 部分更新一�?Collection�?
+   * @apiParam {string} collectionId - 要更新的 Collection 的唯一标识符�?
+   * @apiBody {string} [name] - Collection 的新名称�?
+   * @apiBody {string} [description] - Collection 的新描述�?
+   * @apiSuccess {Collection} collection - 更新后的 Collection 对象�?
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -218,8 +218,8 @@ export function createCollectionRoutes(
    *       "name": "Updated Collection Name",
    *       "description": "Updated description"
    *     }
-   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给定 ID 的 Collection。
-   * @apiError (422 Unprocessable Entity) ValidationError - 如果名称已存在。
+   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给�?ID �?Collection�?
+   * @apiError (422 Unprocessable Entity) ValidationError - 如果名称已存在�?
    */
   router.patch(
     '/collections/:collectionId',
@@ -278,8 +278,8 @@ export function createCollectionRoutes(
   /**
    * @api {delete} /collections/:collectionId 删除 Collection
    * @apiGroup Collections
-   * @apiDescription 根据 Collection ID 删除一个 Collection 及其所有相关文档和块。
-   * @apiParam {string} collectionId - 要删除的 Collection 的唯一标识符。
+   * @apiDescription 根据 Collection ID 删除一个Collection 及其所有相关文档和块
+   * @apiParam {string} collectionId - 要删除的 Collection 的唯一标识符
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 204 No Content
    */
