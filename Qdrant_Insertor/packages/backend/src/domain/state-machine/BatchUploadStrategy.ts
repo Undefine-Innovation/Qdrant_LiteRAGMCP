@@ -106,16 +106,23 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
       getTask: (taskId: string) => Promise<StateMachineTask | null>;
       getTasksByStatus: (status: string) => Promise<StateMachineTask[]>;
       getTasksByType: (taskType: string) => Promise<StateMachineTask[]>;
-      updateTask: (taskId: string, updates: Partial<StateMachineTask>) => Promise<void>;
+      updateTask: (
+        taskId: string,
+        updates: Partial<StateMachineTask>,
+      ) => Promise<void>;
       deleteTask: (taskId: string) => Promise<void>;
       cleanupExpiredTasks: (olderThan: number) => Promise<number>;
     },
-    logger: Logger
+    logger: Logger,
   ) {
     const config: StateMachineConfig = {
       taskType: 'batch_upload',
       initialState: BatchUploadState.NEW,
-      finalStates: [BatchUploadState.COMPLETED, BatchUploadState.FAILED, BatchUploadState.CANCELLED],
+      finalStates: [
+        BatchUploadState.COMPLETED,
+        BatchUploadState.FAILED,
+        BatchUploadState.CANCELLED,
+      ],
       maxRetries: 3,
       enablePersistence: true,
       transitions: [
@@ -243,7 +250,7 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
     }
 
     const context = task.context as BatchUploadContext;
-    
+
     try {
       // 标记任务开始
       await this.markTaskStarted(taskId);
@@ -274,7 +281,6 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
       // 完成任务
       await this.handleTransition(taskId, BatchUploadEvent.COMPLETE, context);
-
     } catch (error) {
       this.logger.error(`批量上传任务执行失败: ${taskId}, 错误: ${error}`);
       await this.handleTransition(taskId, BatchUploadEvent.FAIL, {
@@ -290,7 +296,7 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
    */
   private async onStartValidation(context: BatchUploadContext): Promise<void> {
     this.logger.info(`开始验证批量上传任务: ${context.batchId}`);
-    
+
     // 初始化进度详情
     context.progressDetails = {
       validated: 0,
@@ -339,9 +345,11 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
    */
   private async onComplete(context: BatchUploadContext): Promise<void> {
     this.logger.info(`批量上传任务完成: ${context.batchId}`);
-    
+
     if (context.results) {
-      this.logger.info(`上传结果: 总计 ${context.results.total}, 成功 ${context.results.successful}, 失败 ${context.results.failed}`);
+      this.logger.info(
+        `上传结果: 总计 ${context.results.total}, 成功 ${context.results.successful}, 失败 ${context.results.failed}`,
+      );
     }
 
     await this.updateProgress(context.taskId, 100);
@@ -357,24 +365,26 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
   /**
    * 验证文件
    */
-  private async validateFiles(taskId: string, context: BatchUploadContext): Promise<void> {
+  private async validateFiles(
+    taskId: string,
+    context: BatchUploadContext,
+  ): Promise<void> {
     this.logger.info(`开始验证文件: ${context.files.length} 个文件`);
 
     for (let i = 0; i < context.files.length; i++) {
       const file = context.files[i];
-      
+
       try {
         // 这里应该调用文件验证逻辑
         await this.validateFile(file);
-        
+
         if (context.progressDetails) {
           context.progressDetails.validated++;
         }
-        
+
         // 更新进度 (5% - 25%)
-        const progress = 5 + (20 * (i + 1) / context.files.length);
+        const progress = 5 + (20 * (i + 1)) / context.files.length;
         await this.updateProgress(taskId, progress);
-        
       } catch (error) {
         if (context.results) {
           context.results.failed++;
@@ -384,35 +394,39 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
             error: (error as Error).message,
           });
         }
-        
+
         this.logger.warn(`文件验证失败: ${file.name}, 错误: ${error}`);
       }
     }
 
-    this.logger.info(`文件验证完成: ${context.progressDetails?.validated}/${context.files.length}`);
+    this.logger.info(
+      `文件验证完成: ${context.progressDetails?.validated}/${context.files.length}`,
+    );
   }
 
   /**
    * 处理文件
    */
-  private async processFiles(taskId: string, context: BatchUploadContext): Promise<void> {
+  private async processFiles(
+    taskId: string,
+    context: BatchUploadContext,
+  ): Promise<void> {
     this.logger.info(`开始处理文件`);
 
     for (let i = 0; i < context.files.length; i++) {
       const file = context.files[i];
-      
+
       try {
         // 这里应该调用文件处理逻辑
         await this.processFile(file, context);
-        
+
         if (context.progressDetails) {
           context.progressDetails.processed++;
         }
-        
+
         // 更新进度 (25% - 50%)
-        const progress = 25 + (25 * (i + 1) / context.files.length);
+        const progress = 25 + (25 * (i + 1)) / context.files.length;
         await this.updateProgress(taskId, progress);
-        
       } catch (error) {
         if (context.results) {
           context.results.failed++;
@@ -422,35 +436,39 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
             error: (error as Error).message,
           });
         }
-        
+
         this.logger.warn(`文件处理失败: ${file.name}, 错误: ${error}`);
       }
     }
 
-    this.logger.info(`文件处理完成: ${context.progressDetails?.processed}/${context.files.length}`);
+    this.logger.info(
+      `文件处理完成: ${context.progressDetails?.processed}/${context.files.length}`,
+    );
   }
 
   /**
    * 上传文件
    */
-  private async uploadFiles(taskId: string, context: BatchUploadContext): Promise<void> {
+  private async uploadFiles(
+    taskId: string,
+    context: BatchUploadContext,
+  ): Promise<void> {
     this.logger.info(`开始上传文件`);
 
     for (let i = 0; i < context.files.length; i++) {
       const file = context.files[i];
-      
+
       try {
         // 这里应该调用文件上传逻辑
         await this.uploadFile(file, context);
-        
+
         if (context.progressDetails) {
           context.progressDetails.uploaded++;
         }
-        
+
         // 更新进度 (50% - 75%)
-        const progress = 50 + (25 * (i + 1) / context.files.length);
+        const progress = 50 + (25 * (i + 1)) / context.files.length;
         await this.updateProgress(taskId, progress);
-        
       } catch (error) {
         if (context.results) {
           context.results.failed++;
@@ -460,35 +478,39 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
             error: (error as Error).message,
           });
         }
-        
+
         this.logger.warn(`文件上传失败: ${file.name}, 错误: ${error}`);
       }
     }
 
-    this.logger.info(`文件上传完成: ${context.progressDetails?.uploaded}/${context.files.length}`);
+    this.logger.info(
+      `文件上传完成: ${context.progressDetails?.uploaded}/${context.files.length}`,
+    );
   }
 
   /**
    * 索引文件
    */
-  private async indexFiles(taskId: string, context: BatchUploadContext): Promise<void> {
+  private async indexFiles(
+    taskId: string,
+    context: BatchUploadContext,
+  ): Promise<void> {
     this.logger.info(`开始索引文件`);
 
     for (let i = 0; i < context.files.length; i++) {
       const file = context.files[i];
-      
+
       try {
         // 这里应该调用文件索引逻辑
         await this.indexFile(file, context);
-        
+
         if (context.progressDetails) {
           context.progressDetails.indexed++;
         }
-        
+
         // 更新进度 (75% - 95%)
-        const progress = 75 + (20 * (i + 1) / context.files.length);
+        const progress = 75 + (20 * (i + 1)) / context.files.length;
         await this.updateProgress(taskId, progress);
-        
       } catch (error) {
         if (context.results) {
           context.results.failed++;
@@ -498,12 +520,14 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
             error: (error as Error).message,
           });
         }
-        
+
         this.logger.warn(`文件索引失败: ${file.name}, 错误: ${error}`);
       }
     }
 
-    this.logger.info(`文件索引完成: ${context.progressDetails?.indexed}/${context.files.length}`);
+    this.logger.info(
+      `文件索引完成: ${context.progressDetails?.indexed}/${context.files.length}`,
+    );
   }
 
   /**
@@ -524,13 +548,16 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
   /**
    * 处理单个文件
    */
-  private async processFile(file: {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    path?: string;
-  }, context: BatchUploadContext): Promise<void> {
+  private async processFile(
+    file: {
+      id: string;
+      name: string;
+      size: number;
+      type: string;
+      path?: string;
+    },
+    context: BatchUploadContext,
+  ): Promise<void> {
     // 实现文件处理逻辑
     // 文档解析、内容提取、分块等
     this.logger.debug(`处理文件: ${file.name}`);
@@ -539,13 +566,16 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
   /**
    * 上传单个文件
    */
-  private async uploadFile(file: {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    path?: string;
-  }, context: BatchUploadContext): Promise<void> {
+  private async uploadFile(
+    file: {
+      id: string;
+      name: string;
+      size: number;
+      type: string;
+      path?: string;
+    },
+    context: BatchUploadContext,
+  ): Promise<void> {
     // 实现文件上传逻辑
     // 保存到存储系统、生成嵌入向量等
     this.logger.debug(`上传文件: ${file.name}`);
@@ -554,13 +584,16 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
   /**
    * 索引单个文件
    */
-  private async indexFile(file: {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    path?: string;
-  }, context: BatchUploadContext): Promise<void> {
+  private async indexFile(
+    file: {
+      id: string;
+      name: string;
+      size: number;
+      type: string;
+      path?: string;
+    },
+    context: BatchUploadContext,
+  ): Promise<void> {
     // 实现文件索引逻辑
     // 添加到搜索索引、更新元数据等
     this.logger.debug(`索引文件: ${file.name}`);

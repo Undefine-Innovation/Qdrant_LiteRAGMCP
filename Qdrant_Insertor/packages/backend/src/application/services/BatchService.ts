@@ -81,7 +81,7 @@ export class BatchService implements IBatchService {
     }
 
     // 创建状态机任务
-    const filesForStateMachine = files.map(file => ({
+    const filesForStateMachine = files.map((file) => ({
       id: randomUUID(),
       name: file.originalname,
       size: file.size,
@@ -97,15 +97,18 @@ export class BatchService implements IBatchService {
           skipDuplicates: false,
           generateThumbnails: true,
           chunkSize: 1000,
-        }
+        },
       );
 
       // 异步执行批量上传任务
-      this.executeBatchUploadWithStateMachine(operationId, files, actualCollectionId)
-        .catch(error => {
-          this.logger.error(`Batch upload task failed: ${operationId}`, error);
-          this.completeBatchOperation(operationId, false);
-        });
+      this.executeBatchUploadWithStateMachine(
+        operationId,
+        files,
+        actualCollectionId,
+      ).catch((error) => {
+        this.logger.error(`Batch upload task failed: ${operationId}`, error);
+        this.completeBatchOperation(operationId, false);
+      });
 
       // 立即返回操作ID
       return {
@@ -116,7 +119,10 @@ export class BatchService implements IBatchService {
         results: [],
       };
     } catch (error) {
-      this.logger.error(`Failed to create batch upload task: ${operationId}`, error);
+      this.logger.error(
+        `Failed to create batch upload task: ${operationId}`,
+        error,
+      );
       throw error;
     }
   }
@@ -177,7 +183,12 @@ export class BatchService implements IBatchService {
         }
 
         // 更新进度
-        this.updateBatchOperationProgress(operationId, i + 1, successful, failed);
+        this.updateBatchOperationProgress(
+          operationId,
+          i + 1,
+          successful,
+          failed,
+        );
       }
 
       // 完成操作
@@ -381,10 +392,12 @@ export class BatchService implements IBatchService {
   /**
    * 将状态机任务转换为批量操作进度
    */
-  private convertStateMachineTaskToProgress(task: StateMachineTask): BatchOperationProgress {
+  private convertStateMachineTaskToProgress(
+    task: StateMachineTask,
+  ): BatchOperationProgress {
     const context = task.context as {
-      files?: Array<{ id: string; name: string; size: number; type: string; }>;
-      results?: { successful: number; failed: number; };
+      files?: Array<{ id: string; name: string; size: number; type: string }>;
+      results?: { successful: number; failed: number };
     };
     return {
       operationId: task.id,
@@ -396,14 +409,19 @@ export class BatchService implements IBatchService {
       failed: context.results?.failed || 0,
       startTime: task.createdAt,
       endTime: task.completedAt,
-      estimatedTimeRemaining: task.status === 'PROCESSING' ? this.calculateEstimatedTime(task) : undefined,
+      estimatedTimeRemaining:
+        task.status === 'PROCESSING'
+          ? this.calculateEstimatedTime(task)
+          : undefined,
     };
   }
 
   /**
    * 转换状态机状态为批量操作状态
    */
-  private convertStateMachineStatus(status: string): BatchOperationProgress['status'] {
+  private convertStateMachineStatus(
+    status: string,
+  ): BatchOperationProgress['status'] {
     switch (status) {
       case 'NEW':
         return 'pending';
@@ -433,7 +451,7 @@ export class BatchService implements IBatchService {
     const elapsed = Date.now() - task.startedAt;
     const avgTimePerPercent = elapsed / task.progress;
     const remainingPercent = 100 - task.progress;
-    
+
     return Math.ceil((avgTimePerPercent * remainingPercent) / 1000);
   }
 

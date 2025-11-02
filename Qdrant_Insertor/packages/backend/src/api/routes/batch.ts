@@ -91,7 +91,9 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
         });
       }
 
-      const { collectionId } = req.validated?.body as { collectionId?: CollectionId } || { collectionId: undefined };
+      const { collectionId } = (req.validated?.body as {
+        collectionId?: CollectionId;
+      }) || { collectionId: undefined };
 
       try {
         const result = await batchService.batchUploadDocuments(
@@ -158,7 +160,9 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
       const { docIds } = req.validated?.body || { docIds: [] };
 
       try {
-        const result = await batchService.batchDeleteDocuments((docIds || []) as DocId[]);
+        const result = await batchService.batchDeleteDocuments(
+          (docIds || []) as DocId[],
+        );
 
         // 验证响应格式
         const validatedResponse = BatchDeleteDocsResponseSchema.parse(result);
@@ -219,7 +223,9 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
       const { collectionIds } = req.validated?.body || { collectionIds: [] };
 
       try {
-        const result = await batchService.batchDeleteCollections((collectionIds || []) as CollectionId[]);
+        const result = await batchService.batchDeleteCollections(
+          (collectionIds || []) as CollectionId[],
+        );
 
         // 验证响应格式
         const validatedResponse =
