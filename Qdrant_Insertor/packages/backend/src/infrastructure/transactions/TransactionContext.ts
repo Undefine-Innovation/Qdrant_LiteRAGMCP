@@ -23,7 +23,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 创建事务上下文实例
-   * 
+   *
    * @param options 事务上下文选项
    */
   constructor(options: {
@@ -43,13 +43,14 @@ export class TransactionContext implements ITransactionContext {
     this.metadata = options.metadata;
     this.parentTransactionId = options.parentTransactionId;
     this.savepoints = options.savepoints || new Map<string, Savepoint>();
-    this.nestingLevel = options.nestingLevel ?? (options.parentTransactionId ? 1 : 0);
+    this.nestingLevel =
+      options.nestingLevel ?? (options.parentTransactionId ? 1 : 0);
     this.isRootTransaction = !options.parentTransactionId;
   }
 
   /**
    * 添加操作到事务
-   * 
+   *
    * @param operation 事务操作
    */
   addOperation(operation: TransactionOperation): void {
@@ -58,12 +59,13 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 创建保存点
-   * 
+   *
    * @param name 保存点名称
    * @param metadata 保存点元数据
    * @returns 保存点ID
    */
-  createSavepoint(name: string, metadata?: Record<string, any>): string { // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
+  createSavepoint(name: string, metadata?: Record<string, any>): string {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
     const savepointId = uuidv4();
     const savepoint: Savepoint = {
       id: savepointId,
@@ -80,7 +82,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 回滚到保存点
-   * 
+   *
    * @param savepointId 保存点ID
    */
   rollbackToSavepoint(savepointId: string): void {
@@ -104,7 +106,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 释放保存点
-   * 
+   *
    * @param savepointId 保存点ID
    */
   releaseSavepoint(savepointId: string): void {
@@ -118,7 +120,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 获取保存点列表
-   * 
+   *
    * @returns 保存点列表
    */
   getSavepoints(): Savepoint[] {
@@ -127,7 +129,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 根据名称获取保存点
-   * 
+   *
    * @param name 保存点名称
    * @returns 保存点或undefined
    */
@@ -142,7 +144,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 检查是否为嵌套事务
-   * 
+   *
    * @returns 是否为嵌套事务
    */
   isNested(): boolean {
@@ -151,7 +153,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 获取事务的深度（嵌套层级）
-   * 
+   *
    * @returns 嵌套层级
    */
   getDepth(): number {
@@ -160,7 +162,7 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 克隆事务上下文
-   * 
+   *
    * @returns 新的事务上下文实例
    */
   clone(): TransactionContext {
@@ -178,10 +180,11 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 转换为JSON对象
-   * 
+   *
    * @returns JSON对象
    */
-  toJSON(): Record<string, any> { // eslint-disable-line @typescript-eslint/no-explicit-any -- JSON序列化需要灵活类型
+  toJSON(): Record<string, any> {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- JSON序列化需要灵活类型
     return {
       transactionId: this.transactionId,
       status: this.status,
@@ -197,14 +200,13 @@ export class TransactionContext implements ITransactionContext {
 
   /**
    * 从JSON对象创建事务上下文
-   * 
+   *
    * @param json JSON对象
    * @returns 事务上下文实例
    */
-  static fromJSON(json: Record<string, any>): TransactionContext { // eslint-disable-line @typescript-eslint/no-explicit-any -- JSON反序列化需要灵活类型
-    const savepoints = new Map<string, Savepoint>(
-      json.savepoints || []
-    );
+  static fromJSON(json: Record<string, any>): TransactionContext {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- JSON反序列化需要灵活类型
+    const savepoints = new Map<string, Savepoint>(json.savepoints || []);
 
     return new TransactionContext({
       transactionId: json.transactionId,

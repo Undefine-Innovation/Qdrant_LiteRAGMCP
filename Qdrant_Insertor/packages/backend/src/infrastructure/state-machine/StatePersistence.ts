@@ -70,8 +70,8 @@ export class InMemoryStatePersistence implements IStatePersistence {
    */
   async getTasksByStatus(status: string): Promise<StateMachineTask[]> {
     return Array.from(this.tasks.values())
-      .filter(task => task.status === status)
-      .map(task => ({ ...task }));
+      .filter((task) => task.status === status)
+      .map((task) => ({ ...task }));
   }
 
   /**
@@ -81,8 +81,8 @@ export class InMemoryStatePersistence implements IStatePersistence {
    */
   async getTasksByType(taskType: string): Promise<StateMachineTask[]> {
     return Array.from(this.tasks.values())
-      .filter(task => task.taskType === taskType)
-      .map(task => ({ ...task }));
+      .filter((task) => task.taskType === taskType)
+      .map((task) => ({ ...task }));
   }
 
   /**
@@ -90,7 +90,10 @@ export class InMemoryStatePersistence implements IStatePersistence {
    * @param taskId 任务ID
    * @param updates 更新内容
    */
-  async updateTask(taskId: string, updates: Partial<StateMachineTask>): Promise<void> {
+  async updateTask(
+    taskId: string,
+    updates: Partial<StateMachineTask>,
+  ): Promise<void> {
     const existingTask = this.tasks.get(taskId);
     if (!existingTask) {
       throw new Error(`任务 ${taskId} 不存在`);
@@ -103,7 +106,9 @@ export class InMemoryStatePersistence implements IStatePersistence {
     };
 
     this.tasks.set(taskId, updatedTask);
-    this.logger.debug(`更新任务状态: ${taskId}, 更新字段: ${Object.keys(updates).join(', ')}`);
+    this.logger.debug(
+      `更新任务状态: ${taskId}, 更新字段: ${Object.keys(updates).join(', ')}`,
+    );
   }
 
   /**
@@ -129,7 +134,9 @@ export class InMemoryStatePersistence implements IStatePersistence {
 
     for (const [taskId, task] of this.tasks.entries()) {
       // 清理已完成或失败且超过指定时间的任务
-      const isFinalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(task.status);
+      const isFinalState = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(
+        task.status,
+      );
       const isExpired = now - task.updatedAt > olderThan;
 
       if (isFinalState && isExpired) {
@@ -167,7 +174,7 @@ export class SQLiteStatePersistence implements IStatePersistence {
    */
   constructor(
     private readonly db: Database.Database, // SQLite数据库实例
-    private readonly logger: Logger
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -234,7 +241,7 @@ export class SQLiteStatePersistence implements IStatePersistence {
 
     const stmt = this.db.prepare(query);
     const rows = stmt.all(status) as TaskDatabaseRow[];
-    return rows.map(row => this.mapRowToTask(row));
+    return rows.map((row) => this.mapRowToTask(row));
   }
 
   /**
@@ -249,7 +256,7 @@ export class SQLiteStatePersistence implements IStatePersistence {
 
     const stmt = this.db.prepare(query);
     const rows = stmt.all(taskType) as TaskDatabaseRow[];
-    return rows.map(row => this.mapRowToTask(row));
+    return rows.map((row) => this.mapRowToTask(row));
   }
 
   /**
@@ -257,7 +264,10 @@ export class SQLiteStatePersistence implements IStatePersistence {
    * @param taskId 任务ID
    * @param updates 更新内容
    */
-  async updateTask(taskId: string, updates: Partial<StateMachineTask>): Promise<void> {
+  async updateTask(
+    taskId: string,
+    updates: Partial<StateMachineTask>,
+  ): Promise<void> {
     const fields = [];
     const values = [];
 
@@ -312,7 +322,9 @@ export class SQLiteStatePersistence implements IStatePersistence {
       throw new Error(`任务 ${taskId} 不存在`);
     }
 
-    this.logger.debug(`更新任务状态到数据库: ${taskId}, 更新字段: ${Object.keys(updates).join(', ')}`);
+    this.logger.debug(
+      `更新任务状态到数据库: ${taskId}, 更新字段: ${Object.keys(updates).join(', ')}`,
+    );
   }
 
   /**
@@ -385,14 +397,14 @@ export class SQLiteStatePersistence implements IStatePersistence {
     const indexQueries = [
       `CREATE INDEX IF NOT EXISTS idx_status ON state_machine_tasks (status)`,
       `CREATE INDEX IF NOT EXISTS idx_task_type ON state_machine_tasks (task_type)`,
-      `CREATE INDEX IF NOT EXISTS idx_updated_at ON state_machine_tasks (updated_at)`
+      `CREATE INDEX IF NOT EXISTS idx_updated_at ON state_machine_tasks (updated_at)`,
     ];
 
     this.db.exec(query);
-    indexQueries.forEach(indexQuery => {
+    indexQueries.forEach((indexQuery) => {
       this.db.exec(indexQuery);
     });
-    
+
     this.logger.info('状态机任务表初始化完成');
   }
 
