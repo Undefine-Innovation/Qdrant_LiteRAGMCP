@@ -1,10 +1,25 @@
 // src/application/services/ScrapeService.ts
 
 import { Logger } from '@logging/logger.js';
-import { IScrapeService, IScrapeTask, ScrapeConfig, ScrapeStatus, ScrapeType } from '@domain/entities/scrape.js';
-import { IStateMachineEngine, StateMachineContext } from '@domain/state-machine/types.js';
+import {
+  IScrapeService,
+  IScrapeTask,
+  ScrapeConfig,
+  ScrapeStatus,
+  ScrapeType,
+} from '@domain/entities/scrape.js';
+import {
+  IStateMachineEngine,
+  StateMachineContext,
+} from '@domain/state-machine/types.js';
 import { BaseStateMachineStrategy } from '@domain/state-machine/BaseStateMachineStrategy.js';
-import { BaseState, BaseEvent, StateMachineTask, StateMachineConfig, StatePersistence } from '@domain/state-machine/types.js';
+import {
+  BaseState,
+  BaseEvent,
+  StateMachineTask,
+  StateMachineConfig,
+  StatePersistence,
+} from '@domain/state-machine/types.js';
 import { IWebCrawler } from '@domain/entities/scrape.js';
 import { IContentExtractor } from '@domain/entities/scrape.js';
 
@@ -42,20 +57,22 @@ export class ScrapeStateMachineStrategy extends BaseStateMachineStrategy {
     persistence: StatePersistence,
     logger: Logger,
     webCrawler?: IWebCrawler,
-    contentExtractor?: IContentExtractor
+    contentExtractor?: IContentExtractor,
   ) {
     super(strategyId, config, persistence, logger);
     // Provide safe defaults so the strategy can be registered with only the state/persistence/logger in tests or DI setups.
-    this.webCrawler = webCrawler ?? ({
-      // minimal no-op implementation to avoid runtime crashes if real crawler not injected
-      crawl: async (_cfg: ScrapeConfig) => ({
-        status: 'FAILED',
-        title: '',
-        content: '',
-        links: [],
-        error: 'No webCrawler provided',
-      }),
-    } as unknown as IWebCrawler);
+    this.webCrawler =
+      webCrawler ??
+      ({
+        // minimal no-op implementation to avoid runtime crashes if real crawler not injected
+        crawl: async (_cfg: ScrapeConfig) => ({
+          status: 'FAILED',
+          title: '',
+          content: '',
+          links: [],
+          error: 'No webCrawler provided',
+        }),
+      } as unknown as IWebCrawler);
     // default to an empty stub for content extractor
     this.contentExtractor = contentExtractor ?? ({} as IContentExtractor);
     this.initializeTransitions();
@@ -90,14 +107,16 @@ export class ScrapeStateMachineStrategy extends BaseStateMachineStrategy {
     }
 
     const context = task.context as StateMachineContext;
-    
+
     try {
       // 标记任务开始
       await this.handleTransition(taskId, BaseEvent.START, context);
 
       // 开始爬取
-      const result = await this.webCrawler.crawl(context.config as ScrapeConfig);
-      
+      const result = await this.webCrawler.crawl(
+        context.config as ScrapeConfig,
+      );
+
       // 更新任务状态和进度
       if (result.status === 'COMPLETED') {
         await this.handleTransition(taskId, BaseEvent.COMPLETE, {
@@ -113,7 +132,6 @@ export class ScrapeStateMachineStrategy extends BaseStateMachineStrategy {
           error: result.error,
         });
       }
-
     } catch (error) {
       this.logger.error(`爬虫任务执行失败: ${taskId}, 错误: ${error}`);
       await this.handleTransition(taskId, BaseEvent.FAIL, {
@@ -141,14 +159,18 @@ export class ScrapeService implements IScrapeService {
   constructor(stateMachine: IStateMachineEngine, logger: Logger) {
     this.stateMachine = stateMachine;
     this.logger = logger;
-    
+
     // 注册爬虫状态机策略
     const scrapeStrategy = new ScrapeStateMachineStrategy(
       'web_crawl',
       {
         taskType: 'web_crawl',
         initialState: BaseState.NEW,
-        finalStates: [BaseState.COMPLETED, BaseState.FAILED, BaseState.CANCELLED],
+        finalStates: [
+          BaseState.COMPLETED,
+          BaseState.FAILED,
+          BaseState.CANCELLED,
+        ],
         transitions: [
           {
             from: BaseState.NEW,
@@ -194,7 +216,9 @@ export class ScrapeService implements IScrapeService {
              * @param context - 任务上下文
              */
             action: async (context: StateMachineContext) => {
-              this.logger.error(`爬取失败: ${context.taskId}, 错误: ${context.error}`);
+              this.logger.error(
+                `爬取失败: ${context.taskId}, 错误: ${context.error}`,
+              );
               // 这里可以添加失败后的处理逻辑
             },
           },
@@ -210,7 +234,9 @@ export class ScrapeService implements IScrapeService {
              * @param context - 任务上下文
              */
             action: async (context: Record<string, unknown>) => {
-              this.logger.info(`重试爬取: ${context.taskId}, 第${((context as ScrapeContext).retries || 0) + 1}次`);
+              this.logger.info(
+                `重试爬取: ${context.taskId}, 第${((context as ScrapeContext).retries || 0) + 1}次`,
+              );
               // 这里可以添加重试逻辑
             },
           },
@@ -227,11 +253,13 @@ export class ScrapeService implements IScrapeService {
         maxRetries: 3,
       },
       stateMachine as unknown as StatePersistence, // 类型适配以满足接口要求
-      this.logger
+      this.logger,
     );
     this.stateMachine.registerStrategy(scrapeStrategy);
-    
-    this.logger.info('ScrapeService initialized with state machine integration');
+
+    this.logger.info(
+      'ScrapeService initialized with state machine integration',
+    );
   }
 
   /**
@@ -248,7 +276,7 @@ export class ScrapeService implements IScrapeService {
     this.logger.info(`创建爬虫任务: ${config.url}`);
 
     const taskId = `scrape_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // 创建任务上下文
     const context = {
       taskId,
@@ -259,7 +287,7 @@ export class ScrapeService implements IScrapeService {
 
     // 使用状态机创建任务
     await this.stateMachine.createTask(ScrapeType.WEB_CRAWL, taskId, context);
-    
+
     this.logger.info(`爬虫任务已创建: ${taskId}`);
     return taskId;
   }
@@ -276,7 +304,7 @@ export class ScrapeService implements IScrapeService {
    */
   async getScrapeTask(taskId: string): Promise<IScrapeTask | null> {
     const task = await this.stateMachine.getTask(taskId);
-    
+
     if (!task) {
       this.logger.warn(`爬虫任务不存在: ${taskId}`);
       return null;
@@ -309,7 +337,7 @@ export class ScrapeService implements IScrapeService {
    */
   async getAllScrapeTasks(): Promise<IScrapeTask[]> {
     const tasks = await this.stateMachine.getTasksByType(ScrapeType.WEB_CRAWL);
-    
+
     return tasks.map((task: StateMachineTask) => ({
       id: task.id,
       taskType: task.taskType as ScrapeType,
@@ -338,7 +366,7 @@ export class ScrapeService implements IScrapeService {
    */
   async getScrapeTasksByStatus(status: string): Promise<IScrapeTask[]> {
     const tasks = await this.stateMachine.getTasksByStatus(status);
-    
+
     return tasks.map((task: StateMachineTask) => ({
       id: task.id,
       taskType: task.taskType as ScrapeType,
@@ -367,7 +395,7 @@ export class ScrapeService implements IScrapeService {
    */
   async cancelScrapeTask(taskId: string): Promise<boolean> {
     this.logger.info(`取消爬虫任务: ${taskId}`);
-    
+
     try {
       return await this.stateMachine.transitionState(taskId, BaseEvent.CANCEL);
     } catch (error) {
@@ -388,7 +416,7 @@ export class ScrapeService implements IScrapeService {
    */
   async retryScrapeTask(taskId: string): Promise<boolean> {
     this.logger.info(`重试爬虫任务: ${taskId}`);
-    
+
     try {
       return await this.stateMachine.transitionState(taskId, BaseEvent.RETRY);
     } catch (error) {
@@ -408,21 +436,23 @@ export class ScrapeService implements IScrapeService {
   async getScrapeTaskStats(): Promise<Record<string, Record<string, number>>> {
     // 由于 IStateMachineEngine 没有 getTaskStats 方法，
     // 我们通过获取不同状态的任务来计算统计信息
-    const allTasks = await this.stateMachine.getTasksByType(ScrapeType.WEB_CRAWL);
-    
+    const allTasks = await this.stateMachine.getTasksByType(
+      ScrapeType.WEB_CRAWL,
+    );
+
     const stats: Record<string, Record<string, number>> = {
-      [ScrapeType.WEB_CRAWL]: {}
+      [ScrapeType.WEB_CRAWL]: {},
     };
-    
+
     // 按状态分组统计
-    allTasks.forEach(task => {
+    allTasks.forEach((task) => {
       const status = task.status;
       if (!stats[ScrapeType.WEB_CRAWL][status]) {
         stats[ScrapeType.WEB_CRAWL][status] = 0;
       }
       stats[ScrapeType.WEB_CRAWL][status]++;
     });
-    
+
     return stats;
   }
 }

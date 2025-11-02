@@ -186,7 +186,10 @@ export interface IContentExtractor {
    * @param selectors - CSS选择器配置
    * @returns 提取结果
    */
-  extract(html: string, selectors?: ScrapeConfig['selectors']): {
+  extract(
+    html: string,
+    selectors?: ScrapeConfig['selectors'],
+  ): {
     title?: string;
     content?: string;
     links?: Array<{

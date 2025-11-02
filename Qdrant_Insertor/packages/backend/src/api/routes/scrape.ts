@@ -3,7 +3,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { Logger } from '@logging/logger.js';
-import { 
+import {
   ScrapeStartRequestSchema,
   ScrapeStatusResponseSchema,
   ScrapeListResponseSchema,
@@ -52,7 +52,15 @@ export function createScrapeRoutes(
         return;
       }
 
-      const { url, maxDepth, followLinks, selectors, headers, timeout, userAgent } = validationResult.data;
+      const {
+        url,
+        maxDepth,
+        followLinks,
+        selectors,
+        headers,
+        timeout,
+        userAgent,
+      } = validationResult.data;
 
       logger.info(`收到爬虫启动请求: ${url}`);
 
@@ -72,7 +80,6 @@ export function createScrapeRoutes(
         message: '爬虫任务已启动',
         taskId,
       });
-
     } catch (error) {
       logger.error(`启动爬虫任务失败: ${error}`);
       res.status(500).json({
@@ -132,7 +139,6 @@ export function createScrapeRoutes(
       };
 
       res.json(response);
-
     } catch (error) {
       logger.error(`查询爬虫任务状态失败: ${req.params.id}, 错误: ${error}`);
       res.status(500).json({
@@ -174,7 +180,6 @@ export function createScrapeRoutes(
       };
 
       res.json(response);
-
     } catch (error) {
       logger.error(`获取爬虫任务列表失败: ${error}`);
       res.status(500).json({
@@ -225,7 +230,6 @@ export function createScrapeRoutes(
       };
 
       res.json(response);
-
     } catch (error) {
       logger.error(`取消爬虫任务失败: ${req.params.id}, 错误: ${error}`);
       res.status(500).json({
@@ -276,7 +280,6 @@ export function createScrapeRoutes(
       };
 
       res.json(response);
-
     } catch (error) {
       logger.error(`重试爬虫任务失败: ${req.params.id}, 错误: ${error}`);
       res.status(500).json({
@@ -304,7 +307,6 @@ export function createScrapeRoutes(
       };
 
       res.json(response);
-
     } catch (error) {
       logger.error(`获取爬虫任务统计失败: ${error}`);
       res.status(500).json({

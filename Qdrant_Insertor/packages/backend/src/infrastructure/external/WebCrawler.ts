@@ -1,7 +1,12 @@
 // src/infrastructure/external/WebCrawler.ts
 
 import { Logger } from '@logging/logger.js';
-import { IWebCrawler, ScrapeConfig, ScrapeResult, ScrapeStatus } from '@domain/entities/scrape.js';
+import {
+  IWebCrawler,
+  ScrapeConfig,
+  ScrapeResult,
+  ScrapeStatus,
+} from '@domain/entities/scrape.js';
 import { IContentExtractor } from '@domain/entities/scrape.js';
 
 /**
@@ -41,8 +46,13 @@ export class WebCrawler implements IWebCrawler {
 
     try {
       // 获取网页内容
-      const html = await this.fetchHtml(config.url, config.headers, config.timeout, config.userAgent);
-      
+      const html = await this.fetchHtml(
+        config.url,
+        config.headers,
+        config.timeout,
+        config.userAgent,
+      );
+
       if (!html) {
         throw new Error(`无法获取网页内容: ${config.url}`);
       }
@@ -57,7 +67,9 @@ export class WebCrawler implements IWebCrawler {
         links = extracted.links.slice(0, config.maxDepth || 10);
       }
 
-      this.logger.info(`内容提取完成，标题: ${extracted.title}, 链接数: ${links.length}`);
+      this.logger.info(
+        `内容提取完成，标题: ${extracted.title}, 链接数: ${links.length}`,
+      );
 
       return {
         taskId: `crawl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -77,10 +89,9 @@ export class WebCrawler implements IWebCrawler {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
-
     } catch (error) {
       this.logger.error(`爬取失败: ${config.url}, 错误: ${error}`);
-      
+
       return {
         taskId: `crawl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         status: 'FAILED' as ScrapeStatus,
@@ -115,7 +126,7 @@ export class WebCrawler implements IWebCrawler {
     url: string,
     headers?: Record<string, string>,
     timeout?: number,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<string> {
     // 在实际项目中，应该使用fetch或axios等HTTP客户端
     // 这里提供一个基础实现
@@ -126,7 +137,9 @@ export class WebCrawler implements IWebCrawler {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.0 Safari/537.36',
+          'User-Agent':
+            userAgent ||
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.0 Safari/537.36',
           ...headers,
         },
         signal: controller.signal,
@@ -139,11 +152,10 @@ export class WebCrawler implements IWebCrawler {
       }
 
       return await response.text();
-
     } catch (error) {
       clearTimeout(timeoutId);
       controller.abort();
-      
+
       if (error instanceof Error) {
         throw error;
       } else {
