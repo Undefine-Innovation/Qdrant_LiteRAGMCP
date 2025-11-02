@@ -3,10 +3,10 @@
  * @description 定义状态机管理的核心业务接口，遵循依赖倒置原则
  */
 
-import type { 
-  IStateMachineEngine, 
+import type {
+  IStateMachineEngine,
   StateMachineTask,
-  StateMachineContext 
+  StateMachineContext,
 } from '../state-machine/types.js';
 
 /**
@@ -72,7 +72,7 @@ export interface IStateMachineService {
     batchId: string,
     files: BatchUploadFile[],
     collectionId: string,
-    options?: BatchUploadOptions
+    options?: BatchUploadOptions,
   ): Promise<StateMachineTask>;
 
   /**
@@ -133,12 +133,17 @@ export interface IStateMachineService {
    * @param batches 批次列表
    * @returns 创建的任务列表
    */
-  createBatchUploadTasks(batches: BatchUploadBatch[]): Promise<StateMachineTask[]>;
+  createBatchUploadTasks(
+    batches: BatchUploadBatch[],
+  ): Promise<StateMachineTask[]>;
 
   /**
    * 批量执行任务
    * @param batchIds 批次ID列表
    * @param concurrency 并发数
    */
-  executeBatchUploadTasks(batchIds: string[], concurrency?: number): Promise<void>;
+  executeBatchUploadTasks(
+    batchIds: string[],
+    concurrency?: number,
+  ): Promise<void>;
 }

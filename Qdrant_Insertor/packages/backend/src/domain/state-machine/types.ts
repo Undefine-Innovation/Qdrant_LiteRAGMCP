@@ -139,12 +139,15 @@ export interface StateMachineStrategy {
   handleTransition(
     taskId: string,
     event: string,
-    context?: StateMachineContext
+    context?: StateMachineContext,
   ): Promise<boolean>;
   /** 获取当前状态 */
   getCurrentState(taskId: string): Promise<string | null>;
   /** 创建新任务 */
-  createTask(taskId: string, initialContext?: StateMachineContext): Promise<StateMachineTask>;
+  createTask(
+    taskId: string,
+    initialContext?: StateMachineContext,
+  ): Promise<StateMachineTask>;
   /** 执行任务逻辑 */
   executeTask(taskId: string): Promise<void>;
   /** 处理错误 */
@@ -164,13 +167,13 @@ export interface IStateMachineEngine {
   createTask(
     taskType: string,
     taskId: string,
-    initialContext?: StateMachineContext
+    initialContext?: StateMachineContext,
   ): Promise<StateMachineTask>;
   /** 触发状态转换 */
   transitionState(
     taskId: string,
     event: string,
-    context?: StateMachineContext
+    context?: StateMachineContext,
   ): Promise<boolean>;
   /** 获取任务状态 */
   getTask(taskId: string): Promise<StateMachineTask | null>;

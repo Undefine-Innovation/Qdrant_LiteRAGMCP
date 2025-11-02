@@ -20,7 +20,9 @@ import {
  * 基础状态机策略实现
  * 提供状态机的通用功能和状态转换逻辑
  */
-export abstract class BaseStateMachineStrategy implements IStateMachineStrategy {
+export abstract class BaseStateMachineStrategy
+  implements IStateMachineStrategy
+{
   protected transitions: Map<string, Map<string, StateTransition>> = new Map();
 
   /**
@@ -34,7 +36,7 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
     public readonly strategyId: string,
     public readonly config: StateMachineConfig,
     protected readonly persistence: StatePersistence,
-    protected readonly logger: Logger
+    protected readonly logger: Logger,
   ) {
     this.initializeTransitions();
   }
@@ -56,7 +58,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
       fromTransitions.set(transition.event, transition);
     }
 
-    this.logger.info(`状态机策略 ${this.strategyId} 初始化完成，共 ${this.config.transitions.length} 个转换规则`);
+    this.logger.info(
+      `状态机策略 ${this.strategyId} 初始化完成，共 ${this.config.transitions.length} 个转换规则`,
+    );
   }
 
   /**
@@ -65,7 +69,7 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
   async handleTransition(
     taskId: string,
     event: string,
-    context?: StateMachineContext
+    context?: StateMachineContext,
   ): Promise<boolean> {
     const task = await this.persistence.getTask(taskId);
     if (!task) {
@@ -92,7 +96,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
       try {
         const conditionResult = await transition.condition(context);
         if (!conditionResult) {
-          this.logger.warn(`状态转换条件不满足: ${currentState} -> ${transition.to} (事件: ${event})`);
+          this.logger.warn(
+            `状态转换条件不满足: ${currentState} -> ${transition.to} (事件: ${event})`,
+          );
           return false;
         }
       } catch (error) {
@@ -118,7 +124,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
       context: context ? { ...task.context, ...context } : task.context,
     });
 
-    this.logger.info(`任务 ${taskId} 状态转换: ${currentState} -> ${transition.to} (事件: ${event})`);
+    this.logger.info(
+      `任务 ${taskId} 状态转换: ${currentState} -> ${transition.to} (事件: ${event})`,
+    );
     return true;
   }
 
@@ -133,7 +141,10 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
   /**
    * 创建新任务
    */
-  async createTask(taskId: string, initialContext?: StateMachineContext): Promise<StateMachineTask> {
+  async createTask(
+    taskId: string,
+    initialContext?: StateMachineContext,
+  ): Promise<StateMachineTask> {
     const now = Date.now();
     const task: StateMachineTask = {
       id: taskId,
@@ -147,7 +158,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
     };
 
     await this.persistence.saveTask(task);
-    this.logger.info(`创建新任务: ${taskId}, 类型: ${this.config.taskType}, 初始状态: ${this.config.initialState}`);
+    this.logger.info(
+      `创建新任务: ${taskId}, 类型: ${this.config.taskType}, 初始状态: ${this.config.initialState}`,
+    );
     return task;
   }
 
@@ -176,7 +189,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
         error: error.message,
         completedAt: Date.now(),
       });
-      this.logger.error(`任务 ${taskId} 超过最大重试次数，标记为失败: ${error.message}`);
+      this.logger.error(
+        `任务 ${taskId} 超过最大重试次数，标记为失败: ${error.message}`,
+      );
       return;
     }
 
@@ -195,7 +210,9 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
       retryCount: task.retries + 1,
     });
 
-    this.logger.info(`任务 ${taskId} 将进行第 ${task.retries + 1} 次重试: ${error.message}`);
+    this.logger.info(
+      `任务 ${taskId} 将进行第 ${task.retries + 1} 次重试: ${error.message}`,
+    );
   }
 
   /**
@@ -216,7 +233,10 @@ export abstract class BaseStateMachineStrategy implements IStateMachineStrategy 
   /**
    * 更新任务进度
    */
-  protected async updateProgress(taskId: string, progress: number): Promise<void> {
+  protected async updateProgress(
+    taskId: string,
+    progress: number,
+  ): Promise<void> {
     await this.persistence.updateTask(taskId, {
       progress: Math.max(0, Math.min(100, progress)),
     });

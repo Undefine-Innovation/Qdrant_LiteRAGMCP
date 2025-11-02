@@ -15,7 +15,7 @@ export type AppConfig = {
 
 /**
  * 校验字符串参数，确保非空，并去除可能的引号
- * 
+ *
  * @param value - 要校验的值
  * @param name - 参数名称
  * @returns 校验后的字符串
@@ -31,7 +31,7 @@ function validateString(value: unknown, name: string): string {
 
 /**
  * 校验数值参数，确保为正整数
- * 
+ *
  * @param value - 要校验的值
  * @param name - 参数名称
  * @param defaultValue - 默认值
@@ -51,7 +51,7 @@ function validateNumber(
 
 /**
  * 读取并校验配置
- * 
+ *
  * @param env - 环境变量对象
  * @returns 验证后的配置对象
  */

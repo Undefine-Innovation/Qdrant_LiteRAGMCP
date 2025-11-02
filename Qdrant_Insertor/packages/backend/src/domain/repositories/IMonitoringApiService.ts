@@ -48,14 +48,18 @@ export interface IMonitoringApiService {
    * @param request 系统指标请求
    * @returns 系统指标响应
    */
-  getSystemMetrics(request: SystemMetricsRequest): Promise<SystemMetricsResponse>;
+  getSystemMetrics(
+    request: SystemMetricsRequest,
+  ): Promise<SystemMetricsResponse>;
 
   /**
    * 获取仪表板数据API
    * @param request 仪表板数据请求
    * @returns 仪表板数据响应
    */
-  getDashboardData(request: DashboardDataRequest): Promise<DashboardDataResponse>;
+  getDashboardData(
+    request: DashboardDataRequest,
+  ): Promise<DashboardDataResponse>;
 
   /**
    * 创建告警规则API
@@ -93,7 +97,10 @@ export interface IMonitoringApiService {
    * @param request 更新告警规则请求
    * @returns 告警规则响应
    */
-  updateAlertRule(ruleId: string, request: UpdateAlertRuleRequest): Promise<AlertRuleResponse>;
+  updateAlertRule(
+    ruleId: string,
+    request: UpdateAlertRuleRequest,
+  ): Promise<AlertRuleResponse>;
 
   /**
    * 删除告警规则API
@@ -113,7 +120,9 @@ export interface IMonitoringApiService {
    * @param request 创建通知渠道请求
    * @returns 通知渠道响应
    */
-  createNotificationChannel(request: CreateNotificationChannelRequest): Promise<NotificationChannelResponse>;
+  createNotificationChannel(
+    request: CreateNotificationChannelRequest,
+  ): Promise<NotificationChannelResponse>;
 
   /**
    * 获取通知渠道列表API
@@ -143,5 +152,7 @@ export interface IMonitoringApiService {
    * @param request 测试通知请求
    * @returns 测试通知响应
    */
-  testNotification(request: TestNotificationRequest): Promise<TestNotificationResponse>;
+  testNotification(
+    request: TestNotificationRequest,
+  ): Promise<TestNotificationResponse>;
 }

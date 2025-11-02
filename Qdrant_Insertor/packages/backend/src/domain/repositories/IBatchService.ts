@@ -57,7 +57,11 @@ export interface BatchDeleteCollectionsResponse {
 /**
  * 批量操作进度状态
  */
-export type BatchOperationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type BatchOperationStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed';
 
 /**
  * 批量操作进度

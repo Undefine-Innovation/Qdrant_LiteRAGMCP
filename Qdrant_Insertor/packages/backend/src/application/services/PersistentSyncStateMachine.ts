@@ -39,7 +39,7 @@ export class PersistentSyncStateMachine {
       logger,
     );
     this.errorHandler = new SyncErrorHandler(this.syncJobManager, logger);
-    
+
     // 注入执行方法
     this.errorHandler.setExecuteSyncMethod((docId: string) =>
       this.executeSync(docId as DocId),
@@ -55,7 +55,7 @@ export class PersistentSyncStateMachine {
    */
   async initialize(): Promise<void> {
     this.logger.info('初始化持久化同步状态机...');
-    
+
     // 从数据库加载未完成的同步作业
     const unfinishedJobs: Array<{
       docId: string;
@@ -63,7 +63,7 @@ export class PersistentSyncStateMachine {
       createdAt: number;
       updatedAt: number;
     }> = [];
-    
+
     // 分别查询每个状态
     const statuses = [
       SyncJobStatus.NEW,
@@ -72,21 +72,21 @@ export class PersistentSyncStateMachine {
       SyncJobStatus.FAILED,
       SyncJobStatus.RETRYING,
     ];
-    
+
     for (const status of statuses) {
       const jobs = this.sqliteRepo.syncJobs.getByStatus(status);
       unfinishedJobs.push(...jobs);
     }
 
     this.logger.info(`找到 ${unfinishedJobs.length} 个未完成的同步作业`);
-    
+
     // 恢复状态机状态
     for (const job of unfinishedJobs) {
       // 使用getOrCreateSyncJob方法
       await this.syncJobManager.getOrCreateSyncJob(job.docId);
       this.logger.info(`恢复同步作业: ${job.docId} - ${job.status}`);
     }
-    
+
     this.logger.info('持久化同步状态机初始化完成');
   }
 
@@ -96,7 +96,7 @@ export class PersistentSyncStateMachine {
    */
   private async executeSync(docId: DocId): Promise<void> {
     this.logger.info(`执行同步操作: ${docId}`);
-    
+
     try {
       // 1. 分割文档
       await this.documentProcessor.splitDocument(docId);
@@ -106,7 +106,7 @@ export class PersistentSyncStateMachine {
 
       // 3. 标记为已同步
       await this.documentProcessor.markDocAsSynced(docId);
-      
+
       this.logger.info(`同步操作完成: ${docId}`);
     } catch (error) {
       this.logger.error(`同步操作失败: ${docId}`, error);
@@ -150,10 +150,10 @@ export class PersistentSyncStateMachine {
    */
   public async triggerSync(docId: DocId): Promise<void> {
     this.logger.info(`触发同步操作: ${docId}`);
-    
+
     // 创建新的同步作业
     await this.syncJobManager.getOrCreateSyncJob(docId);
-    
+
     // 执行同步
     await this.executeSync(docId);
   }
@@ -165,12 +165,17 @@ export class PersistentSyncStateMachine {
     const allJobs = this.syncJobManager.getAllSyncJobs();
     return {
       total: allJobs.length,
-      successRate: allJobs.filter(job => job.status === SyncJobStatus.SYNCED).length / Math.max(allJobs.length, 1),
+      successRate:
+        allJobs.filter((job) => job.status === SyncJobStatus.SYNCED).length /
+        Math.max(allJobs.length, 1),
       avgDuration: 0, // SyncJob接口没有durationMs字段，暂时设为0
-      byStatus: allJobs.reduce((acc, job) => {
-        acc[job.status] = (acc[job.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
+      byStatus: allJobs.reduce(
+        (acc, job) => {
+          acc[job.status] = (acc[job.status] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     };
   }
 

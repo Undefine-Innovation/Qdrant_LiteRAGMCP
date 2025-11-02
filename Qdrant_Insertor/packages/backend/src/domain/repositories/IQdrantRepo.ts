@@ -1,5 +1,10 @@
 import { Schemas } from '@qdrant/js-client-rest';
-import { SearchResult, CollectionId, PointId, DocId } from '@domain/entities/types.js';
+import {
+  SearchResult,
+  CollectionId,
+  PointId,
+  DocId,
+} from '@domain/entities/types.js';
 
 /**
  * Qdrant向量点接�?

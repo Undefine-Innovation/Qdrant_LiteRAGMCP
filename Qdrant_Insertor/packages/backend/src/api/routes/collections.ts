@@ -155,7 +155,13 @@ export function createCollectionRoutes(
       params: CollectionIdParamsSchema,
       body: UpdateCollectionSchema,
     }),
-    async (req: ValidatedRequest<z.infer<typeof UpdateCollectionSchema>, z.infer<typeof CollectionIdParamsSchema>>, res) => {
+    async (
+      req: ValidatedRequest<
+        z.infer<typeof UpdateCollectionSchema>,
+        z.infer<typeof CollectionIdParamsSchema>
+      >,
+      res,
+    ) => {
       const validated = req.validated;
       const params = validated?.params;
       const body = validated?.body;
@@ -227,7 +233,13 @@ export function createCollectionRoutes(
       params: CollectionIdParamsSchema,
       body: UpdateCollectionSchema,
     }),
-    async (req: ValidatedRequest<z.infer<typeof UpdateCollectionSchema>, z.infer<typeof CollectionIdParamsSchema>>, res) => {
+    async (
+      req: ValidatedRequest<
+        z.infer<typeof UpdateCollectionSchema>,
+        z.infer<typeof CollectionIdParamsSchema>
+      >,
+      res,
+    ) => {
       const validated = req.validated;
       const params = validated?.params;
       const body = validated?.body;

@@ -54,7 +54,7 @@ const HEX_RE = /^[0-9a-f]{64}$/;
 
 /**
  * 生成点ID
- * 
+ *
  * @param docId - 文档ID
  * @param chunkIndex - 块索引
  * @returns 返回生成的点ID

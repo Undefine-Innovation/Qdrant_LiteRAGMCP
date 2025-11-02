@@ -17,7 +17,11 @@ export { BaseStateMachineStrategy } from './BaseStateMachineStrategy.js';
 
 // 具体策略实现
 /** 批量上传状态机策略及相关类型 */
-export { BatchUploadStrategy, BatchUploadState, BatchUploadEvent } from './BatchUploadStrategy.js';
+export {
+  BatchUploadStrategy,
+  BatchUploadState,
+  BatchUploadEvent,
+} from './BatchUploadStrategy.js';
 /**
  * 批量上传上下文类型
  */

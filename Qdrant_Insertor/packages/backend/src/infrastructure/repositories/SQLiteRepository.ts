@@ -80,7 +80,7 @@ export class SQLiteRepo implements ISQLiteRepo {
     // 创建事务管理器
     this.transactionManager = new TransactionManager(
       this.core,
-      this.qdrantRepo || {} as IQdrantRepo, // 提供默认空实现或抛出错误
+      this.qdrantRepo || ({} as IQdrantRepo), // 提供默认空实现或抛出错误
       this.logger,
     );
 
@@ -194,12 +194,12 @@ export class SQLiteRepo implements ISQLiteRepo {
   ): Promise<Record<string, { content: string }>> {
     const result = this.chunkManager.getChunkTexts(pointIds);
     if (!result) return Promise.resolve({});
-    
+
     // 转换格式以匹配接口
     const converted: Record<string, { content: string }> = {};
     for (const [pointId, value] of Object.entries(result)) {
       converted[pointId] = {
-        content: value.content
+        content: value.content,
       };
     }
     return Promise.resolve(converted);
@@ -285,7 +285,10 @@ export class SQLiteRepo implements ISQLiteRepo {
    * @param logger - 日志记录�?
    * @returns 初始化结�?
    */
-  async initializeDatabase(dbPath: string, logger: Logger): Promise<{
+  async initializeDatabase(
+    dbPath: string,
+    logger: Logger,
+  ): Promise<{
     success: boolean;
     message: string;
     error?: string;

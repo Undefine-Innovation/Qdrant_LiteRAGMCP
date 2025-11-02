@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import { Logger } from '@logging/logger.js';
-import { CHECK_TABLE_EXISTS, GET_ALL_TABLES } from '@infrastructure/sqlite/sql/schema.sql.js';
+import {
+  CHECK_TABLE_EXISTS,
+  GET_ALL_TABLES,
+} from '@infrastructure/sqlite/sql/schema.sql.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 

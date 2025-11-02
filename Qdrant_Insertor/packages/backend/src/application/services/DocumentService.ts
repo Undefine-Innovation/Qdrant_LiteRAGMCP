@@ -13,7 +13,7 @@ import { ImportService } from './ImportService.js'; // Assuming ImportService ha
 
 /**
  * 块数据的类型定义
- * 
+ *
  * 表示从数据库返回的块数据格式，包含块的基本信息和内容。
  * 用于在文档服务中处理文档块的映射和删除操作。
  */
@@ -28,11 +28,11 @@ interface ChunkData {
 
 /**
  * 文档服务实现类
- * 
+ *
  * 负责管理文档的创建、查询、更新和删除操作。
  * 提供文档级别的业务逻辑，包括文档与向量数据的同步管理。
  * 支持文档的重新同步和级联删除功能。
- * 
+ *
  * @example
  * ```typescript
  * const documentService = new DocumentService(sqliteRepo, importService, qdrantRepo);
@@ -43,7 +43,7 @@ interface ChunkData {
 export class DocumentService implements IDocumentService {
   /**
    * 构造函数
-   * 
+   *
    * @param sqliteRepo - SQLite 数据库仓储实例，用于本地数据持久化
    * @param importService - 导入服务实例，用于文档重新同步操作
    * @param qdrantRepo - Qdrant 向量数据库仓储实例，用于级联删除向量数据

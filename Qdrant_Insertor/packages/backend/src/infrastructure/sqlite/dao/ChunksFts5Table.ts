@@ -111,7 +111,7 @@ export class ChunksFts5Table {
 
       // 重新创建 FTS5 表，不使用content_rowid
       this.db.exec(
-        `CREATE VIRTUAL TABLE chunks_fts5 USING fts5(content, title, tokenize='porter')`
+        `CREATE VIRTUAL TABLE chunks_fts5 USING fts5(content, title, tokenize='porter')`,
       );
 
       // 使用原始 SQL 执行插入，避免better-sqlite3 的参数绑定问题

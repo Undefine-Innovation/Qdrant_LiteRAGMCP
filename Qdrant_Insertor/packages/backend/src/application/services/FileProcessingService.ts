@@ -67,7 +67,8 @@ export class FileProcessingService implements IFileProcessingService {
     let responseFormat = format || 'text';
 
     // 从数据库获取原始内容
-    const originalContent = await this.contentConverter.getDocumentContent(docId);
+    const originalContent =
+      await this.contentConverter.getDocumentContent(docId);
 
     switch (fileFormat.category) {
       case 'text':
@@ -77,7 +78,8 @@ export class FileProcessingService implements IFileProcessingService {
 
       case 'markdown':
         if (format === 'html') {
-          content = await this.contentConverter.convertMarkdownToHtml(originalContent);
+          content =
+            await this.contentConverter.convertMarkdownToHtml(originalContent);
           mimeType = 'text/html';
           responseFormat = 'html';
         } else {
@@ -145,12 +147,16 @@ export class FileProcessingService implements IFileProcessingService {
       filename = doc.name || `document${fileFormat.extension}`;
     } else {
       // 返回转换后的内容
-      const originalContent = await this.contentConverter.getDocumentContent(docId);
+      const originalContent =
+        await this.contentConverter.getDocumentContent(docId);
 
       switch (downloadFormat) {
         case 'html':
           if (fileFormat.category === 'markdown') {
-            content = await this.contentConverter.convertMarkdownToHtml(originalContent);
+            content =
+              await this.contentConverter.convertMarkdownToHtml(
+                originalContent,
+              );
             mimeType = 'text/html';
             filename = `${path.basename(doc.name || 'document', fileFormat.extension)}.html`;
           } else {

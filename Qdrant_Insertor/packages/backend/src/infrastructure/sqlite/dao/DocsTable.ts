@@ -148,7 +148,7 @@ export class DocsTable {
     ];
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
-
+
     let sql = `
       SELECT * FROM docs
       WHERE is_deleted = 0
@@ -159,7 +159,7 @@ export class DocsTable {
       sql += ' AND collectionId = ?';
       params.push(collectionId);
     }
-
+
     sql += ` ORDER BY ${sortField} ${sortOrder} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
@@ -232,4 +232,4 @@ export class DocsTable {
       is_deleted: Boolean(row.is_deleted),
     }));
   }
-}
+}

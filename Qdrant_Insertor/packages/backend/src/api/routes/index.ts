@@ -80,10 +80,10 @@ export function createApiRouter(services: ApiServices): express.Router {
   router.use('/', createBatchRoutes(services.batchService));
 
   // 爬虫路由
-  router.use('/scrape', createScrapeRoutes(
-    services.scrapeService,
-    services.logger
-  ));
+  router.use(
+    '/scrape',
+    createScrapeRoutes(services.scrapeService, services.logger),
+  );
 
   // 监控路由
   if (services.monitoringApiService) {

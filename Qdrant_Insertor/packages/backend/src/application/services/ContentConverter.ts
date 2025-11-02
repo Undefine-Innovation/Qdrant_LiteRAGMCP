@@ -106,7 +106,7 @@ export class ContentConverter {
         console.error(`Failed to read file from path: ${doc.key}`, error);
       }
     }
-    
+
     // 返回默认内容或抛出错误
     return doc.content || '';
   }

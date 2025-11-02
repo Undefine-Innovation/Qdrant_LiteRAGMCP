@@ -122,7 +122,9 @@ export class MonitoringApiService implements IMonitoringApiService {
    * 创建告警规则API
    * @param request
    */
-  async createAlertRule(request: CreateAlertRuleRequest): Promise<AlertRuleResponse> {
+  async createAlertRule(
+    request: CreateAlertRuleRequest,
+  ): Promise<AlertRuleResponse> {
     return this.alertApi.createAlertRule(request);
   }
 
@@ -162,7 +164,10 @@ export class MonitoringApiService implements IMonitoringApiService {
    * @param ruleId
    * @param request
    */
-  async updateAlertRule(ruleId: string, request: UpdateAlertRuleRequest): Promise<AlertRuleResponse> {
+  async updateAlertRule(
+    ruleId: string,
+    request: UpdateAlertRuleRequest,
+  ): Promise<AlertRuleResponse> {
     return this.alertApi.updateAlertRule(ruleId, request);
   }
 
@@ -178,7 +183,9 @@ export class MonitoringApiService implements IMonitoringApiService {
    * 获取告警历史API
    * @param request
    */
-  async getAlertHistory(request: AlertHistoryRequest): Promise<AlertHistoryResponse> {
+  async getAlertHistory(
+    request: AlertHistoryRequest,
+  ): Promise<AlertHistoryResponse> {
     return this.alertApi.getAlertHistory(request);
   }
 
@@ -186,7 +193,9 @@ export class MonitoringApiService implements IMonitoringApiService {
    * 创建通知渠道API
    * @param request
    */
-  async createNotificationChannel(request: CreateNotificationChannelRequest): Promise<NotificationChannelResponse> {
+  async createNotificationChannel(
+    request: CreateNotificationChannelRequest,
+  ): Promise<NotificationChannelResponse> {
     return this.notificationApi.createNotificationChannel(request);
   }
 
@@ -221,7 +230,9 @@ export class MonitoringApiService implements IMonitoringApiService {
    * 测试通知API
    * @param request
    */
-  async testNotification(request: TestNotificationRequest): Promise<TestNotificationResponse> {
+  async testNotification(
+    request: TestNotificationRequest,
+  ): Promise<TestNotificationResponse> {
     return this.notificationApi.testNotification(request);
   }
 }

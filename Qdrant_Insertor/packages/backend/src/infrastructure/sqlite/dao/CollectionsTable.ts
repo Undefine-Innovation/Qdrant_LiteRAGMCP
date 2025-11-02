@@ -105,7 +105,6 @@ export class CollectionsTable {
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
 
-
     const sql = `
       SELECT
         c.*,
@@ -170,4 +169,3 @@ export class CollectionsTable {
     }
   }
 }
-

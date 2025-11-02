@@ -1,11 +1,14 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { Logger } from '@logging/logger.js';
 import { PersistentSyncStateMachine } from './PersistentSyncStateMachine.js';
-import { HealthStatus, SystemHealth } from '../../infrastructure/sqlite/dao/SystemHealthTable.js';
+import {
+  HealthStatus,
+  SystemHealth,
+} from '../../infrastructure/sqlite/dao/SystemHealthTable.js';
 
 /**
  * 健康状态组件类型定义
- * 
+ *
  * 表示系统组件的健康状态信息，包含状态、检查时间和性能指标。
  * 用于监控服务中健康状态数据的类型安全处理。
  */
@@ -18,10 +21,10 @@ interface HealthComponent {
 
 /**
  * 监控服务核心类
- * 
+ *
  * 负责系统监控的核心功能，包括健康状态检查、性能指标收集和告警管理。
  * 提供系统级别的监控数据聚合和分析功能。
- * 
+ *
  * @example
  * ```typescript
  * const monitoringCore = new MonitoringServiceCore(sqliteRepo, syncStateMachine, logger);
@@ -32,7 +35,7 @@ interface HealthComponent {
 export class MonitoringServiceCore {
   /**
    * 构造函数
-   * 
+   *
    * @param sqliteRepo - SQLite 数据库仓储实例，用于存储监控数据
    * @param syncStateMachine - 持久化同步状态机实例，用于监控同步状态
    * @param logger - 日志记录器实例，用于记录监控日志
@@ -49,18 +52,23 @@ export class MonitoringServiceCore {
   public getSystemHealth(): {
     status: 'healthy' | 'degraded' | 'unhealthy';
     lastCheck: number;
-    components: Record<string, {
-      status: 'healthy' | 'degraded' | 'unhealthy';
-      lastCheck: string;
-      message?: string;
-      responseTime?: number;
-    }>;
+    components: Record<
+      string,
+      {
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        lastCheck: string;
+        message?: string;
+        responseTime?: number;
+      }
+    >;
   } {
     const health = this.sqliteRepo.systemHealth.getOverallHealth();
     return {
       status: health.status,
       lastCheck: Date.now(),
-      components: (health as { components?: Record<string, HealthComponent> }).components || {},
+      components:
+        (health as { components?: Record<string, HealthComponent> })
+          .components || {},
     };
   }
 
@@ -78,7 +86,7 @@ export class MonitoringServiceCore {
   } | null {
     const health = this.sqliteRepo.systemHealth.getByComponent(component);
     if (!health) return null;
-    
+
     return {
       component: health.component,
       status: health.status,
@@ -186,15 +194,18 @@ export class MonitoringServiceCore {
    * 获取多个指标的最新值
    * @param metricNames
    */
-  public getLatestMetrics(metricNames: string[]): Record<string, {
-    id: string;
-    metricName: string;
-    metricValue: number;
-    metricUnit?: string;
-    tags?: Record<string, string | number>;
-    timestamp: number;
-    createdAt: number;
-  } | null> {
+  public getLatestMetrics(metricNames: string[]): Record<
+    string,
+    {
+      id: string;
+      metricName: string;
+      metricValue: number;
+      metricUnit?: string;
+      tags?: Record<string, string | number>;
+      timestamp: number;
+      createdAt: number;
+    } | null
+  > {
     return this.sqliteRepo.systemMetrics.getLatestByNames(metricNames);
   }
 
@@ -227,7 +238,7 @@ export class MonitoringServiceCore {
       defaultEndTime,
       aggregationType,
     );
-    
+
     if (result) {
       return {
         min: aggregationType === 'min' ? result.value : 0,
@@ -237,7 +248,7 @@ export class MonitoringServiceCore {
         count: result.count,
       };
     }
-    
+
     return {
       min: 0,
       max: 0,
@@ -276,7 +287,7 @@ export class MonitoringServiceCore {
       startTime,
       endTime,
     );
-    
+
     if (result) {
       return {
         min: result.min,
@@ -286,7 +297,7 @@ export class MonitoringServiceCore {
         count: result.count,
       };
     }
-    
+
     return {
       min: 0,
       max: 0,

@@ -25,7 +25,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
    */
   constructor(
     private readonly logger: Logger,
-    persistence?: StatePersistence
+    persistence?: StatePersistence,
   ) {
     // 如果没有提供持久化实现，使用内存实现
     this.persistence = persistence || new InMemoryStatePersistence(logger);
@@ -56,7 +56,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
   async createTask(
     taskType: string,
     taskId: string,
-    initialContext?: StateMachineContext
+    initialContext?: StateMachineContext,
   ): Promise<StateMachineTask> {
     const strategy = this.getStrategy(taskType);
     if (!strategy) {
@@ -78,7 +78,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
   async transitionState(
     taskId: string,
     event: string,
-    context?: StateMachineContext
+    context?: StateMachineContext,
   ): Promise<boolean> {
     const task = await this.persistence.getTask(taskId);
     if (!task) {
@@ -168,7 +168,9 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
   /**
    * 清理过期任务
    */
-  async cleanupExpiredTasks(olderThan: number = 24 * 60 * 60 * 1000): Promise<number> {
+  async cleanupExpiredTasks(
+    olderThan: number = 24 * 60 * 60 * 1000,
+  ): Promise<number> {
     this.logger.info(`开始清理过期任务 (超过 ${olderThan}ms)`);
     const deletedCount = await this.persistence.cleanupExpiredTasks(olderThan);
     this.logger.info(`清理完成，共删除 ${deletedCount} 个过期任务`);
@@ -211,7 +213,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
   async createTasks(
     taskType: string,
     taskIds: string[],
-    initialContext?: StateMachineContext
+    initialContext?: StateMachineContext,
   ): Promise<StateMachineTask[]> {
     const strategy = this.getStrategy(taskType);
     if (!strategy) {
@@ -234,23 +236,30 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
       this.logger.warn(`批量创建任务时发生错误: ${errors.join('; ')}`);
     }
 
-    this.logger.info(`批量创建任务完成: 成功 ${tasks.length} 个，失败 ${errors.length} 个`);
+    this.logger.info(
+      `批量创建任务完成: 成功 ${tasks.length} 个，失败 ${errors.length} 个`,
+    );
     return tasks;
   }
 
   /**
    * 批量执行任务
    */
-  async executeTasks(taskIds: string[], concurrency: number = 5): Promise<void> {
-    this.logger.info(`开始批量执行任务: ${taskIds.length} 个任务，并发数: ${concurrency}`);
+  async executeTasks(
+    taskIds: string[],
+    concurrency: number = 5,
+  ): Promise<void> {
+    this.logger.info(
+      `开始批量执行任务: ${taskIds.length} 个任务，并发数: ${concurrency}`,
+    );
 
     // 分批执行任务
     for (let i = 0; i < taskIds.length; i += concurrency) {
       const batch = taskIds.slice(i, i + concurrency);
-      const promises = batch.map(taskId => 
-        this.executeTask(taskId).catch(error => {
+      const promises = batch.map((taskId) =>
+        this.executeTask(taskId).catch((error) => {
           this.logger.error(`批量执行任务失败: ${taskId}, 错误: ${error}`);
-        })
+        }),
       );
 
       await Promise.all(promises);

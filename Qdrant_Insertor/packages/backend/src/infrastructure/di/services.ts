@@ -150,21 +150,28 @@ export async function initializeServices(
   );
 
   const graphService: IGraphService = new GraphService();
-  
+
   // 创建状态机服务
   const stateMachineService = new StateMachineService(
     logger,
     (dbRepo as any).getDb?.(), // eslint-disable-line @typescript-eslint/no-explicit-any -- 获取底层数据库实例
   );
-  
+
   const webCrawler = new WebCrawler(logger, new ContentExtractor(logger));
-  const scrapeService: ScrapeService = new ScrapeService(stateMachineService.getEngine(), logger);
+  const scrapeService: ScrapeService = new ScrapeService(
+    stateMachineService.getEngine(),
+    logger,
+  );
   const autoGCService = new AutoGCService(dbRepo, qdrantRepo, logger, config);
 
   const collectionService: ICollectionService = new CollectionService(
     dbRepo,
     qdrantRepo,
-    (dbRepo as ISQLiteRepo & { getTransactionManager: () => TransactionManager }).getTransactionManager?.() || undefined,
+    (
+      dbRepo as ISQLiteRepo & {
+        getTransactionManager: () => TransactionManager;
+      }
+    ).getTransactionManager?.() || undefined,
   );
   const documentService: IDocumentService = new DocumentService(
     dbRepo,

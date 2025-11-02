@@ -36,27 +36,27 @@ export interface ISQLiteRepo {
    * 集合表访问器
    */
   readonly collections: CollectionsTable;
-  
+
   /**
    * 文档表访问器
    */
   readonly docs: DocsTable;
-  
+
   /**
    * 块元数据表访问器
    */
   readonly chunkMeta: ChunkMetaTable;
-  
+
   /**
    * 块全文搜索表访问器
    */
   readonly chunksFts5: ChunksFts5Table;
-  
+
   /**
    * 块表访问器
    */
   readonly chunks: ChunksTable;
-  
+
   /**
    * 同步任务表访问器
    */
@@ -186,17 +186,16 @@ export interface ISQLiteRepo {
    * @param pointIds - 点ID数组
    * @returns 块文本内容映射
    */
-  getChunkTexts(pointIds: PointId[]): Promise<Record<string, { content: string }>>;
+  getChunkTexts(
+    pointIds: PointId[],
+  ): Promise<Record<string, { content: string }>>;
 
   /**
    * 添加块
    * @param docId - 文档ID
    * @param documentChunks - 文档块数组
    */
-  addChunks(
-    docId: DocId,
-    documentChunks: DocumentChunk[],
-  ): Promise<void>;
+  addChunks(docId: DocId, documentChunks: DocumentChunk[]): Promise<void>;
 
   /**
    * 标记文档为已同步
@@ -210,7 +209,10 @@ export interface ISQLiteRepo {
    * @param logger - 日志记录器
    * @returns 初始化结果
    */
-  initializeDatabase(dbPath: string, logger: Logger): Promise<{
+  initializeDatabase(
+    dbPath: string,
+    logger: Logger,
+  ): Promise<{
     success: boolean;
     message: string;
     error?: string;

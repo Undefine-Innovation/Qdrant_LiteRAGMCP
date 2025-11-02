@@ -89,20 +89,22 @@ export class ChunkManager {
       collectionId,
     );
 
-    return chunks.map((row: {
-      pointId: PointId;
-      docId: DocId;
-      collectionId: CollectionId;
-      chunkIndex: number;
-      content: string;
-      title?: string;
-      titleChain: string;
-    }) => ({
-      ...row,
-      docId: row.docId,
-      pointId: row.pointId,
-      collectionId: row.collectionId,
-    }));
+    return chunks.map(
+      (row: {
+        pointId: PointId;
+        docId: DocId;
+        collectionId: CollectionId;
+        chunkIndex: number;
+        content: string;
+        title?: string;
+        titleChain: string;
+      }) => ({
+        ...row,
+        docId: row.docId,
+        pointId: row.pointId,
+        collectionId: row.collectionId,
+      }),
+    );
   }
 
   /**
@@ -162,7 +164,10 @@ export class ChunkManager {
           title: cm.titleChain || undefined,
           content: documentChunks[index].content,
         }));
-        this.logger.info(`[ChunkManager.addChunks] chunksData示例:`, chunksData[0]);
+        this.logger.info(
+          `[ChunkManager.addChunks] chunksData示例:`,
+          chunksData[0],
+        );
         // 确保 title 字段正确处理 null/undefined
         const processedChunksData = chunksData.map((chunk) => ({
           ...chunk,
@@ -209,24 +214,30 @@ export class ChunkManager {
     // 这里应该从DocumentManager获取文档
     // 暂时直接从docs表获�?
     // 需要通过SQLiteRepoCore访问docs�?
-    const doc = (this.core as { docs?: { getById: (id: DocId) => {
-      docId: DocId;
-      name: string;
-      collectionId: CollectionId;
-      key?: string;
-      mime?: string;
-      content?: string;
-      size_bytes?: number;
-      created_at?: number;
-      updated_at?: number;
-      synced_at?: number;
-      deleted_at?: number;
-    } } }).docs?.getById(docId);
-    
+    const doc = (
+      this.core as {
+        docs?: {
+          getById: (id: DocId) => {
+            docId: DocId;
+            name: string;
+            collectionId: CollectionId;
+            key?: string;
+            mime?: string;
+            content?: string;
+            size_bytes?: number;
+            created_at?: number;
+            updated_at?: number;
+            synced_at?: number;
+            deleted_at?: number;
+          };
+        };
+      }
+    ).docs?.getById(docId);
+
     if (!doc) {
       throw new Error(`Document ${docId} not found`);
     }
-    
+
     return {
       docId: doc.docId,
       name: doc.name,

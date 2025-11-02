@@ -32,7 +32,10 @@ export class ContentExtractor implements IContentExtractor {
    * @param selectors - CSS选择器配置
    * @returns 提取结果
    */
-  extract(html: string, selectors?: ScrapeConfig['selectors']): {
+  extract(
+    html: string,
+    selectors?: ScrapeConfig['selectors'],
+  ): {
     title?: string;
     content?: string;
     links?: Array<{ url: string; text?: string; title?: string }>;
@@ -51,25 +54,32 @@ export class ContentExtractor implements IContentExtractor {
       }
 
       // 提取标题
-      const title = selectors.title ? this.extractBySelector(html, selectors.title) : undefined;
+      const title = selectors.title
+        ? this.extractBySelector(html, selectors.title)
+        : undefined;
 
       // 提取主要内容
-      const content = selectors.content ? this.extractBySelector(html, selectors.content) : undefined;
+      const content = selectors.content
+        ? this.extractBySelector(html, selectors.content)
+        : undefined;
 
       // 提取链接
-      const links = selectors.links ? this.extractLinks(html, selectors.links) : undefined;
+      const links = selectors.links
+        ? this.extractLinks(html, selectors.links)
+        : undefined;
 
-      this.logger.info(`内容提取完成，标题: ${title}, 链接数: ${links?.length || 0}`);
+      this.logger.info(
+        `内容提取完成，标题: ${title}, 链接数: ${links?.length || 0}`,
+      );
 
       return {
         title,
         content,
         links,
       };
-
     } catch (error) {
       this.logger.error(`内容提取失败: ${error}`);
-      
+
       return {
         title: undefined,
         content: undefined,
@@ -85,18 +95,21 @@ export class ContentExtractor implements IContentExtractor {
    * @param selector - CSS选择器
    * @returns 提取的文本内容
    */
-  private extractBySelector(html: string, selector: string): string | undefined {
+  private extractBySelector(
+    html: string,
+    selector: string,
+  ): string | undefined {
     try {
       // 在实际项目中，应该使用cheerio或类似的HTML解析库
       // 这里提供一个简单的正则表达式实现
       const regex = new RegExp(`<[^>]*${selector}[^>]*>([^<]*)`, 'gi');
       const matches = html.match(regex);
-      
+
       if (matches && matches.length > 0) {
         // 移除HTML标签，只保留文本内容
         return matches[0].replace(/<[^>]*>/g, '').trim();
       }
-      
+
       return undefined;
     } catch (error) {
       this.logger.warn(`选择器提取失败: ${selector}, 错误: ${error}`);
@@ -127,7 +140,9 @@ export class ContentExtractor implements IContentExtractor {
       }
 
       // 如果没有找到标题，尝试从meta标签获取
-      const metaMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["'][^>]*>/i);
+      const metaMatch = html.match(
+        /<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["'][^>]*>/i,
+      );
       if (metaMatch && metaMatch[1]) {
         return metaMatch[1].replace(/["']/g, '');
       }
@@ -145,7 +160,10 @@ export class ContentExtractor implements IContentExtractor {
    * @param linkSelector - 链接选择器
    * @returns 提取的链接数组
    */
-  private extractLinks(html: string, linkSelector?: string): Array<{ url: string; text?: string; title?: string }> | undefined {
+  private extractLinks(
+    html: string,
+    linkSelector?: string,
+  ): Array<{ url: string; text?: string; title?: string }> | undefined {
     try {
       // 在实际项目中，应该使用cheerio或类似的HTML解析库
       // 这里提供一个简单的正则表达式实现
@@ -157,7 +175,9 @@ export class ContentExtractor implements IContentExtractor {
 
       while ((match = hrefRegex.exec(html)) !== null) {
         const url = match[1];
-        const linkText = match[2] ? match[2].replace(/<[^>]*>/g, '').trim() : '';
+        const linkText = match[2]
+          ? match[2].replace(/<[^>]*>/g, '').trim()
+          : '';
         const title = this.extractTitle(match[2]) || linkText;
 
         links.push({
@@ -169,7 +189,6 @@ export class ContentExtractor implements IContentExtractor {
 
       this.logger.info(`链接提取完成，共找到 ${links.length} 个链接`);
       return links;
-
     } catch (error) {
       this.logger.warn(`链接提取失败: ${error}`);
       return undefined;

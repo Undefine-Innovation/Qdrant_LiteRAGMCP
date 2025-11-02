@@ -298,7 +298,10 @@ export function createMonitoringRoutes(
         const { channelId } = req.params;
         const result = await monitoringApiService.testNotification({
           channelId,
-          ...(req.validated!.body as Omit<TestNotificationRequest, 'channelId'>),
+          ...(req.validated!.body as Omit<
+            TestNotificationRequest,
+            'channelId'
+          >),
         });
         res.json(result);
       } catch (error) {

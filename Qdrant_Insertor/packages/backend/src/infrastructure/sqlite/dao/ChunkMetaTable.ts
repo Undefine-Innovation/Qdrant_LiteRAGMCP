@@ -109,27 +109,30 @@ export class ChunkMetaTable {
               now,
             );
           } catch (insertError) {
-            console.error(`[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`, {
-              error: (insertError as Error).message,
-              stack: (insertError as Error).stack,
-              pointId: items[i].pointId,
-              pointIdType: typeof items[i].pointId,
-              docId: items[i].docId,
-              docIdType: typeof items[i].docId,
-              collectionId: items[i].collectionId,
-              collectionIdType: typeof items[i].collectionId,
-              chunkIndex: items[i].chunkIndex,
-              chunkIndexType: typeof items[i].chunkIndex,
-              titleChain: items[i].titleChain,
-              titleChainType: typeof items[i].titleChain,
-              titleChainValue: items[i].titleChain,
-              contentHash: items[i].contentHash,
-              contentHashType: typeof items[i].contentHash,
-            });
+            console.error(
+              `[ChunkMetaTable.createBatch] 插入第${i + 1}条数据失败:`,
+              {
+                error: (insertError as Error).message,
+                stack: (insertError as Error).stack,
+                pointId: items[i].pointId,
+                pointIdType: typeof items[i].pointId,
+                docId: items[i].docId,
+                docIdType: typeof items[i].docId,
+                collectionId: items[i].collectionId,
+                collectionIdType: typeof items[i].collectionId,
+                chunkIndex: items[i].chunkIndex,
+                chunkIndexType: typeof items[i].chunkIndex,
+                titleChain: items[i].titleChain,
+                titleChainType: typeof items[i].titleChain,
+                titleChainValue: items[i].titleChain,
+                contentHash: items[i].contentHash,
+                contentHashType: typeof items[i].contentHash,
+              },
+            );
             throw insertError;
           }
         }
-      }
+      },
     );
 
     try {
@@ -241,10 +244,7 @@ export class ChunkMetaTable {
     }
     const placeholders = pointIds.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace(
-        '(?)',
-        `(${placeholders})`,
-      ),
+      SELECT_CHUNKS_DETAILS_BY_POINT_IDS.replace('(?)', `(${placeholders})`),
     );
     return stmt.all(...pointIds, collectionId) as Array<{
       pointId: PointId;
@@ -267,10 +267,7 @@ export class ChunkMetaTable {
     }
     const placeholders = pointIds.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      DELETE_CHUNKS_META_BATCH.replace(
-        '(?)',
-        `(${placeholders})`,
-      ),
+      DELETE_CHUNKS_META_BATCH.replace('(?)', `(${placeholders})`),
     );
     stmt.run(...pointIds);
   }

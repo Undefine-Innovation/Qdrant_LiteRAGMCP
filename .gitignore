@@ -65,7 +65,10 @@ Thumbs.db
 .now/
 *.tmp
 *.temp
+thumbnails/
+file_cache/
 
 *.db
 *.db-shm
 *.db-wal
+*.txt

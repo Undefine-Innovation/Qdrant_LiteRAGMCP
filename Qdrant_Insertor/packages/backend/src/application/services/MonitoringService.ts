@@ -72,12 +72,15 @@ export class MonitoringService {
   public getSystemHealth(): {
     status: 'healthy' | 'degraded' | 'unhealthy';
     lastCheck: number;
-    components: Record<string, {
-      status: 'healthy' | 'degraded' | 'unhealthy';
-      lastCheck: string;
-      message?: string;
-      responseTime?: number;
-    }>;
+    components: Record<
+      string,
+      {
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        lastCheck: string;
+        message?: string;
+        responseTime?: number;
+      }
+    >;
   } {
     return this.core.getSystemHealth();
   }
@@ -169,15 +172,18 @@ export class MonitoringService {
    * 获取多个指标的最新�?
    * @param metricNames
    */
-  public getLatestMetrics(metricNames: string[]): Record<string, {
-    id: string;
-    metricName: string;
-    metricValue: number;
-    metricUnit?: string;
-    tags?: Record<string, string | number>;
-    timestamp: number;
-    createdAt: number;
-  } | null> {
+  public getLatestMetrics(metricNames: string[]): Record<
+    string,
+    {
+      id: string;
+      metricName: string;
+      metricValue: number;
+      metricUnit?: string;
+      tags?: Record<string, string | number>;
+      timestamp: number;
+      createdAt: number;
+    } | null
+  > {
     return this.core.getLatestMetrics(metricNames);
   }
 

@@ -2,7 +2,10 @@
  * 告警服务接口
  * @description 定义告警管理的核心业务接口，遵循依赖倒置原则
  */
-import { AlertRule, AlertHistory } from '../../infrastructure/sqlite/dao/index.js';
+import {
+  AlertRule,
+  AlertHistory,
+} from '../../infrastructure/sqlite/dao/index.js';
 
 /**
  * 告警规则配置接口

@@ -32,7 +32,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
 
   /**
    * Creates an instance of OpenAIEmbeddingProvider.
-   * 
+   *
    * @param config - `OpenAIEmbeddingProvider` 的配置对象，包含 API 密钥、基础 URL 和模型名称
    */
   constructor(config: OpenAIEmbeddingProviderConfig) {
@@ -41,7 +41,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
 
   /**
    * Initializes OpenAI client.
-   * 
+   *
    * @returns 一个Promise，解析为初始化后的OpenAI 客户端实例
    */
   private async initializeClient(): Promise<import('openai').default> {
@@ -59,7 +59,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
 
   /**
    * Generates embeddings for given texts.
-   * 
+   *
    * @param texts - 一个字符串数组，用于生成嵌入
    * @returns 一个Promise，解析为 `number[][]` 类型的嵌入数组
    */
@@ -120,7 +120,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
 
 /**
  * Factory function to create an OpenAIEmbeddingProvider from global application config.
- * 
+ *
  * @returns An instance of OpenAIEmbeddingProvider.
  */
 export function createOpenAIEmbeddingProviderFromConfig(): OpenAIEmbeddingProvider {

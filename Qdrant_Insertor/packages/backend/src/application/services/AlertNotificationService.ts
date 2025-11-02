@@ -1,5 +1,9 @@
 import { Logger } from '@logging/logger.js';
-import { AlertRule, AlertHistory, AlertSeverity } from '@infrastructure/sqlite/dao/index.js';
+import {
+  AlertRule,
+  AlertHistory,
+  AlertSeverity,
+} from '@infrastructure/sqlite/dao/index.js';
 
 /**
  * 告警通知渠道接口

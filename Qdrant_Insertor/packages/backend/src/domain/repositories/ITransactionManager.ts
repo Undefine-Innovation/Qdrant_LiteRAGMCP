@@ -155,10 +155,7 @@ export interface ITransactionManager {
    * @param transactionId 事务ID
    * @param savepointId 保存点ID
    */
-  releaseSavepoint(
-    transactionId: string,
-    savepointId: string,
-  ): Promise<void>;
+  releaseSavepoint(transactionId: string, savepointId: string): Promise<void>;
 
   /**
    * 获取事务状态

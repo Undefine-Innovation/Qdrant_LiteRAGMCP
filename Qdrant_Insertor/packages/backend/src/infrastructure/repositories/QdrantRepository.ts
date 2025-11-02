@@ -3,7 +3,12 @@ import type { Schemas } from '@qdrant/js-client-rest';
 import { AppConfig } from '@config/config.js';
 import { Logger } from '@logging/logger.js';
 import { IQdrantRepo, Point } from '@domain/repositories/IQdrantRepo.js';
-import { PointId, DocId, CollectionId, SearchResult } from '@domain/entities/types.js';
+import {
+  PointId,
+  DocId,
+  CollectionId,
+  SearchResult,
+} from '@domain/entities/types.js';
 
 /**
  * A repository class for interacting with Qdrant vector database.
@@ -58,7 +63,7 @@ export class QdrantRepo implements IQdrantRepo {
       if (actualSize && actualSize !== this.config.vectorSize) {
         throw new Error(
           `Qdrant collection "${this.collectionName}" vector size mismatch: ` +
-          `expected ${this.config.vectorSize}, got ${actualSize}`,
+            `expected ${this.config.vectorSize}, got ${actualSize}`,
         );
       }
     } catch (err) {
@@ -66,7 +71,9 @@ export class QdrantRepo implements IQdrantRepo {
         error: err,
         collectionName: this.collectionName,
       });
-      throw new Error(`Failed to ensure Qdrant collection: ${this.collectionName}`);
+      throw new Error(
+        `Failed to ensure Qdrant collection: ${this.collectionName}`,
+      );
     }
   }
 
@@ -102,7 +109,10 @@ export class QdrantRepo implements IQdrantRepo {
    * @param {CollectionId} collectionId - The ID of the collection to upsert into.
    * @param {Point[]} points - An array of points to upsert.
    */
-  async upsertCollection(collectionId: CollectionId, points: Point[]): Promise<void> {
+  async upsertCollection(
+    collectionId: CollectionId,
+    points: Point[],
+  ): Promise<void> {
     if (!points?.length) {
       this.logger.info('No points to upsert.');
       return;
@@ -119,10 +129,13 @@ export class QdrantRepo implements IQdrantRepo {
           points: batch,
         });
       } catch (e) {
-        this.logger.error(`Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`, {
-          error: e,
-          batchSize: batch.length,
-        });
+        this.logger.error(
+          `Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`,
+          {
+            error: e,
+            batchSize: batch.length,
+          },
+        );
       }
     }
   }
@@ -225,9 +238,7 @@ export class QdrantRepo implements IQdrantRepo {
    * @param {string} collectionId - The ID of the collection to get points for.
    * @returns {Promise<PointId[]>} A promise that resolves to an array of point IDs.
    */
-  async getAllPointIdsInCollection(
-    collectionId: string,
-  ): Promise<PointId[]> {
+  async getAllPointIdsInCollection(collectionId: string): Promise<PointId[]> {
     try {
       const { points } = await this.client.scroll(this.collectionName, {
         limit: 10000, // Adjust based on your needs
@@ -235,7 +246,10 @@ export class QdrantRepo implements IQdrantRepo {
       });
       return points.map((point) => point.id as PointId);
     } catch (e) {
-      this.logger.error('Error getting all point IDs:', { error: e, collectionId });
+      this.logger.error('Error getting all point IDs:', {
+        error: e,
+        collectionId,
+      });
       return [];
     }
   }
@@ -262,11 +276,14 @@ export class QdrantRepo implements IQdrantRepo {
           points: batch,
         });
       } catch (e) {
-        this.logger.warn(`Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`, {
-          collectionId,
-          pointIds: batch,
-          error: e,
-        });
+        this.logger.warn(
+          `Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`,
+          {
+            collectionId,
+            pointIds: batch,
+            error: e,
+          },
+        );
       }
     }
   }

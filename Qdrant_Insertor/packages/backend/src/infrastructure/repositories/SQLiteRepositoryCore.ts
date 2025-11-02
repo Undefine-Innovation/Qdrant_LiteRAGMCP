@@ -16,7 +16,7 @@ export class SQLiteRepoCore {
 
   /**
    * 创建SQLite仓库核心实例
-   * 
+   *
    * @param db `better-sqlite3` 数据库实例
    */
   constructor(db: Database.Database) {
@@ -37,7 +37,7 @@ export class SQLiteRepoCore {
 
   /**
    * 在数据库事务中执行一个函数
-   * 
+   *
    * @param fn 包含数据库操作的函数
    * @returns 事务函数的返回值
    */
@@ -54,7 +54,7 @@ export class SQLiteRepoCore {
 
   /**
    * 检查数据库连接是否存活
-   * 
+   *
    * @returns 如果连接响应正常则返回true，否则返回false
    */
   ping(): boolean {
@@ -65,7 +65,7 @@ export class SQLiteRepoCore {
 
   /**
    * 初始化数据库
-   * 
+   *
    * @param dbPath - 数据库文件路径
    * @param logger - 日志记录器
    * @returns 初始化结果
@@ -82,7 +82,7 @@ export class SQLiteRepoCore {
 
   /**
    * 获取数据库状态信息
-   * 
+   *
    * @param dbPath - 数据库文件路径
    * @param logger - 日志记录器
    * @returns 数据库状态信息
@@ -96,7 +96,7 @@ export class SQLiteRepoCore {
 
   /**
    * 检查数据库初始化状态
-   * 
+   *
    * @param dbPath - 数据库文件路径
    * @param logger - 日志记录器
    * @returns 初始化状态

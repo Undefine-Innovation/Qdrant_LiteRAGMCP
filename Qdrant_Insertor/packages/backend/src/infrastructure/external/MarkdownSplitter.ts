@@ -8,7 +8,7 @@ type HeadingEvt = { index: number; level: number; text: string };
 
 /**
  * 标准化行结束符
- * 
+ *
  * @param s - 输入字符串
  * @returns 标准化后的字符串
  */
@@ -18,7 +18,7 @@ function normalizeEol(s: string) {
 
 /**
  * 获取基础文件名
- * 
+ *
  * @param p - 文件路径
  * @returns 基础文件名
  */
@@ -31,7 +31,7 @@ function baseName(p?: string): string | null {
 
 /**
  * 收集Markdown标题
- * 
+ *
  * @param md - Markdown内容
  * @returns 标题事件数组
  */
@@ -72,7 +72,7 @@ function collectHeadings(md: string): HeadingEvt[] {
 
 /**
  * 构建标题跟踪器
- * 
+ *
  * @param md - Markdown内容
  * @returns 标题跟踪器函数
  */
@@ -101,7 +101,7 @@ function buildTitleTracker(md: string) {
 export class MarkdownSplitter implements ISplitter {
   /**
    * 创建Markdown分割器实例
-   * 
+   *
    * @param options 默认的分割选项
    */
   constructor(
@@ -111,7 +111,7 @@ export class MarkdownSplitter implements ISplitter {
   /**
    * 将给定的 Markdown 内容分割成文档块数组
    * Splits the given Markdown content into an array of document chunks.
-   * 
+   *
    * @param content 要分割的 Markdown 字符串内容
    * @param options 本次分割操作的选项，例如`{ docPath: 'path/to/doc.md' }`
    * @param options.docPath - 文档路径

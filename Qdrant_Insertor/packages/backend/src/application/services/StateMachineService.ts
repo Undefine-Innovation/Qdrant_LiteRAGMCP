@@ -1,15 +1,18 @@
 import Database from 'better-sqlite3';
 import { Logger } from '@logging/logger.js';
-import { 
-  IStateMachineService, 
+import {
+  IStateMachineService,
   TaskExecutionOptions,
   BatchUploadFile,
   BatchUploadOptions,
-  BatchUploadBatch
+  BatchUploadBatch,
 } from '@domain/repositories/IStateMachineService.js';
 import { BaseStateMachineEngine } from '@domain/state-machine/BaseStateMachineEngine.js';
 import { BatchUploadStrategy } from '@domain/state-machine/BatchUploadStrategy.js';
-import { InMemoryStatePersistence, SQLiteStatePersistence } from '@infrastructure/state-machine/StatePersistence.js';
+import {
+  InMemoryStatePersistence,
+  SQLiteStatePersistence,
+} from '@infrastructure/state-machine/StatePersistence.js';
 import {
   IStateMachineEngine,
   StateMachineTask,
@@ -32,12 +35,13 @@ export class StateMachineService implements IStateMachineService {
    */
   constructor(
     private readonly logger: Logger,
-    db?: unknown // SQLite数据库实例
+    db?: unknown, // SQLite数据库实例
   ) {
     // 根据环境选择持久化实现
-    const persistence = db && typeof db === 'object' && 'prepare' in db
-      ? new SQLiteStatePersistence(db as Database.Database, logger)
-      : new InMemoryStatePersistence(logger);
+    const persistence =
+      db && typeof db === 'object' && 'prepare' in db
+        ? new SQLiteStatePersistence(db as Database.Database, logger)
+        : new InMemoryStatePersistence(logger);
 
     this.engine = new BaseStateMachineEngine(logger, persistence);
     this.initializeStrategies();
@@ -51,7 +55,7 @@ export class StateMachineService implements IStateMachineService {
     const batchUploadStrategy = new BatchUploadStrategy(
       // 使用类型断言访问私有属性
       (this.engine as any).persistence, // eslint-disable-line @typescript-eslint/no-explicit-any -- 访问引擎私有属性
-      this.logger
+      this.logger,
     );
     this.engine.registerStrategy(batchUploadStrategy);
 
@@ -65,7 +69,7 @@ export class StateMachineService implements IStateMachineService {
     batchId: string,
     files: BatchUploadFile[],
     collectionId: string,
-    options?: BatchUploadOptions
+    options?: BatchUploadOptions,
   ): Promise<StateMachineTask> {
     const context: BatchUploadContext = {
       taskId: batchId,
@@ -133,20 +137,20 @@ export class StateMachineService implements IStateMachineService {
    */
   async getTaskStats(): Promise<Record<string, Record<string, number>>> {
     const tasks = await this.engine.getTasksByType('batch_upload');
-    
+
     const stats: Record<string, Record<string, number>> = {
-      'batch_upload': {}
+      batch_upload: {},
     };
-    
+
     // 按状态分组统计
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       const status = task.status;
       if (!stats['batch_upload'][status]) {
         stats['batch_upload'][status] = 0;
       }
       stats['batch_upload'][status]++;
     });
-    
+
     return stats;
   }
 
@@ -154,9 +158,9 @@ export class StateMachineService implements IStateMachineService {
    * 批量创建任务
    */
   async createBatchUploadTasks(
-    batches: BatchUploadBatch[]
+    batches: BatchUploadBatch[],
   ): Promise<StateMachineTask[]> {
-    const taskIds = batches.map(batch => batch.batchId);
+    const taskIds = batches.map((batch) => batch.batchId);
     const tasks: StateMachineTask[] = [];
 
     for (const batch of batches) {
@@ -164,7 +168,7 @@ export class StateMachineService implements IStateMachineService {
         batch.batchId,
         batch.files,
         batch.collectionId,
-        batch.options
+        batch.options,
       );
       tasks.push(task);
     }
@@ -175,7 +179,10 @@ export class StateMachineService implements IStateMachineService {
   /**
    * 批量执行任务
    */
-  async executeBatchUploadTasks(batchIds: string[], concurrency: number = 3): Promise<void> {
+  async executeBatchUploadTasks(
+    batchIds: string[],
+    concurrency: number = 3,
+  ): Promise<void> {
     // 由于 IStateMachineEngine 没有 executeTasks 方法，我们逐一执行任务
     for (const batchId of batchIds) {
       try {

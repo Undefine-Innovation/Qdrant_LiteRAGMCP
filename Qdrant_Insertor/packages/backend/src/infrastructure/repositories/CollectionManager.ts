@@ -81,11 +81,13 @@ export class CollectionManager {
 
   /**
    * 获取所有集合的 ID
-   * 
+   *
    * @returns 包含所有集合ID 的数组
    */
   async getAllCollectionIds(): Promise<CollectionId[]> {
     const collections = this.collections.listAll();
-    return collections.map((c: { collectionId: CollectionId }) => c.collectionId);
+    return collections.map(
+      (c: { collectionId: CollectionId }) => c.collectionId,
+    );
   }
 }

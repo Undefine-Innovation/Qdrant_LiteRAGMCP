@@ -66,17 +66,20 @@ export class ChunksTable {
     const insert = this.db.prepare(INSERT_CHUNKS_BATCH);
 
     const insertMany = this.db.transaction(
-      (items: Array<{
-        pointId: PointId;
-        docId: DocId;
-        collectionId: CollectionId;
-        chunkIndex: number;
-        title?: string;
-        content: string;
-      }>) => {
+      (
+        items: Array<{
+          pointId: PointId;
+          docId: DocId;
+          collectionId: CollectionId;
+          chunkIndex: number;
+          title?: string;
+          content: string;
+        }>,
+      ) => {
         for (const item of items) {
           // 处理 title 字段：将 undefined/null 转换为空字符串
-          const titleForDb = item.title === undefined || item.title === null ? '' : item.title;
+          const titleForDb =
+            item.title === undefined || item.title === null ? '' : item.title;
 
           // 确保 chunkIndex 是整数
           const chunkIndexInt = Math.floor(item.chunkIndex);

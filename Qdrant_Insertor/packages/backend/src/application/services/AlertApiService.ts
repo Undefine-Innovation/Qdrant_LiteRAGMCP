@@ -7,10 +7,7 @@ import {
   AlertHistoryResponse,
 } from '@api/contracts/monitoring.js';
 import { logger } from '@logging/logger.js';
-import {
-  AlertRule,
-  AlertSeverity,
-} from '@infrastructure/sqlite/dao/index.js';
+import { AlertRule, AlertSeverity } from '@infrastructure/sqlite/dao/index.js';
 
 /**
  * 告警API服务
@@ -288,7 +285,9 @@ export class AlertApiService {
         alerts: alerts.map((alert) => ({
           id: alert.id,
           ruleId: alert.ruleId,
-          ruleName: (('ruleName' in alert ? alert.ruleName : undefined) as string) || 'Unknown',
+          ruleName:
+            (('ruleName' in alert ? alert.ruleName : undefined) as string) ||
+            'Unknown',
           severity: alert.severity,
           status: alert.status,
           message: alert.message || 'No message',

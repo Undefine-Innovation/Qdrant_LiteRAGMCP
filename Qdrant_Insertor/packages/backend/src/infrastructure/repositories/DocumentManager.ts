@@ -12,7 +12,7 @@ import { ChunksFts5Table } from '@infrastructure/sqlite/dao/ChunksFts5Table.js';
 export class DocumentManager {
   /**
    * 创建文档管理器实例
-   * 
+   *
    * @param docs - 文档表操作对象
    * @param docs.getById - 根据ID获取文档的方法
    * @param docs.update - 更新文档的方法
@@ -39,7 +39,7 @@ export class DocumentManager {
   /**
    * 更新文档的内容和元数据
    * 如果内容发生变化，旧文档及其块将被删除，并创建一个新文档
-   * 
+   *
    * @param docId - 要更新的文档 ID
    * @param content - 新的文档内容
    * @param name - 可选的文档名称
@@ -95,7 +95,7 @@ export class DocumentManager {
   /**
    * 删除一个文档及其所有关联的块
    * 这是一个在事务中执行的硬删除操作
-   * 
+   *
    * @param docId - 要删除的文档 ID
    * @returns 如果找到并删除了文档，则返回 true，否则返回false
    */
@@ -116,7 +116,7 @@ export class DocumentManager {
 
   /**
    * 获取文档
-   * 
+   *
    * @param docId - 文档ID
    * @returns 文档对象
    */
@@ -126,7 +126,7 @@ export class DocumentManager {
 
   /**
    * 标记文档为已同步
-   * 
+   *
    * @param docId - 文档ID
    */
   async markDocAsSynced(docId: DocId): Promise<void> {
@@ -135,7 +135,7 @@ export class DocumentManager {
 
   /**
    * 生成文档ID
-   * 
+   *
    * @param content - 文档内容
    * @returns 文档ID
    */

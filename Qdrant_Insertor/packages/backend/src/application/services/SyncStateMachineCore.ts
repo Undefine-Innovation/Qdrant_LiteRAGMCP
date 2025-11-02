@@ -133,9 +133,7 @@ export class SyncStateMachineCore {
 
     const newStatus = transitions.get(event);
     if (!newStatus) {
-      this.logger.error(
-        `[${docId}] 不允许的状态转换 ${job.status} + ${event}`,
-      );
+      this.logger.error(`[${docId}] 不允许的状态转换 ${job.status} + ${event}`);
       return false;
     }
 

@@ -56,7 +56,10 @@ export class TransactionManager implements ITransactionManager {
       // 验证集合存在
       const collection = collections.getById(collectionId);
       if (!collection) {
-        this.logger.warn('deleteCollection: no such collectionId', collectionId);
+        this.logger.warn(
+          'deleteCollection: no such collectionId',
+          collectionId,
+        );
         return;
       }
 
@@ -75,7 +78,8 @@ export class TransactionManager implements ITransactionManager {
         collections.chunksFts5.deleteByCollectionId(collectionId);
 
         // 然后，删除集合中的所有文档
-        const docsInCollection = collections.docs.listByCollection(collectionId);
+        const docsInCollection =
+          collections.docs.listByCollection(collectionId);
         for (const doc of docsInCollection) {
           collections.docs.hardDelete(doc.docId);
         }
@@ -86,12 +90,14 @@ export class TransactionManager implements ITransactionManager {
 
       // 异步删除Qdrant中的向量数据（不阻塞事务提交）
       if (this.qdrantRepo) {
-        this.qdrantRepo.deletePointsByCollection(collectionId).catch((error) => {
-          this.logger.warn('Failed to delete Qdrant points for collection', {
-            collectionId,
-            error: error instanceof Error ? error.message : String(error),
+        this.qdrantRepo
+          .deletePointsByCollection(collectionId)
+          .catch((error) => {
+            this.logger.warn('Failed to delete Qdrant points for collection', {
+              collectionId,
+              error: error instanceof Error ? error.message : String(error),
+            });
           });
-        });
       }
 
       this.logger.info(
@@ -105,7 +111,8 @@ export class TransactionManager implements ITransactionManager {
    * @param metadata 事务元数据（可选）
    * @returns 事务上下文
    */
-  beginTransaction(metadata?: Record<string, any>): TransactionContext { // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
+  beginTransaction(metadata?: Record<string, any>): TransactionContext {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
     const context = new TransactionContext({
       metadata,
     });
@@ -169,22 +176,22 @@ export class TransactionManager implements ITransactionManager {
     try {
       // 在SQLite事务中执行所有操作
       this.sqliteCore.transaction(() => {
-        this.logger.info('Committing SQLite transaction', { 
-          transactionId, 
-          operations: context.operations.length 
+        this.logger.info('Committing SQLite transaction', {
+          transactionId,
+          operations: context.operations.length,
         });
-        
+
         // SQLite操作已经在事务中执行，这里只需要标记状态
         context.status = TransactionStatus.COMMITTED;
       });
 
       this.logger.info('Transaction committed successfully', { transactionId });
     } catch (error) {
-      this.logger.error('Failed to commit transaction', { 
-        transactionId, 
-        error: error instanceof Error ? error.message : String(error) 
+      this.logger.error('Failed to commit transaction', {
+        transactionId,
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       context.status = TransactionStatus.FAILED;
       throw error;
     }
@@ -203,19 +210,21 @@ export class TransactionManager implements ITransactionManager {
     try {
       // 按相反顺序执行回滚操作
       const rollbackOperations = [...context.operations].reverse();
-      
+
       for (const operation of rollbackOperations) {
         await this.executeRollbackOperation(operation);
       }
 
       context.status = TransactionStatus.ROLLED_BACK;
-      this.logger.info('Transaction rolled back successfully', { transactionId });
-    } catch (error) {
-      this.logger.error('Failed to rollback transaction', { 
-        transactionId, 
-        error: error instanceof Error ? error.message : String(error) 
+      this.logger.info('Transaction rolled back successfully', {
+        transactionId,
       });
-      
+    } catch (error) {
+      this.logger.error('Failed to rollback transaction', {
+        transactionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       context.status = TransactionStatus.FAILED;
       throw error;
     }
@@ -235,8 +244,13 @@ export class TransactionManager implements ITransactionManager {
       throw new Error(`Transaction ${transactionId} not found`);
     }
 
-    if (context.status !== TransactionStatus.ACTIVE && context.status !== TransactionStatus.PENDING) {
-      throw new Error(`Transaction ${transactionId} is not in a valid state for operations`);
+    if (
+      context.status !== TransactionStatus.ACTIVE &&
+      context.status !== TransactionStatus.PENDING
+    ) {
+      throw new Error(
+        `Transaction ${transactionId} is not in a valid state for operations`,
+      );
     }
 
     try {
@@ -248,22 +262,22 @@ export class TransactionManager implements ITransactionManager {
       // 执行操作并保存回滚数据
       const rollbackData = await this.executeOperationWithRollback(operation);
       operation.rollbackData = rollbackData;
-      
+
       context.addOperation(operation);
-      
-      this.logger.debug('Operation executed in transaction', { 
-        transactionId, 
+
+      this.logger.debug('Operation executed in transaction', {
+        transactionId,
         operationType: operation.type,
         target: operation.target,
-        targetId: operation.targetId 
+        targetId: operation.targetId,
       });
     } catch (error) {
-      this.logger.error('Failed to execute operation in transaction', { 
-        transactionId, 
+      this.logger.error('Failed to execute operation in transaction', {
+        transactionId,
         operation,
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -279,7 +293,7 @@ export class TransactionManager implements ITransactionManager {
     metadata?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
   ): Promise<T> {
     const context = this.beginTransaction(metadata);
-    
+
     try {
       const result = await fn(context);
       await this.commit(context.transactionId);
@@ -288,12 +302,15 @@ export class TransactionManager implements ITransactionManager {
       try {
         await this.rollback(context.transactionId);
       } catch (rollbackError) {
-        this.logger.error('Failed to rollback transaction', { 
+        this.logger.error('Failed to rollback transaction', {
           transactionId: context.transactionId,
-          error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError) 
+          error:
+            rollbackError instanceof Error
+              ? rollbackError.message
+              : String(rollbackError),
         });
       }
-      
+
       throw error;
     } finally {
       // 清理事务上下文
@@ -322,16 +339,18 @@ export class TransactionManager implements ITransactionManager {
    * 清理已完成的事务
    * @param maxAge 最大保留时间（毫秒）
    */
-  cleanupCompletedTransactions(maxAge: number = this.DEFAULT_CLEANUP_AGE): void {
+  cleanupCompletedTransactions(
+    maxAge: number = this.DEFAULT_CLEANUP_AGE,
+  ): void {
     const now = Date.now();
     const transactionsToRemove: string[] = [];
 
     for (const [transactionId, context] of this.activeTransactions.entries()) {
-      const isCompleted = 
+      const isCompleted =
         context.status === TransactionStatus.COMMITTED ||
         context.status === TransactionStatus.ROLLED_BACK ||
         context.status === TransactionStatus.FAILED;
-      
+
       const isExpired = now - context.startTime > maxAge;
 
       if (isCompleted && isExpired) {
@@ -345,8 +364,8 @@ export class TransactionManager implements ITransactionManager {
     }
 
     if (transactionsToRemove.length > 0) {
-      this.logger.info('Cleaned up completed transactions', { 
-        count: transactionsToRemove.length 
+      this.logger.info('Cleaned up completed transactions', {
+        count: transactionsToRemove.length,
       });
     }
   }
@@ -356,7 +375,10 @@ export class TransactionManager implements ITransactionManager {
    * @param operation 事务操作
    * @returns 回滚数据
    */
-  private async executeOperationWithRollback(operation: TransactionOperation): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
+  private async executeOperationWithRollback(
+    operation: TransactionOperation,
+  ): Promise<any> {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
     switch (operation.target) {
       case 'collection':
         return this.executeCollectionOperation(operation);
@@ -374,7 +396,10 @@ export class TransactionManager implements ITransactionManager {
    * @param operation 事务操作
    * @returns 回滚数据
    */
-  private async executeCollectionOperation(operation: TransactionOperation): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
+  private async executeCollectionOperation(
+    operation: TransactionOperation,
+  ): Promise<any> {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
     // 这里需要根据具体的集合操作实现
     // 暂时返回空对象，实际实现需要根据具体操作类型处理
     return {};
@@ -385,7 +410,10 @@ export class TransactionManager implements ITransactionManager {
    * @param operation 事务操作
    * @returns 回滚数据
    */
-  private async executeDocumentOperation(operation: TransactionOperation): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
+  private async executeDocumentOperation(
+    operation: TransactionOperation,
+  ): Promise<any> {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
     // 这里需要根据具体的文档操作实现
     // 暂时返回空对象，实际实现需要根据具体操作类型处理
     return {};
@@ -396,7 +424,10 @@ export class TransactionManager implements ITransactionManager {
    * @param operation 事务操作
    * @returns 回滚数据
    */
-  private async executeChunkOperation(operation: TransactionOperation): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
+  private async executeChunkOperation(
+    operation: TransactionOperation,
+  ): Promise<any> {
+    // eslint-disable-line @typescript-eslint/no-explicit-any -- 回滚数据类型灵活
     // 这里需要根据具体的块操作实现
     // 暂时返回空对象，实际实现需要根据具体操作类型处理
     return {};
@@ -406,7 +437,9 @@ export class TransactionManager implements ITransactionManager {
    * 执行回滚操作
    * @param operation 事务操作
    */
-  private async executeRollbackOperation(operation: TransactionOperation): Promise<void> {
+  private async executeRollbackOperation(
+    operation: TransactionOperation,
+  ): Promise<void> {
     switch (operation.target) {
       case 'collection':
         await this.rollbackCollectionOperation(operation);
@@ -426,7 +459,9 @@ export class TransactionManager implements ITransactionManager {
    * 回滚集合操作
    * @param operation 事务操作
    */
-  private async rollbackCollectionOperation(operation: TransactionOperation): Promise<void> {
+  private async rollbackCollectionOperation(
+    operation: TransactionOperation,
+  ): Promise<void> {
     // 根据操作类型和回滚数据执行具体的回滚逻辑
     this.logger.debug('Rolling back collection operation', { operation });
   }
@@ -435,7 +470,9 @@ export class TransactionManager implements ITransactionManager {
    * 回滚文档操作
    * @param operation 事务操作
    */
-  private async rollbackDocumentOperation(operation: TransactionOperation): Promise<void> {
+  private async rollbackDocumentOperation(
+    operation: TransactionOperation,
+  ): Promise<void> {
     // 根据操作类型和回滚数据执行具体的回滚逻辑
     this.logger.debug('Rolling back document operation', { operation });
   }
@@ -444,7 +481,9 @@ export class TransactionManager implements ITransactionManager {
    * 回滚块操作
    * @param operation 事务操作
    */
-  private async rollbackChunkOperation(operation: TransactionOperation): Promise<void> {
+  private async rollbackChunkOperation(
+    operation: TransactionOperation,
+  ): Promise<void> {
     // 根据操作类型和回滚数据执行具体的回滚逻辑
     this.logger.debug('Rolling back chunk operation', { operation });
   }
@@ -462,7 +501,7 @@ export class TransactionManager implements ITransactionManager {
     metadata?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any -- 通用元数据字段
   ): Promise<T> {
     const context = this.beginNestedTransaction(parentTransactionId, metadata);
-    
+
     try {
       const result = await fn(context);
       // 嵌套事务提交时，将操作合并到父事务
@@ -474,10 +513,13 @@ export class TransactionManager implements ITransactionManager {
       } catch (rollbackError) {
         this.logger.error('Failed to rollback nested transaction', {
           transactionId: context.transactionId,
-          error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+          error:
+            rollbackError instanceof Error
+              ? rollbackError.message
+              : String(rollbackError),
         });
       }
-      
+
       throw error;
     } finally {
       // 清理嵌套事务上下文
@@ -496,12 +538,18 @@ export class TransactionManager implements ITransactionManager {
     }
 
     if (!context.parentTransactionId) {
-      throw new Error(`Transaction ${transactionId} is not a nested transaction`);
+      throw new Error(
+        `Transaction ${transactionId} is not a nested transaction`,
+      );
     }
 
-    const parentContext = this.activeTransactions.get(context.parentTransactionId);
+    const parentContext = this.activeTransactions.get(
+      context.parentTransactionId,
+    );
     if (!parentContext) {
-      throw new Error(`Parent transaction ${context.parentTransactionId} not found`);
+      throw new Error(
+        `Parent transaction ${context.parentTransactionId} not found`,
+      );
     }
 
     // 将嵌套事务的操作合并到父事务
@@ -518,7 +566,7 @@ export class TransactionManager implements ITransactionManager {
     this.logger.info('Nested transaction committed and merged to parent', {
       transactionId,
       parentTransactionId: context.parentTransactionId,
-      operationsMerged: context.operations.length
+      operationsMerged: context.operations.length,
     });
   }
 
@@ -540,12 +588,12 @@ export class TransactionManager implements ITransactionManager {
     }
 
     const savepointId = context.createSavepoint(name, metadata);
-    
+
     this.logger.info('Savepoint created', {
       transactionId,
       savepointId,
       savepointName: name,
-      operationsCount: context.operations.length
+      operationsCount: context.operations.length,
     });
 
     return savepointId;
@@ -567,19 +615,19 @@ export class TransactionManager implements ITransactionManager {
 
     try {
       context.rollbackToSavepoint(savepointId);
-      
+
       this.logger.info('Transaction rolled back to savepoint', {
         transactionId,
         savepointId,
-        operationsCount: context.operations.length
+        operationsCount: context.operations.length,
       });
     } catch (error) {
       this.logger.error('Failed to rollback to savepoint', {
         transactionId,
         savepointId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -600,18 +648,18 @@ export class TransactionManager implements ITransactionManager {
 
     try {
       context.releaseSavepoint(savepointId);
-      
+
       this.logger.info('Savepoint released', {
         transactionId,
-        savepointId
+        savepointId,
       });
     } catch (error) {
       this.logger.error('Failed to release savepoint', {
         transactionId,
         savepointId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -662,15 +710,17 @@ export class TransactionManager implements ITransactionManager {
     // 递归查找根事务
     let currentContext = context;
     while (currentContext.parentTransactionId) {
-      const parentContext = this.activeTransactions.get(currentContext.parentTransactionId);
+      const parentContext = this.activeTransactions.get(
+        currentContext.parentTransactionId,
+      );
       if (!parentContext) {
         break;
       }
-      
+
       if (parentContext.isRootTransaction) {
         return parentContext.transactionId;
       }
-      
+
       currentContext = parentContext;
     }
 

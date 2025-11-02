@@ -151,14 +151,21 @@ export class HealthCheckService {
       const allJobs = this.syncStateMachine.getAllSyncJobs();
       const stats = {
         total: allJobs.length,
-        successRate: allJobs.filter(job => job.status === SyncJobStatus.SYNCED).length / Math.max(allJobs.length, 1),
+        successRate:
+          allJobs.filter((job) => job.status === SyncJobStatus.SYNCED).length /
+          Math.max(allJobs.length, 1),
         avgDuration: 0, // SyncJob接口没有durationMs字段，暂时设为0
-        byStatus: allJobs.reduce((acc, job) => {
-          acc[job.status] = (acc[job.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>)
+        byStatus: allJobs.reduce(
+          (acc, job) => {
+            acc[job.status] = (acc[job.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
       };
-      const activeRetryCount = this.syncStateMachine.getSyncJobCountByStatus(SyncJobStatus.RETRYING);
+      const activeRetryCount = this.syncStateMachine.getSyncJobCountByStatus(
+        SyncJobStatus.RETRYING,
+      );
 
       // 如果失败率过高，标记为降级
       if (stats.total > 0 && stats.successRate < 0.8) {

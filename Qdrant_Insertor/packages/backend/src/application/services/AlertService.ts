@@ -1,5 +1,9 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { IAlertService, AlertRuleConfig, AlertRecord } from '@domain/repositories/IAlertService.js';
+import {
+  IAlertService,
+  AlertRuleConfig,
+  AlertRecord,
+} from '@domain/repositories/IAlertService.js';
 import { Logger } from '@logging/logger.js';
 import { AlertRule, AlertHistory } from '@infrastructure/sqlite/dao/index.js';
 import { AlertServiceCore } from './AlertServiceCore.js';
