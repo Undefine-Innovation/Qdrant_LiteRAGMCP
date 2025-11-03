@@ -61,4 +61,12 @@ export interface IImportService {
    * @param collectionId - 要删除的集合 ID�?
    */
   deleteCollection(collectionId: CollectionId): Promise<void>;
+
+  /**
+   * 直接从文本内容导入为一个文档，并触发后续切分/嵌入/同步流程
+   * @param name 文档名称
+   * @param content 文本内容
+   * @param collectionId 目标集合
+   */
+  importText(name: string, content: string, collectionId: CollectionId): Promise<Doc>;
 }

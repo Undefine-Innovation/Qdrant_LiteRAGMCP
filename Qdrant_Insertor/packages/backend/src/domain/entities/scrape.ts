@@ -162,6 +162,37 @@ export interface IScrapeService {
    * @returns 统计信息
    */
   getScrapeTaskStats(): Promise<Record<string, Record<string, number>>>;
+
+  /**
+   * 列出已持久化的爬取结果供审核/导入
+   */
+  listScrapeResults(params?: {
+    status?: 'PENDING' | 'IMPORTED' | 'DELETED';
+    taskId?: string;
+  }): Promise<
+    Array<{
+      id: string;
+      taskId: string;
+      url: string;
+      title?: string;
+      content?: string;
+      links?: Array<{ url: string; text?: string; title?: string }>;
+      status: 'PENDING' | 'IMPORTED' | 'DELETED';
+      created_at: number;
+      updated_at: number;
+      imported_doc_id?: string | null;
+    }>
+  >;
+
+  /**
+   * 将抓取结果导入到指定集合
+   */
+  importScrapeResult(id: string, collectionId: import('@domain/entities/types.js').CollectionId, name?: string): Promise<{ success: boolean; docId?: import('@domain/entities/types.js').DocId; error?: string }>;
+
+  /**
+   * 删除（软删除）抓取结果
+   */
+  deleteScrapeResult(id: string): Promise<{ success: boolean }>;
 }
 
 /**

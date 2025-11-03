@@ -23,6 +23,7 @@ import type { SystemMetricsTable } from '../../infrastructure/sqlite/dao/SystemM
 import type { AlertRulesTable } from '../../infrastructure/sqlite/dao/AlertRulesTable.js';
 import type { SystemHealthTable } from '../../infrastructure/sqlite/dao/SystemHealthTable.js';
 import type { AlertHistoryTable } from '../../infrastructure/sqlite/dao/AlertHistoryTable.js';
+import type { ScrapeResultsTable } from '../../infrastructure/sqlite/dao/ScrapeResultsTable.js';
 import type { SQLiteRepoCore } from '../../infrastructure/repositories/SQLiteRepositoryCore.js';
 import type { CollectionManager } from '../../infrastructure/repositories/CollectionManager.js';
 import type { DocumentManager } from '../../infrastructure/repositories/DocumentManager.js';
@@ -81,6 +82,11 @@ export interface ISQLiteRepo {
    * 告警历史表访问器
    */
   readonly alertHistory: AlertHistoryTable;
+
+  /**
+   * 爬虫结果表访问器
+   */
+  readonly scrapeResults: ScrapeResultsTable;
 
   /**
    * 数据库实例（用于兼容性）
