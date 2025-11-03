@@ -15,6 +15,8 @@ import {
   ITransactionManager,
   TransactionOperationType,
 } from '@domain/repositories/ITransactionManager.js';
+import { Logger } from '@logging/logger.js';
+import { AppError } from '@api/contracts/error.js';
 
 /**
  * 块数据的类型定义
@@ -57,6 +59,7 @@ export class CollectionService implements ICollectionService {
   constructor(
     private sqliteRepo: ISQLiteRepo,
     private qdrantRepo: IQdrantRepo, // Add QdrantRepo for cascade deletion
+    private readonly logger: Logger,
     private transactionManager?: ITransactionManager, // Add TransactionManager for nested transaction support
   ) {}
 
@@ -113,7 +116,9 @@ export class CollectionService implements ICollectionService {
     const existingCollection =
       this.sqliteRepo.collections.getById(collectionId);
     if (!existingCollection) {
-      throw new Error(`Collection with ID ${collectionId} not found`);
+      throw AppError.createNotFoundError(
+        `Collection with ID ${collectionId} not found`,
+      );
     }
 
     // 如果提供了新名称，检查名称是否已被其他集合使用
@@ -162,12 +167,17 @@ export class CollectionService implements ICollectionService {
   private async deleteCollectionWithTransactionManager(
     collectionId: CollectionId,
   ): Promise<void> {
+    const t0 = Date.now();
     await this.transactionManager!.executeInTransaction(
       async (context) => {
         // 获取集合信息用于日志记录
         const collection = this.sqliteRepo.collections.getById(collectionId);
         if (!collection) {
-          throw new Error(`Collection with ID ${collectionId} not found`);
+          // 幂等删除：目标不存在视为已删除
+          this.logger.info('[DeleteAudit] Collection not found, no-op', {
+            collectionId,
+          });
+          return;
         }
 
         // 获取集合中的所有文档
@@ -193,12 +203,20 @@ export class CollectionService implements ICollectionService {
         );
 
         try {
+          this.logger.info('[DeleteAudit] Collection deletion start', {
+            collectionId,
+            docsCount: docs.length,
+            // chunksCount will be allPointIds.length below but not yet computed
+          });
           // 1. 从Qdrant向量数据库删除所有相关向量点
           if (allPointIds.length > 0) {
+            const tq0 = Date.now();
             await this.qdrantRepo.deletePoints(collectionId, allPointIds);
-            console.log(
-              `Deleted ${allPointIds.length} vector points from Qdrant for collection ${collectionId}`,
-            );
+            this.logger.info('[DeleteAudit] Qdrant points deleted', {
+              collectionId,
+              points: allPointIds.length,
+              elapsedMs: Date.now() - tq0,
+            });
           }
 
           // 2. 从SQLite数据库删除集合及其所有相关文档和块
@@ -223,9 +241,16 @@ export class CollectionService implements ICollectionService {
             { operation: 'deleteCollectionSQLite', collectionId },
           );
 
-          console.log(
-            `Successfully deleted collection ${collectionId}, its ${docs.length} documents, and ${allPointIds.length} chunks`,
-          );
+          this.logger.info('[DeleteAudit] SQLite cascade deletion completed', {
+            collectionId,
+            docsCount: docs.length,
+            chunksCount: allPointIds.length,
+          });
+
+          this.logger.info('[DeleteAudit] Collection deletion completed', {
+            collectionId,
+            totalElapsedMs: Date.now() - t0,
+          });
 
           // 释放保存点
           await this.transactionManager!.releaseSavepoint(
@@ -233,9 +258,9 @@ export class CollectionService implements ICollectionService {
             savepointId,
           );
         } catch (error) {
-          console.error(
-            `Error during cascade deletion of collection ${collectionId}:`,
-            error,
+          this.logger.error(
+            '[DeleteAudit] Error during cascade deletion of collection',
+            { collectionId, error: error instanceof Error ? error.message : String(error) },
           );
 
           // 回滚到保存点
@@ -262,10 +287,15 @@ export class CollectionService implements ICollectionService {
   private async deleteCollectionWithoutTransactionManager(
     collectionId: CollectionId,
   ): Promise<void> {
+    const t0 = Date.now();
     // 获取集合信息用于日志记录
     const collection = this.sqliteRepo.collections.getById(collectionId);
     if (!collection) {
-      throw new Error(`Collection with ID ${collectionId} not found`);
+      // 幂等删除：目标不存在视为已删除
+      this.logger.info('[DeleteAudit] Collection not found, no-op', {
+        collectionId,
+      });
+      return;
     }
 
     // 获取集合中的所有文档
@@ -279,31 +309,38 @@ export class CollectionService implements ICollectionService {
       allPointIds.push(...chunks.map((chunk: ChunkData) => chunk.pointId));
     }
 
-    // 使用事务确保删除操作的原子性
-    await this.sqliteRepo.transaction(async () => {
-      try {
-        // 1. 从Qdrant向量数据库删除所有相关向量点
-        if (allPointIds.length > 0) {
-          await this.qdrantRepo.deletePoints(collectionId, allPointIds);
-          console.log(
-            `Deleted ${allPointIds.length} vector points from Qdrant for collection ${collectionId}`,
-          );
-        }
+    // 先删除Qdrant中的向量，再在本地开启同步事务删除数据库记录
+    this.logger.info('[DeleteAudit] Collection deletion start', {
+      collectionId,
+      docsCount: docs.length,
+      chunksCount: allPointIds.length,
+    });
+    if (allPointIds.length > 0) {
+      const tq0 = Date.now();
+      await this.qdrantRepo.deletePoints(collectionId, allPointIds);
+      this.logger.info('[DeleteAudit] Qdrant points deleted', {
+        collectionId,
+        points: allPointIds.length,
+        elapsedMs: Date.now() - tq0,
+      });
+    } else {
+      this.logger.info('[DeleteAudit] No Qdrant points to delete', {
+        collectionId,
+      });
+    }
 
-        // 2. 从SQLite数据库删除集合及其所有相关文档和块
-        // CollectionManager的deleteCollection方法已经处理了级联删除
-        this.sqliteRepo.deleteCollection(collectionId);
-
-        console.log(
-          `Successfully deleted collection ${collectionId}, its ${docs.length} documents, and ${allPointIds.length} chunks`,
-        );
-      } catch (error) {
-        console.error(
-          `Error during cascade deletion of collection ${collectionId}:`,
-          error,
-        );
-        throw error;
-      }
+    this.sqliteRepo.transaction(() => {
+      // CollectionManager.deleteCollection 已处理级联删除
+      this.sqliteRepo.deleteCollection(collectionId);
+    });
+    this.logger.info('[DeleteAudit] SQLite cascade deletion completed', {
+      collectionId,
+      docsCount: docs.length,
+      chunksCount: allPointIds.length,
+    });
+    this.logger.info('[DeleteAudit] Collection deletion completed', {
+      collectionId,
+      totalElapsedMs: Date.now() - t0,
     });
   }
 }

@@ -15,6 +15,7 @@ import {
 } from '@domain/repositories/IBatchService.js';
 import { Express } from 'express';
 import { StateMachineService } from './StateMachineService.js';
+import { AppError } from '@api/contracts/error.js';
 import { StateMachineTask } from '@domain/state-machine/types.js';
 
 /**
@@ -77,7 +78,9 @@ export class BatchService implements IBatchService {
     const collection =
       this.collectionService.getCollectionById(actualCollectionId);
     if (!collection) {
-      throw new Error(`Collection with ID ${actualCollectionId} not found`);
+      throw AppError.createNotFoundError(
+        `Collection with ID ${actualCollectionId} not found`,
+      );
     }
 
     // 创建状态机任务
@@ -228,6 +231,13 @@ export class BatchService implements IBatchService {
       const docId = docIds[i];
 
       try {
+        const tItem0 = Date.now();
+        this.logger.info('[DeleteAudit] Batch doc deletion start', {
+          operationId,
+          docId,
+          index: i + 1,
+          total: docIds.length,
+        });
         await this.documentService.deleteDocument(docId);
 
         results.push({
@@ -236,7 +246,11 @@ export class BatchService implements IBatchService {
         });
 
         successful++;
-        this.logger.info(`Successfully deleted document: ${docId}`);
+        this.logger.info('[DeleteAudit] Batch doc deletion completed', {
+          operationId,
+          docId,
+          elapsedMs: Date.now() - tItem0,
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
@@ -247,7 +261,9 @@ export class BatchService implements IBatchService {
         });
 
         failed++;
-        this.logger.error(`Failed to delete document: ${docId}`, {
+        this.logger.error('[DeleteAudit] Batch doc deletion failed', {
+          operationId,
+          docId,
           error: errorMessage,
         });
       }
@@ -298,6 +314,13 @@ export class BatchService implements IBatchService {
       const collectionId = collectionIds[i];
 
       try {
+        const tItem0 = Date.now();
+        this.logger.info('[DeleteAudit] Batch collection deletion start', {
+          operationId,
+          collectionId,
+          index: i + 1,
+          total: collectionIds.length,
+        });
         await this.collectionService.deleteCollection(collectionId);
 
         results.push({
@@ -306,7 +329,11 @@ export class BatchService implements IBatchService {
         });
 
         successful++;
-        this.logger.info(`Successfully deleted collection: ${collectionId}`);
+        this.logger.info('[DeleteAudit] Batch collection deletion completed', {
+          operationId,
+          collectionId,
+          elapsedMs: Date.now() - tItem0,
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
@@ -317,7 +344,9 @@ export class BatchService implements IBatchService {
         });
 
         failed++;
-        this.logger.error(`Failed to delete collection: ${collectionId}`, {
+        this.logger.error('[DeleteAudit] Batch collection deletion failed', {
+          operationId,
+          collectionId,
           error: errorMessage,
         });
       }

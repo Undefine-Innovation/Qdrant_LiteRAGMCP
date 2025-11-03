@@ -44,7 +44,26 @@ export class StateMachineService implements IStateMachineService {
         : new InMemoryStatePersistence(logger);
 
     this.engine = new BaseStateMachineEngine(logger, persistence);
+    
+    // 如果使用SQLite持久化，需要初始化表结构
+    if (persistence instanceof SQLiteStatePersistence) {
+      this.initializePersistence(persistence);
+    }
+    
     this.initializeStrategies();
+  }
+
+  /**
+   * 初始化持久化层
+   */
+  private async initializePersistence(persistence: SQLiteStatePersistence): Promise<void> {
+    try {
+      await persistence.initializeTable();
+      this.logger.info('状态机持久化表初始化完成');
+    } catch (error) {
+      this.logger.error('状态机持久化表初始化失败', { error });
+      throw error;
+    }
   }
 
   /**

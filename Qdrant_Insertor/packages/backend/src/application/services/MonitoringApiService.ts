@@ -92,30 +92,7 @@ export class MonitoringApiService implements IMonitoringApiService {
   async getDashboardData(
     request: DashboardDataRequest,
   ): Promise<DashboardDataResponse> {
-    const dashboardData = await this.core.getDashboardData(request);
-
-    // 添加告警相关数据
-    const alertStats = await this.alertApi.getAlertRules();
-    const activeAlerts = await this.alertApi.getAlertHistory({
-      offset: 0,
-      limit: 100,
-      timeRange: '24h',
-    });
-
-    return {
-      ...dashboardData,
-      overview: {
-        ...dashboardData.overview,
-        totalAlerts: alertStats.length,
-        activeAlerts: activeAlerts.alerts.length,
-      },
-      recentAlerts: activeAlerts.alerts.slice(0, 5).map((alert) => ({
-        id: alert.id,
-        severity: alert.severity,
-        message: alert.message || 'No message',
-        triggeredAt: new Date(alert.triggeredAt).toISOString(),
-      })),
-    };
+    return await this.core.getDashboardData(request);
   }
 
   /**

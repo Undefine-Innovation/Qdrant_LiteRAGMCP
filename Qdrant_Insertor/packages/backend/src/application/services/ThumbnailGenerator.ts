@@ -10,14 +10,15 @@ import path from 'path';
  * 负责为不同类型的文档生成缩略图
  */
 export class ThumbnailGenerator {
-  private readonly THUMBNAIL_DIR = './thumbnails';
+  // 使用绝对路径，避免 res.sendFile 对相对路径报错
+  private readonly THUMBNAIL_DIR = path.resolve(process.cwd(), 'thumbnails');
 
   /**
    *
    * @param sqliteRepo
    */
   constructor(private readonly sqliteRepo: ISQLiteRepo) {
-    this.ensureDirectoryExists(this.THUMBNAIL_DIR);
+    // 目录存在性检查放在生成时强制 await，避免构造器里未 await 导致的竞态
   }
 
   /**
@@ -30,12 +31,16 @@ export class ThumbnailGenerator {
     docId: DocId,
     size: ThumbnailSize = { width: 200, height: 200 },
   ): Promise<string> {
+    // 确保缩略图目录存在（显式等待）
+    await this.ensureDirectoryExists(this.THUMBNAIL_DIR);
+
     const doc = this.sqliteRepo.docs.getById(docId);
     if (!doc) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
-    const thumbnailPath = path.join(this.THUMBNAIL_DIR, `${docId}.png`);
+    // 为占位图使用 SVG，更易于生成且浏览器原生支持
+    const thumbnailPath = path.join(this.THUMBNAIL_DIR, `${docId}.svg`);
 
     // 检查缩略图是否已存在
     try {
@@ -91,7 +96,7 @@ export class ThumbnailGenerator {
     TXT
   </text>
 </svg>`;
-    await fs.writeFile(outputPath, placeholder);
+  await fs.writeFile(outputPath, placeholder, 'utf-8');
   }
 
   /**
@@ -113,7 +118,7 @@ export class ThumbnailGenerator {
     PDF
   </text>
 </svg>`;
-    await fs.writeFile(outputPath, placeholder);
+  await fs.writeFile(outputPath, placeholder, 'utf-8');
   }
 
   /**
@@ -134,7 +139,7 @@ export class ThumbnailGenerator {
     DOC
   </text>
 </svg>`;
-    await fs.writeFile(outputPath, placeholder);
+  await fs.writeFile(outputPath, placeholder, 'utf-8');
   }
 
   /**
@@ -155,7 +160,7 @@ export class ThumbnailGenerator {
     FILE
   </text>
 </svg>`;
-    await fs.writeFile(outputPath, placeholder);
+  await fs.writeFile(outputPath, placeholder, 'utf-8');
   }
 
   /**

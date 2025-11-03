@@ -10,6 +10,7 @@ import { AppError } from '@api/contracts/error.js';
 import { IImportService } from '@domain/repositories/IImportService.js';
 import { SyncStateMachine } from './SyncStateMachine.js';
 import { PersistentSyncStateMachine } from './PersistentSyncStateMachine.js';
+import { makeDocId } from '@domain/utils/id.js';
 
 /**
  *
@@ -214,5 +215,78 @@ export class ImportService implements IImportService {
     await this.qdrantRepo.deletePointsByCollection(collectionId);
     this.sqliteRepo.deleteCollection(collectionId); // 使用协调deleteCollection 方法
     this.logger.info(`成功删除集合 ${collectionId} 及其关联的向量点。`);
+  }
+
+  /**
+   * 从文本直接导入文档
+   */
+  public async importText(
+    name: string,
+    content: string,
+    collectionId: CollectionId,
+  ): Promise<Doc> {
+    this.logger.info(`Starting text import: ${name}`);
+    try {
+      let collection = this.sqliteRepo.collections.getById(collectionId);
+      let actualCollectionId = collectionId;
+
+      if (!collection) {
+        this.logger.info(`Collection ${collectionId} not found, creating it...`);
+        const newCollectionId = this.sqliteRepo.collections.create({
+          name: collectionId,
+          description: `Auto-created collection for ${collectionId}`,
+        });
+        collection = this.sqliteRepo.collections.getById(newCollectionId);
+        if (!collection) {
+          throw AppError.createInternalServerError(
+            `Failed to create or retrieve collection: ${collectionId}`,
+          );
+        }
+        actualCollectionId = collection.collectionId;
+      }
+
+      // 基于内容哈希的去重：如已存在则直接复用，避免主键冲突
+      const candidateDocId = makeDocId(content) as DocId;
+      const existing = this.sqliteRepo.docs.getById(candidateDocId);
+      if (existing) {
+        if (existing.collectionId !== actualCollectionId) {
+          this.logger.warn(
+            `Duplicate content detected for doc "${name}". Existing doc ${candidateDocId} belongs to collection ${existing.collectionId}, requested collection ${actualCollectionId}. Reusing existing doc to avoid PK conflicts.`,
+          );
+        } else {
+          this.logger.info(
+            `Duplicate content detected for doc "${name}" in the same collection. Reusing existing doc ${candidateDocId}.`,
+          );
+        }
+        await this.syncStateMachine.triggerSync(candidateDocId);
+        return existing;
+      }
+
+      const docId = this.sqliteRepo.docs.create({
+        collectionId: actualCollectionId,
+        key: `text_${Date.now()}_${name}`,
+        name,
+        mime: 'text/markdown',
+        size_bytes: Buffer.byteLength(content, 'utf-8'),
+        content,
+      });
+      this.logger.info(`Document created from text with id: ${docId}`);
+
+      await this.syncStateMachine.triggerSync(docId);
+      const doc = this.sqliteRepo.docs.getById(docId);
+      if (!doc) {
+        throw AppError.createInternalServerError(
+          `Failed to retrieve created doc with id: ${docId}`,
+        );
+      }
+      return doc;
+    } catch (error) {
+      this.logger.error('Error during text import process.', {
+        error,
+        name,
+        collectionId,
+      });
+      throw error;
+    }
   }
 }

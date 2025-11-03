@@ -10,6 +10,8 @@ import { IDocumentService } from '@domain/repositories/IDocumentService.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { ImportService } from './ImportService.js'; // Assuming ImportService handles resync logic
+import { Logger } from '@logging/logger.js';
+import { AppError } from '@api/contracts/error.js';
 
 /**
  * 块数据的类型定义
@@ -52,6 +54,7 @@ export class DocumentService implements IDocumentService {
     private sqliteRepo: ISQLiteRepo,
     private importService: ImportService, // Use ImportService for resync
     private qdrantRepo: IQdrantRepo, // Add QdrantRepo for cascade deletion
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -101,43 +104,67 @@ export class DocumentService implements IDocumentService {
     // 获取文档信息用于日志记录
     const doc = this.sqliteRepo.docs.getById(docId);
     if (!doc) {
-      throw new Error(`Document with ID ${docId} not found`);
+      // 幂等删除：目标不存在视为已删除
+      this.logger.info('[DeleteAudit] Document not found, no-op', { docId });
+      return;
     }
 
     // 获取文档的所有块ID，用于从Qdrant删除
     const chunks = this.sqliteRepo.chunks.getByDocId(docId);
     const pointIds = chunks.map((chunk: ChunkData) => chunk.pointId);
 
-    // 使用事务确保删除操作的原子性
-    await this.sqliteRepo.transaction(async () => {
-      try {
-        // 1. 从Qdrant向量数据库删除相关向量点
-        if (pointIds.length > 0) {
-          await this.qdrantRepo.deletePoints(doc.collectionId, pointIds);
-          console.log(
-            `Deleted ${pointIds.length} vector points from Qdrant for document ${docId}`,
+
+    const t0 = Date.now();
+    this.logger.info('[DeleteAudit] Document deletion start', {
+      docId,
+      collectionId: doc.collectionId,
+      chunkCount: chunks.length,
+    });
+
+    try {
+      // 外部向量删除
+      const tq0 = Date.now();
+      if (pointIds.length > 0) {
+        await this.qdrantRepo.deletePoints(doc.collectionId, pointIds);
+        this.logger.info('[DeleteAudit] Qdrant points deleted', {
+          docId,
+          collectionId: doc.collectionId,
+          points: pointIds.length,
+          elapsedMs: Date.now() - tq0,
+        });
+      } else {
+        this.logger.info('[DeleteAudit] No Qdrant points to delete', {
+          docId,
+          collectionId: doc.collectionId,
+        });
+      }
+
+      // 本地事务删除
+      const ts0 = Date.now();
+      this.sqliteRepo.transaction(() => {
+        const deleted = this.sqliteRepo.deleteDoc(docId);
+        if (!deleted) {
+          throw new Error(
+            `Failed to delete document ${docId} from database`,
           );
         }
+      });
+      this.logger.info('[DeleteAudit] SQLite doc deleted', {
+        docId,
+        elapsedMs: Date.now() - ts0,
+      });
 
-        // 2. 从SQLite数据库删除文档及其所有相关块
-        // DocumentManager的deleteDoc方法已经处理了级联删除
-        const deleted = this.sqliteRepo.deleteDoc(docId);
-
-        if (!deleted) {
-          throw new Error(`Failed to delete document ${docId} from database`);
-        }
-
-        console.log(
-          `Successfully deleted document ${docId} and its ${chunks.length} chunks`,
-        );
-      } catch (error) {
-        console.error(
-          `Error during cascade deletion of document ${docId}:`,
-          error,
-        );
-        throw error;
-      }
-    });
+      this.logger.info('[DeleteAudit] Document deletion completed', {
+        docId,
+        totalElapsedMs: Date.now() - t0,
+      });
+    } catch (error) {
+      this.logger.error('[DeleteAudit] Document deletion failed', {
+        docId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   /**
