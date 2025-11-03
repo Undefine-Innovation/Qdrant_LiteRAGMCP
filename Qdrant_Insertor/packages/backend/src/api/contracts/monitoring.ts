@@ -188,46 +188,57 @@ export const DashboardDataRequestSchema = z.object({
  *
  */
 export const DashboardDataResponseSchema = z.object({
-  overview: z.object({
-    totalSyncJobs: z.number(),
-    activeSyncJobs: z.number(),
-    successRate: z.number(),
-    averageProcessingTime: z.number(),
-    totalAlerts: z.number(),
-    activeAlerts: z.number(),
-  }),
-  systemHealth: z.object({
-    status: z.string(),
-    components: z.record(
+  success: z.boolean(),
+  data: z.object({
+    health: HealthCheckResponseSchema,
+    metrics: z.object({
+      cpu: z.object({
+        usage: z.number(),
+        loadAverage: z.array(z.number()),
+      }),
+      memory: z.object({
+        used: z.number(),
+        total: z.number(),
+        percentage: z.number(),
+      }),
+      disk: z.object({
+        used: z.number(),
+        total: z.number(),
+        percentage: z.number(),
+      }),
+      database: z.object({
+        connections: z.number(),
+        size: z.number(),
+        queryTime: z.number(),
+      }),
+    }),
+    syncStats: z.object({
+      total: z.number(),
+      pending: z.number(),
+      processing: z.number(),
+      completed: z.number(),
+      failed: z.number(),
+      successRate: z.number(),
+      avgDuration: z.number(),
+      byStatus: z.record(z.number()),
+    }),
+    recentAlerts: z.array(
       z.object({
+        id: z.string(),
+        ruleId: z.string(),
+        severity: z.string(),
+        message: z.string(),
+        triggeredAt: z.number(),
         status: z.string(),
-        lastCheck: z.string(),
       }),
     ),
+    systemOverview: z.object({
+      documentsCount: z.number(),
+      collectionsCount: z.number(),
+      chunksCount: z.number(),
+      vectorsCount: z.number(),
+    }),
   }),
-  recentAlerts: z.array(
-    z.object({
-      id: z.string(),
-      severity: z.string(),
-      message: z.string(),
-      triggeredAt: z.string(),
-    }),
-  ),
-  syncJobTrends: z.array(
-    z.object({
-      timestamp: z.string(),
-      count: z.number(),
-      successRate: z.number(),
-    }),
-  ),
-  topMetrics: z.array(
-    z.object({
-      name: z.string(),
-      value: z.number(),
-      unit: z.string(),
-      trend: z.enum(['up', 'down', 'stable']),
-    }),
-  ),
 });
 
 // 通知渠道相关

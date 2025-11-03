@@ -67,8 +67,8 @@ export function createApiRouter(services: ApiServices): express.Router {
     ),
   );
 
-  // 搜索路由
-  router.use('/', createSearchRoutes(services.searchService));
+  // 搜索路由（注入 logger 以增强调试日志）
+  router.use('/', createSearchRoutes(services.searchService, services.logger));
 
   // 图谱路由
   router.use('/', createGraphRoutes(services.graphService));

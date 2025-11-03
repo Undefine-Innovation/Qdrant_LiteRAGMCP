@@ -7,6 +7,7 @@ import {
   SearchQuerySchema,
   SearchPaginatedQuerySchema,
 } from '../../api/contracts/search.js';
+import { Logger } from '@logging/logger.js';
 
 /**
  * @function createSearchRoutes
@@ -16,6 +17,7 @@ import {
  */
 export function createSearchRoutes(
   searchService: ISearchService,
+  logger?: Logger,
 ): express.Router {
   const router = express.Router();
 
@@ -69,11 +71,23 @@ export function createSearchRoutes(
         return res.status(400).json({ error: 'Invalid query parameters' });
       }
       const { q: query, collectionId, limit } = validatedQuery;
+      logger?.info(
+        `[API] /search request: q="${query}", collectionId="${collectionId}", limit=${limit ?? 10}`,
+      );
       const results = await searchService.search(
         query,
         collectionId as CollectionId,
         { limit },
       );
+      if (!results || results.length === 0) {
+        logger?.warn(
+          `[API] /search no results: q="${query}", collectionId="${collectionId}"`,
+        );
+      } else {
+        logger?.info(
+          `[API] /search results: count=${results.length}, q="${query}", collectionId="${collectionId}"`,
+        );
+      }
       // 根据OpenAPI规范，直接返回RetrievalResultDTO数组
       res.status(200).json(results);
     },
@@ -129,11 +143,25 @@ export function createSearchRoutes(
         return res.status(400).json({ error: 'Invalid query parameters' });
       }
       const { q: query, collectionId } = validatedQuery;
+      logger?.info(
+        `[API] /search/paginated request: q="${query}", collectionId="${collectionId}", page=${validatedQuery.page ?? 1}, limit=${validatedQuery.limit ?? 20}`,
+      );
       const paginatedResults = await searchService.searchPaginated(
         query,
         collectionId as CollectionId | undefined,
         validatedQuery,
       );
+      const total = paginatedResults?.pagination?.total ?? 0;
+      const returned = paginatedResults?.data?.length ?? 0;
+      if (total === 0) {
+        logger?.warn(
+          `[API] /search/paginated no results: q="${query}", collectionId="${collectionId}"`,
+        );
+      } else {
+        logger?.info(
+          `[API] /search/paginated results: returned=${returned}, total=${total}, page=${paginatedResults.pagination.page}, limit=${paginatedResults.pagination.limit}`,
+        );
+      }
       res.status(200).json(paginatedResults);
     },
   );

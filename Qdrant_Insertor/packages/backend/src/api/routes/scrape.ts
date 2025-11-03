@@ -317,5 +317,154 @@ export function createScrapeRoutes(
     }
   });
 
+  /**
+   * GET /scrape/results
+   * 列出已持久化的爬取结果（默认仅返回 PENDING）
+   */
+  router.get('/results', async (req: Request, res: Response) => {
+    try {
+      const status = (req.query.status as string) || 'PENDING';
+      const taskId = (req.query.taskId as string) || undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const offset = req.query.offset ? Number(req.query.offset) : undefined;
+      const includeContent = req.query.includeContent === 'true' ? true : false;
+      const items = await (scrapeService as any).listScrapeResults?.({
+        status: status as any,
+        taskId,
+        limit,
+        offset,
+        includeContent,
+      });
+      res.json({ success: true, items: items ?? [] });
+    } catch (error) {
+      logger.error(`获取爬取结果列表失败: ${error}`);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
+   * GET /scrape/results/:id
+   * 获取单条抓取结果详情（包含全文）
+   */
+  router.get('/results/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const item = await (scrapeService as any).getScrapeResult?.(id);
+      if (!item) {
+        res.status(404).json({ success: false, error: 'Not found' });
+        return;
+      }
+      res.json({ success: true, item });
+    } catch (error) {
+      logger.error(`获取爬取结果详情失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * POST /scrape/results/:id/import
+   * 将抓取结果导入为文档
+   */
+  router.post('/results/:id/import', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { collectionId, name } = (req.body || {}) as {
+        collectionId?: string;
+        name?: string;
+      };
+      if (!id || !collectionId) {
+        res.status(400).json({ success: false, error: 'id and collectionId are required' });
+        return;
+      }
+      const result = await (scrapeService as any).importScrapeResult?.(id, collectionId, name);
+      if (!result?.success) {
+        res.status(400).json({ success: false, error: result?.error || 'Import failed' });
+        return;
+      }
+      res.json({ success: true, docId: result.docId });
+    } catch (error) {
+      logger.error(`导入抓取结果失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * POST /scrape/results/:id/delete
+   * 软删除抓取结果
+   */
+  router.post('/results/:id/delete', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        res.status(400).json({ success: false, error: 'id is required' });
+        return;
+      }
+      const result = await (scrapeService as any).deleteScrapeResult?.(id);
+      if (!result?.success) {
+        res.status(400).json({ success: false, error: 'Delete failed' });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      logger.error(`删除抓取结果失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * GET /scrape/results/groups
+   * 按任务分组的统计信息
+   */
+  router.get('/results-groups', async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const offset = req.query.offset ? Number(req.query.offset) : undefined;
+      const groups = await (scrapeService as any).listScrapeTaskGroups?.({ limit, offset });
+      res.json({ success: true, groups: groups ?? [] });
+    } catch (error) {
+      logger.error(`获取抓取任务分组失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * POST /scrape/results/task/:taskId/import
+   * 批量导入某个任务的所有PENDING结果
+   */
+  router.post('/results/task/:taskId/import', async (req: Request, res: Response) => {
+    try {
+      const { taskId } = req.params;
+      const { collectionId, namePrefix } = (req.body || {}) as { collectionId?: string; namePrefix?: string };
+      if (!collectionId) {
+        res.status(400).json({ success: false, error: 'collectionId is required' });
+        return;
+      }
+      const r = await (scrapeService as any).importTaskResults?.(taskId, collectionId, namePrefix);
+      res.json(r ?? { success: false, imported: 0 });
+    } catch (error) {
+      logger.error(`批量导入任务结果失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * POST /scrape/results/task/:taskId/delete
+   * 批量删除（软删除）某个任务的PENDING结果
+   */
+  router.post('/results/task/:taskId/delete', async (req: Request, res: Response) => {
+    try {
+      const { taskId } = req.params;
+      const r = await (scrapeService as any).deleteTaskResults?.(taskId);
+      res.json(r ?? { success: false });
+    } catch (error) {
+      logger.error(`批量删除任务结果失败: ${error}`);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
   return router;
 }
