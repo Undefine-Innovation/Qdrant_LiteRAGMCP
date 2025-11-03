@@ -16,6 +16,9 @@ const Sidebar = () => {
     { path: '/collections', label: '集合管理', icon: '📚' },
     { path: '/documents', label: '文档管理', icon: '📄' },
     { path: '/search', label: '搜索', icon: '🔍' },
+    { path: '/scrape', label: '网页爬虫', icon: '🕷️' },
+    { path: '/scrape/review', label: '抓取结果审核', icon: '✅' },
+    { path: '/monitoring', label: '监控面板', icon: '📊' },
   ];
 
   return (

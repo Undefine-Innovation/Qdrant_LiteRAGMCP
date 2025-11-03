@@ -74,13 +74,7 @@ const SearchPage = () => {
       setQuery(searchQuery);
       setSelectedCollection(collectionId || '');
       setPaginationParams(prev => ({ ...prev, page: 1 }));
-
-      // 标记当前搜索为最新
-      currentSearchRef.current = {
-        query: searchQuery,
-        collectionId: collectionId || '',
-        page: 1,
-      };
+      // 通过 effect 触发实际搜索，请勿在此处更新 currentSearchRef
       setIsSearchStale(false);
     },
     [],
@@ -90,12 +84,7 @@ const SearchPage = () => {
   const handlePageChange = useCallback(
     (page: number) => {
       setPaginationParams(prev => ({ ...prev, page }));
-      // 标记当前搜索为最新
-      currentSearchRef.current = {
-        query,
-        collectionId: selectedCollection,
-        page,
-      };
+      // 实际搜索将由 effect 触发
       setIsSearchStale(false);
     },
     [query, selectedCollection],
@@ -105,12 +94,7 @@ const SearchPage = () => {
   const handleLimitChange = useCallback(
     (limit: number) => {
       setPaginationParams(prev => ({ ...prev, limit, page: 1 }));
-      // 标记当前搜索为最新
-      currentSearchRef.current = {
-        query,
-        collectionId: selectedCollection,
-        page: 1,
-      };
+      // 实际搜索将由 effect 触发
       setIsSearchStale(false);
     },
     [query, selectedCollection],
@@ -121,12 +105,7 @@ const SearchPage = () => {
     (collectionId: string) => {
       setSelectedCollection(collectionId);
       setPaginationParams(prev => ({ ...prev, page: 1 }));
-      // 标记当前搜索为最新
-      currentSearchRef.current = {
-        query,
-        collectionId,
-        page: 1,
-      };
+      // 实际搜索将由 effect 触发
       setIsSearchStale(false);
     },
     [query],
@@ -140,66 +119,41 @@ const SearchPage = () => {
 
   // 当搜索参数变化时更新结果
   useEffect(() => {
-    if (query.trim()) {
-      // 检查当前搜索是否是最新的
-      const currentSearch = {
-        query,
-        collectionId: selectedCollection,
-        page: paginationParams.page || 1,
-      };
+    if (!query.trim()) return;
 
-      if (currentSearchRef.current) {
-        const {
-          query: lastQuery,
-          collectionId: lastCollectionId,
-          page: lastPage,
-        } = currentSearchRef.current;
+    const currentSearch = {
+      query,
+      collectionId: selectedCollection,
+      page: paginationParams.page || 1,
+    };
 
-        // 只有当搜索参数真正发生变化时才执行搜索
-        if (
-          lastQuery !== query ||
-          lastCollectionId !== selectedCollection ||
-          lastPage !== (paginationParams.page || 1)
-        ) {
-          // 使用搜索限速器执行搜索
-          defaultSearchLimiter
-            .execute(
-              `${query}_${selectedCollection}_${paginationParams.page}`,
-              async () => {
-                await executeSearch();
-                return Promise.resolve();
-              },
-            )
-            .catch(error => {
-              if (error.name !== 'AbortError') {
-                console.error('搜索执行失败:', error);
-              }
-            });
+    const last = currentSearchRef.current;
+    const changed =
+      !last ||
+      last.query !== currentSearch.query ||
+      last.collectionId !== currentSearch.collectionId ||
+      last.page !== currentSearch.page;
 
-          // 更新当前搜索引用
-          currentSearchRef.current = currentSearch;
-        }
-      } else {
-        // 首次搜索
-        defaultSearchLimiter
-          .execute(
-            `${query}_${selectedCollection}_${paginationParams.page}`,
-            async () => {
-              await executeSearch();
-              return Promise.resolve();
-            },
-          )
-          .catch(error => {
-            if (error.name !== 'AbortError') {
-              console.error('搜索执行失败:', error);
-            }
-          });
+    if (!changed) return;
 
-        // 设置当前搜索引用
+    defaultSearchLimiter
+      .execute(
+        `${query}_${selectedCollection}_${paginationParams.page}`,
+        async () => {
+          await executeSearch();
+          return Promise.resolve();
+        },
+      )
+      .then(() => {
+        // 标记为已执行的最新搜索参数
         currentSearchRef.current = currentSearch;
-      }
-    }
-  }, [paginationParams, selectedCollection, query, executeSearch]);
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          console.error('搜索执行失败:', error);
+        }
+      });
+  }, [paginationParams.page, selectedCollection, query, executeSearch]);
 
   // 更新搜索结果
   useEffect(() => {
