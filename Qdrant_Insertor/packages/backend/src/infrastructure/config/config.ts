@@ -9,7 +9,15 @@ export type AppConfig = {
   qdrant: { url: string; collection: string; vectorSize: number };
   embedding: { batchSize: number };
   api: { port: number };
-  log: { level: string };
+  log: {
+    level: string;
+    // 以下为可选的日志轮转配置（不填则采用默认值）
+    dirname?: string; // 日志目录
+    maxFiles?: string | number; // 例如 '14d' 或 30
+    maxSize?: string; // 例如 '20m'
+    datePattern?: string; // 例如 'YYYY-MM-DD'
+    zippedArchive?: boolean; // 是否压缩归档
+  };
   gc: { intervalHours: number };
 };
 
@@ -96,7 +104,14 @@ export function validateConfig(env = process.env): AppConfig {
     },
     embedding: { batchSize: EMBEDDING_BATCH_SIZE },
     api: { port: API_PORT },
-    log: { level: env.LOG_LEVEL || 'info' },
+    log: {
+      level: env.LOG_LEVEL || 'info',
+      dirname: env.LOG_DIRNAME || undefined,
+      maxFiles: env.LOG_MAX_FILES || undefined,
+      maxSize: env.LOG_MAX_SIZE || undefined,
+      datePattern: env.LOG_DATE_PATTERN || undefined,
+      zippedArchive: env.LOG_ZIP ? env.LOG_ZIP === 'true' : undefined,
+    },
     gc: { intervalHours: GC_INTERVAL_HOURS },
   };
 }

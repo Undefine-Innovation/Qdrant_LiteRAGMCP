@@ -178,10 +178,15 @@ export class ChunksFts5Table {
     if (pointIds.length === 0) {
       return;
     }
+    // 将 pointId 转换为实际的 FTS rowid（即 chunks.rowid）后再删除
     const placeholders = pointIds.map(() => '?').join(',');
-    const stmt = this.db.prepare(`
-      DELETE_CHUNKS_FTS5_BATCH.replace('(?)', (${placeholders}))
-    `);
+    const sql = `
+      DELETE FROM chunks_fts5
+      WHERE rowid IN (
+        SELECT rowid FROM chunks WHERE pointId IN (${placeholders})
+      )
+    `;
+    const stmt = this.db.prepare(sql);
     stmt.run(...pointIds);
   }
 }

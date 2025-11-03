@@ -150,6 +150,9 @@ export class DatabaseInitializer {
       const status = await this.checkInitializationStatus();
 
       if (status === DatabaseInitStatus.INITIALIZED) {
+        // 即使数据库已初始化，也确保 FTS5 架构为最新（幂等迁移）
+        await this.schemaManager.ensureFts5SchemaUpToDate();
+
         this.isInitialized = true;
         const duration = Date.now() - startTime;
         return {
@@ -162,7 +165,9 @@ export class DatabaseInitializer {
 
       // 执行初始化SQL
       await this.schemaManager.executeInitialSchema();
-      await this.schemaManager.executeMonitoringSchema();
+  await this.schemaManager.executeMonitoringSchema();
+  // 初始化后也执行一次 FTS5 架构校验/迁移，确保一致性
+  await this.schemaManager.ensureFts5SchemaUpToDate();
 
       this.isInitialized = true;
       const duration = Date.now() - startTime;

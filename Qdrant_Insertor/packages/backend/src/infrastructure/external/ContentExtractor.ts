@@ -2,6 +2,7 @@
 
 import { Logger } from '@logging/logger.js';
 import { IContentExtractor, ScrapeConfig } from '@domain/entities/scrape.js';
+import * as cheerio from 'cheerio';
 
 /**
  * 内容提取器实现类
@@ -44,39 +45,54 @@ export class ContentExtractor implements IContentExtractor {
     this.logger.info('开始提取HTML内容');
 
     try {
-      // 如果没有提供选择器，返回原始HTML
-      if (!selectors) {
-        this.logger.info('未提供选择器，返回原始HTML内容');
-        return {
-          content: html,
-          title: this.extractTitle(html),
-        };
+      const $ = cheerio.load(html);
+
+      // 标题
+      let title: string | undefined;
+      const titleSel = selectors?.title?.trim() || 'title, h1';
+      try {
+        const t = $(titleSel).first().text().trim();
+        title = t || this.extractTitle(html) || undefined;
+      } catch {
+        title = this.extractTitle(html) || undefined;
       }
 
-      // 提取标题
-      const title = selectors.title
-        ? this.extractBySelector(html, selectors.title)
-        : undefined;
+      // 内容（合并多个选择器的文本，保持换行）
+      let content: string | undefined;
+      const contentSel = selectors?.content?.trim() || 'main, article, .content, #content';
+      try {
+        const parts: string[] = [];
+        $(contentSel).each((_, el) => {
+          const text = $(el).text().trim();
+          if (text) parts.push(text);
+        });
+        content = parts.length ? parts.join('\n\n') : undefined;
+      } catch {
+        content = undefined;
+      }
 
-      // 提取主要内容
-      const content = selectors.content
-        ? this.extractBySelector(html, selectors.content)
-        : undefined;
-
-      // 提取链接
-      const links = selectors.links
-        ? this.extractLinks(html, selectors.links)
-        : undefined;
+      // 链接
+      let links: Array<{ url: string; text?: string; title?: string }> | undefined;
+      const linkSel = selectors?.links?.trim() || 'a[href]';
+      try {
+        const linkList: Array<{ url: string; text?: string; title?: string }> = [];
+        $(linkSel).each((_, el) => {
+          const href = $(el).attr('href');
+          if (!href) return;
+          const text = $(el).text().trim();
+          const lt = text || $(el).attr('title') || undefined;
+          linkList.push({ url: href, text, title: lt });
+        });
+        links = linkList;
+      } catch {
+        links = undefined;
+      }
 
       this.logger.info(
-        `内容提取完成，标题: ${title}, 链接数: ${links?.length || 0}`,
+        `内容提取完成，标题: ${title || ''}, 链接数: ${links?.length || 0}`,
       );
 
-      return {
-        title,
-        content,
-        links,
-      };
+      return { title, content, links };
     } catch (error) {
       this.logger.error(`内容提取失败: ${error}`);
 
@@ -95,27 +111,7 @@ export class ContentExtractor implements IContentExtractor {
    * @param selector - CSS选择器
    * @returns 提取的文本内容
    */
-  private extractBySelector(
-    html: string,
-    selector: string,
-  ): string | undefined {
-    try {
-      // 在实际项目中，应该使用cheerio或类似的HTML解析库
-      // 这里提供一个简单的正则表达式实现
-      const regex = new RegExp(`<[^>]*${selector}[^>]*>([^<]*)`, 'gi');
-      const matches = html.match(regex);
-
-      if (matches && matches.length > 0) {
-        // 移除HTML标签，只保留文本内容
-        return matches[0].replace(/<[^>]*>/g, '').trim();
-      }
-
-      return undefined;
-    } catch (error) {
-      this.logger.warn(`选择器提取失败: ${selector}, 错误: ${error}`);
-      return undefined;
-    }
-  }
+  // 旧的正则实现已被 cheerio 替换
 
   /**
    * 提取页面标题

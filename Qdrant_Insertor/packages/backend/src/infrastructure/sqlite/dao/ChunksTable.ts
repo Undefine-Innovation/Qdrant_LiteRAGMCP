@@ -85,9 +85,9 @@ export class ChunksTable {
           const chunkIndexInt = Math.floor(item.chunkIndex);
 
           try {
-            // 暂时禁用所有触发器以避免 FTS5 相关的 datatype mismatch
-            this.db.exec('PRAGMA recursive_triggers = OFF');
-            this.db.exec('PRAGMA foreign_keys = OFF');
+            // 确保触发器开启，让 FTS5 通过触发器自动维护索引
+            this.db.exec('PRAGMA recursive_triggers = ON');
+            this.db.exec('PRAGMA foreign_keys = ON');
 
             // 使用原始 SQL 执行插入，避免 better-sqlite3 的参数绑定问题
             const rawSql = `INSERT INTO chunks (content, title, pointId, docId, collectionId, chunkIndex) VALUES ('${item.content.replace(/'/g, "''")}', '${titleForDb.replace(/'/g, "''")}', '${item.pointId.replace(/'/g, "''")}', '${item.docId.replace(/'/g, "''")}', '${item.collectionId.replace(/'/g, "''")}', ${chunkIndexInt})`;
@@ -119,10 +119,6 @@ export class ChunksTable {
     try {
       insertMany(data);
       console.log(`[ChunksTable.createBatch] 批量插入chunks完成`);
-
-      // 重新启用触发器
-      this.db.exec('PRAGMA recursive_triggers = ON');
-      this.db.exec('PRAGMA foreign_keys = ON');
     } catch (error) {
       console.error(`[ChunksTable.createBatch] 批量插入chunks失败:`, {
         error: (error as Error).message,

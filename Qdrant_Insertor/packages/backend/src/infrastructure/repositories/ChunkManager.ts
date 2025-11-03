@@ -12,6 +12,7 @@ import { makeDocId, makePointId, hashContent } from '@domain/utils/id.js';
 import { ChunkMetaTable } from '@infrastructure/sqlite/dao/ChunkMetaTable.js';
 import { ChunksFts5Table } from '@infrastructure/sqlite/dao/ChunksFts5Table.js';
 import { ChunksTable } from '@infrastructure/sqlite/dao/ChunksTable.js';
+import type { DocsTable } from '@infrastructure/sqlite/dao/DocsTable.js';
 
 /**
  * 块管理器
@@ -30,6 +31,7 @@ export class ChunkManager {
     private readonly chunkMeta: ChunkMetaTable, // ChunkMetaTable
     private readonly chunksFts5: ChunksFts5Table, // ChunksFts5Table
     private readonly chunks: ChunksTable, // ChunksTable
+    private readonly docs: DocsTable, // DocsTable for doc lookup
     private readonly core: SQLiteRepoCore,
     private readonly logger: Logger,
   ) {}
@@ -175,16 +177,10 @@ export class ChunkManager {
         }));
         this.chunks.createBatch(processedChunksData);
 
+        // 依赖 SQLite 触发器自动维护 FTS5 索引（见 schema.sql 中的 chunks_* 触发器）
         this.logger.info(
-          `[ChunkManager.addChunks] 开始执行chunksFts5.createBatch`,
+          `[ChunkManager.addChunks] 已插入 chunks，FTS5 将通过触发器自动更新`,
         );
-        const fts5Data = chunkMetas.map((cm, index) => ({
-          pointId: cm.pointId,
-          content: documentChunks[index].content,
-          titleChain: cm.titleChain,
-        }));
-        this.logger.info(`[ChunkManager.addChunks] fts5Data示例:`, fts5Data[0]);
-        this.chunksFts5.createBatch(fts5Data);
       });
       this.logger.info(`[ChunkManager.addChunks] 所有数据库操作完成`);
     } catch (error) {
@@ -211,28 +207,8 @@ export class ChunkManager {
     key?: string;
     mime?: string;
   }> {
-    // 这里应该从DocumentManager获取文档
-    // 暂时直接从docs表获�?
-    // 需要通过SQLiteRepoCore访问docs�?
-    const doc = (
-      this.core as {
-        docs?: {
-          getById: (id: DocId) => {
-            docId: DocId;
-            name: string;
-            collectionId: CollectionId;
-            key?: string;
-            mime?: string;
-            content?: string;
-            size_bytes?: number;
-            created_at?: number;
-            updated_at?: number;
-            synced_at?: number;
-            deleted_at?: number;
-          };
-        };
-      }
-    ).docs?.getById(docId);
+    // 直接通过 DocsTable 获取文档，避免依赖 core 暴露内部结构
+    const doc = this.docs.getById(docId as DocId);
 
     if (!doc) {
       throw new Error(`Document ${docId} not found`);
@@ -240,7 +216,7 @@ export class ChunkManager {
 
     return {
       docId: doc.docId,
-      name: doc.name,
+      name: doc.name || '',
       collectionId: doc.collectionId,
       key: doc.key,
       mime: doc.mime,

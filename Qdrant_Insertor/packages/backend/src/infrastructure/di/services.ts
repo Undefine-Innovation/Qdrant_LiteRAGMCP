@@ -70,9 +70,24 @@ export async function initializeInfrastructure(
   config: AppConfig,
   logger: Logger,
 ): Promise<InfrastructureComponents> {
-  // 创建数据库实例
+  // 先创建 Qdrant 仓库
+  const qdrantRepo: IQdrantRepo = new QdrantRepo(config, logger);
+  // 确保Qdrant集合已创建且向量维度匹配
+  try {
+    await (qdrantRepo as QdrantRepo).ensureCollection();
+    logger.info(
+      `Qdrant collection ensured: ${(config.qdrant && config.qdrant.collection) || 'chunks'}`,
+    );
+  } catch (e) {
+    logger.error('Failed to ensure Qdrant collection on startup', {
+      error: e,
+    });
+    // 不中断启动，让上层有机会继续运行（如纯关键字检索场景）
+  }
+
+  // 创建数据库实例，并将 Qdrant 注入 SQLiteRepo，确保事务管理器具备 Qdrant 能力
   const dbInstance = new Database(config.db.path);
-  const dbRepo = new SQLiteRepo(dbInstance, logger);
+  const dbRepo = new SQLiteRepo(dbInstance, logger, qdrantRepo);
 
   // 初始化数据库
   logger.info('正在初始化数据库...');
@@ -82,9 +97,6 @@ export async function initializeInfrastructure(
     throw new Error(`数据库初始化失败: ${initResult.error}`);
   }
   logger.info(`数据库初始化成功: ${initResult.message}`);
-
-  // 创建其他基础设施组件
-  const qdrantRepo: IQdrantRepo = new QdrantRepo(config, logger);
   const embeddingProvider: IEmbeddingProvider =
     createOpenAIEmbeddingProviderFromConfig();
   const splitter: ISplitter = new MarkdownSplitter();
@@ -157,16 +169,35 @@ export async function initializeServices(
     (dbRepo as any).getDb?.(), // eslint-disable-line @typescript-eslint/no-explicit-any -- 获取底层数据库实例
   );
 
-  const webCrawler = new WebCrawler(logger, new ContentExtractor(logger));
+  // 初始化状态机（确保数据库表存在）
+  try {
+    // 手动初始化状态机持久化表
+    if ((dbRepo as any).db) {
+      const { SQLiteStatePersistence } = await import('@infrastructure/state-machine/StatePersistence.js');
+      const persistence = new SQLiteStatePersistence((dbRepo as any).db, logger);
+      await persistence.initializeTable();
+      logger.info('状态机数据库表初始化完成');
+    }
+  } catch (error) {
+    logger.error('状态机数据库表初始化失败:', error);
+  }
+
+  const contentExtractor = new ContentExtractor(logger);
+  const webCrawler = new WebCrawler(logger, contentExtractor);
   const scrapeService: ScrapeService = new ScrapeService(
     stateMachineService.getEngine(),
     logger,
+    webCrawler,
+    contentExtractor,
+    dbRepo,
+    importService,
   );
   const autoGCService = new AutoGCService(dbRepo, qdrantRepo, logger, config);
 
   const collectionService: ICollectionService = new CollectionService(
     dbRepo,
     qdrantRepo,
+    logger,
     (
       dbRepo as ISQLiteRepo & {
         getTransactionManager: () => TransactionManager;
@@ -177,6 +208,7 @@ export async function initializeServices(
     dbRepo,
     importService,
     qdrantRepo, // Add QdrantRepo dependency
+    logger,
   );
 
   const fileProcessingService: IFileProcessingService =

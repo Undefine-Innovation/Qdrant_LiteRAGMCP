@@ -30,6 +30,7 @@ import { SystemMetricsTable } from '@infrastructure/sqlite/dao/SystemMetricsTabl
 import { AlertRulesTable } from '@infrastructure/sqlite/dao/AlertRulesTable.js';
 import { SystemHealthTable } from '@infrastructure/sqlite/dao/SystemHealthTable.js';
 import { AlertHistoryTable } from '@infrastructure/sqlite/dao/AlertHistoryTable.js';
+import { ScrapeResultsTable } from '@infrastructure/sqlite/dao/ScrapeResultsTable.js';
 
 /**
  * SQLiteRepo 作为数据访问对象 (DAO) 的协调器�?
@@ -46,6 +47,7 @@ export class SQLiteRepo implements ISQLiteRepo {
   public readonly systemMetrics: SystemMetricsTable;
   public readonly alertRules: AlertRulesTable;
   public readonly alertHistory: AlertHistoryTable;
+  public readonly scrapeResults: ScrapeResultsTable;
   public readonly db: Database.Database;
   public readonly systemHealth: SystemHealthTable;
 
@@ -76,6 +78,7 @@ export class SQLiteRepo implements ISQLiteRepo {
     this.alertRules = new AlertRulesTable(db);
     this.systemHealth = new SystemHealthTable(db);
     this.alertHistory = new AlertHistoryTable(db);
+  this.scrapeResults = new ScrapeResultsTable(db);
 
     // 创建事务管理器
     this.transactionManager = new TransactionManager(
@@ -86,12 +89,12 @@ export class SQLiteRepo implements ISQLiteRepo {
 
     this.collectionManager = new CollectionManager(
       {
-        getById: this.collections.getById,
-        delete: this.collections.delete,
+        getById: this.collections.getById.bind(this.collections),
+        delete: this.collections.delete.bind(this.collections),
         chunkMeta: this.chunkMeta,
         chunksFts5: this.chunksFts5,
         docs: this.docs,
-        listAll: this.collections.listAll,
+        listAll: this.collections.listAll.bind(this.collections),
       } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- FIXME: 需要定义正确的接口类型来替代any
       this.core,
       this.logger,
@@ -99,10 +102,22 @@ export class SQLiteRepo implements ISQLiteRepo {
     );
     this.documentManager = new DocumentManager(
       {
-        ...this.docs,
+        getById: this.docs.getById.bind(this.docs),
+        update: this.docs.update.bind(this.docs),
+        // 适配 DocumentManager 期望的 create 签名
+        create: (data) =>
+          this.docs.create({
+            collectionId: data.collectionId,
+            key: data.key!,
+            name: data.name,
+            mime: data.mime,
+            size_bytes: data.size_bytes,
+            content: (data as unknown as { content: string }).content,
+          }),
+        hardDelete: this.docs.hardDelete.bind(this.docs),
         chunkMeta: this.chunkMeta,
         chunksFts5: this.chunksFts5,
-      } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- FIXME: 需要定义正确的接口类型来替代any
+      },
       this.core,
       this.logger,
     );
@@ -110,6 +125,7 @@ export class SQLiteRepo implements ISQLiteRepo {
       this.chunkMeta,
       this.chunksFts5,
       this.chunks,
+      this.docs,
       this.core,
       this.logger,
     );

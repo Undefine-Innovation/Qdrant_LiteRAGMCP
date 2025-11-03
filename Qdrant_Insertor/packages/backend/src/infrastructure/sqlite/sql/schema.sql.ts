@@ -41,19 +41,19 @@ CREATE TABLE IF NOT EXISTS chunks (
     FOREIGN KEY (collectionId) REFERENCES collections(collectionId) ON DELETE CASCADE
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts5 USING fts5(content, title, tokenize='porter', content='chunks', content_rowid='pointId');
+CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts5 USING fts5(content, title, tokenize='porter', content='chunks');
 
 CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.pointId, NEW.content, NEW.title);
+    INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
 END;
 
 CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
-  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.pointId, OLD.content, OLD.title);
-  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.pointId, NEW.content, NEW.title);
+    INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
+    INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
 END;
 
 CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
-  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.pointId, OLD.content, OLD.title);
+    INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
 END;
 
 CREATE TABLE IF NOT EXISTS sync_jobs (

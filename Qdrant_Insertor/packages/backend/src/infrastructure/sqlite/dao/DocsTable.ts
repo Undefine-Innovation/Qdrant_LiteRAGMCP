@@ -46,18 +46,26 @@ export class DocsTable {
     const docId = makeDocId(data.content);
     const now = Date.now();
     const stmt = this.db.prepare(INSERT_DOC);
-    stmt.run(
-      docId,
-      data.collectionId,
-      data.key,
-      data.name,
-      data.content,
-      data.size_bytes,
-      data.mime,
-      now,
-      now,
-      0, // is_deleted
-    );
+    try {
+      stmt.run(
+        docId,
+        data.collectionId,
+        data.key,
+        data.name,
+        data.content,
+        data.size_bytes,
+        data.mime,
+        now,
+        now,
+        0, // is_deleted
+      );
+    } catch (err: any) {
+      // 幂等：若主键冲突，表示相同内容的文档已存在，则直接返回同一docId
+      if (err && err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+        return docId as DocId;
+      }
+      throw err;
+    }
     return docId as DocId;
   }
 

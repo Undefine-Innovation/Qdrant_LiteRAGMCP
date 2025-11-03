@@ -169,6 +169,15 @@ export class TransactionManager implements ITransactionManager {
       throw new Error(`Transaction ${transactionId} not found`);
     }
 
+    // 允许提交空事务（PENDING），视为无操作提交，避免上层 no-op 流程报错
+    if (context.status === TransactionStatus.PENDING) {
+      context.status = TransactionStatus.COMMITTED;
+      this.logger.info('Transaction committed with no operations (no-op)', {
+        transactionId,
+      });
+      return;
+    }
+
     if (context.status !== TransactionStatus.ACTIVE) {
       throw new Error(`Transaction ${transactionId} is not active`);
     }

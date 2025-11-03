@@ -3,6 +3,9 @@
  */
 
 import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import fs from 'node:fs';
+import path from 'node:path';
 import { AppConfig } from '@config/config.js';
 
 /**
@@ -49,6 +52,14 @@ export interface Logger {
 export function createLogger(config: AppConfig): Logger {
   const { combine, timestamp, json, colorize, simple } = winston.format;
 
+  // 确保日志目录存在
+  const logsDir = path.resolve(process.cwd(), 'logs');
+  try {
+    fs.mkdirSync(logsDir, { recursive: true });
+  } catch {
+    // 目录创建失败不应阻断应用启动，继续使用控制台输出
+  }
+
   const logger = winston.createLogger({
     level: config.log.level, // 从配置中获取日志级别
     format: combine(timestamp(), json()), // 结合时间戳和 JSON 格式进行结构化日志输�?
@@ -57,8 +68,17 @@ export function createLogger(config: AppConfig): Logger {
       new winston.transports.Console({
         format: combine(colorize(), simple()), // 控制台输出带颜色和简洁格�?
       }),
-      // 配置文件传输器，日志写入 logs/app.log
-      new winston.transports.File({ filename: 'logs/app.log' }),
+      // 配置按日期滚动的文件传输器
+      new DailyRotateFile({
+        dirname: logsDir,
+        filename: 'app-%DATE%.log',
+        datePattern: config.log?.datePattern || 'YYYY-MM-DD',
+        zippedArchive: config.log?.zippedArchive ?? true,
+        maxSize: config.log?.maxSize || '20m',
+        // 支持天数(如 '14d')或数量(如 '30')。
+        maxFiles: config.log?.maxFiles || '14d',
+        level: config.log.level,
+      }),
     ],
   });
 

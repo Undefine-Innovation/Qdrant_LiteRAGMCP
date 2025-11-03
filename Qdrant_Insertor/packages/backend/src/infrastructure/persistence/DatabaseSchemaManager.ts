@@ -32,6 +32,80 @@ export class DatabaseSchemaManager {
   }
 
   /**
+   * 确保 FTS5 表和触发器为最新配置（使用 rowid 关联而非 pointId）
+   * 如果检测到旧的 content_rowid='pointId' 或触发器引用 pointId，则自动迁移
+   */
+  public async ensureFts5SchemaUpToDate(): Promise<void> {
+    try {
+      // 查询 chunks_fts5 的创建 SQL
+      const row = this.db
+        .prepare(
+          `SELECT sql FROM sqlite_master WHERE type='table' AND name='chunks_fts5'`,
+        )
+        .get() as { sql?: string } | undefined;
+
+      const existingSql = row?.sql || '';
+      const isOldMapping = existingSql.includes("content_rowid='pointId'");
+
+      // 查询触发器定义
+      const triggers = this.db
+        .prepare(
+          `SELECT name, sql FROM sqlite_master WHERE type='trigger' AND name IN ('chunks_ai','chunks_au','chunks_ad')`,
+        )
+        .all() as Array<{ name: string; sql: string }>;
+      const triggersUsePointId = triggers.some((t) =>
+        /NEW\.pointId|OLD\.pointId/.test(t.sql || ''),
+      );
+
+      if (isOldMapping || triggersUsePointId) {
+        this.logger.warn(
+          '[DatabaseSchemaManager] 检测到旧版 FTS5 配置，开始迁移为 rowid 映射…',
+        );
+
+        const migrate = this.db.transaction(() => {
+          // 删除旧触发器和虚拟表
+          this.db.exec(`
+            DROP TRIGGER IF EXISTS chunks_ai;
+            DROP TRIGGER IF EXISTS chunks_au;
+            DROP TRIGGER IF EXISTS chunks_ad;
+            DROP TABLE IF EXISTS chunks_fts5;
+          `);
+
+          // 创建新的 FTS5 表与触发器（基于 rowid）
+          this.db.exec(`
+            CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts5
+            USING fts5(content, title, tokenize='porter', content='chunks');
+
+            CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
+              INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
+              INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
+              INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+              INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
+            END;
+          `);
+
+          // 触发重建以回填现有内容
+          this.db.exec(`INSERT INTO chunks_fts5(chunks_fts5) VALUES('rebuild')`);
+        });
+
+        migrate();
+        this.logger.info('[DatabaseSchemaManager] FTS5 架构迁移完成');
+      } else {
+        this.logger.info('[DatabaseSchemaManager] FTS5 架构已是最新，无需迁移');
+      }
+    } catch (error) {
+      this.logger.error('[DatabaseSchemaManager] 检测/迁移 FTS5 架构失败', error);
+      // 不抛出以避免阻塞主流程，但保留错误日志
+    }
+  }
+
+  /**
    * 检查是否需要应用监控架构更新
    */
   public async needsMonitoringSchemaUpdate(): Promise<boolean> {

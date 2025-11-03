@@ -7,7 +7,7 @@
  */
 export const CREATE_TABLE_CHUNKS_FTS5 = `
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts5
-USING fts5(content, title, tokenize='porter', content='chunks', content_rowid='pointId')`;
+USING fts5(content, title, tokenize='porter', content='chunks')`;
 
 /**
  * 创建 CHUNKS_FTS5 触发器的 SQL 语句
@@ -15,18 +15,18 @@ USING fts5(content, title, tokenize='porter', content='chunks', content_rowid='p
 export const CREATE_CHUNKS_FTS5_TRIGGERS = `
 -- 触发器：当chunks 表插入时，自动插入到 chunks_fts5
 CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.pointId, NEW.content, NEW.title);
+  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
 END;
 
 -- 触发器：当chunks 表更新时，自动更新chunks_fts5
 CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
-  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.pointId, OLD.content, OLD.title);
-  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.pointId, NEW.content, NEW.title);
+  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
+  INSERT INTO chunks_fts5(rowid, content, title) VALUES (NEW.rowid, NEW.content, NEW.title);
 END;
 
 -- 触发器：当chunks 表删除时，自动从 chunks_fts5 删除
 CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
-  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.pointId, OLD.content, OLD.title);
+  INSERT INTO chunks_fts5(chunks_fts5, rowid, content, title) VALUES ('delete', OLD.rowid, OLD.content, OLD.title);
 END`;
 
 /**
@@ -49,7 +49,7 @@ SELECT
   d.name as doc_name,
   d.is_deleted as doc_is_deleted
 FROM chunks_fts5 fts
-JOIN chunks c ON fts.rowid = c.pointId
+JOIN chunks c ON fts.rowid = c.rowid
 JOIN docs d ON c.docId = d.docId
 WHERE chunks_fts5 MATCH ?
   AND d.is_deleted = 0
@@ -70,7 +70,7 @@ SELECT
   d.name as doc_name,
   d.is_deleted as doc_is_deleted
 FROM chunks_fts5 fts
-JOIN chunks c ON fts.rowid = c.pointId
+JOIN chunks c ON fts.rowid = c.rowid
 JOIN docs d ON c.docId = d.docId
 WHERE chunks_fts5 MATCH ?
   AND c.collectionId = ?
@@ -92,7 +92,7 @@ SELECT
   d.name as doc_name,
   d.is_deleted as doc_is_deleted
 FROM chunks_fts5 fts
-JOIN chunks c ON fts.rowid = c.pointId
+JOIN chunks c ON fts.rowid = c.rowid
 JOIN docs d ON c.docId = d.docId
 WHERE chunks_fts5 MATCH ?
   AND c.docId = ?
@@ -112,7 +112,7 @@ DELETE FROM chunks_fts5 WHERE rowid IN (?)`;
 export const DELETE_CHUNKS_FTS5_BY_DOC_ID = `
 DELETE FROM chunks_fts5
 WHERE rowid IN (
-  SELECT pointId FROM chunks WHERE docId = ?
+  SELECT rowid FROM chunks WHERE docId = ?
 )`;
 
 /**
@@ -121,7 +121,7 @@ WHERE rowid IN (
 export const DELETE_CHUNKS_FTS5_BY_COLLECTION_ID = `
 DELETE FROM chunks_fts5
 WHERE rowid IN (
-  SELECT pointId FROM chunks WHERE collectionId = ?
+  SELECT rowid FROM chunks WHERE collectionId = ?
 )`;
 
 /**

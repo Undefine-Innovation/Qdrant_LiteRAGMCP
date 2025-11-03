@@ -180,7 +180,16 @@ export class QdrantRepo implements IQdrantRepo {
         chunkIndex: item.payload?.chunkIndex as number,
       })) as SearchResult[];
     } catch (e) {
-      this.logger.error('Error searching Qdrant:', { error: e });
+      // 提升错误可观测性：展开常见字段，便于定位问题（如维度不匹配、网络异常等）
+      const err: any = e;
+      this.logger.error('Error searching Qdrant:', {
+        message: err?.message,
+        name: err?.name,
+        code: err?.code,
+        status: err?.status,
+        response: err?.response?.data ?? err?.response,
+        stack: err?.stack,
+      });
       return [];
     }
   }
@@ -195,11 +204,17 @@ export class QdrantRepo implements IQdrantRepo {
     if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
 
     try {
+      const t0 = Date.now();
+      this.logger.info('[DeleteAudit] Qdrant delete by doc start', { docId });
       await this.client.delete(this.collectionName, {
         wait: true,
         filter: {
           must: [{ key: 'docId', match: { value: docId } }],
         },
+      });
+      this.logger.info('[DeleteAudit] Qdrant delete by doc completed', {
+        docId,
+        elapsedMs: Date.now() - t0,
       });
     } catch (e) {
       this.logger.warn('deletePointsByDoc: failed to delete points', {
@@ -219,12 +234,20 @@ export class QdrantRepo implements IQdrantRepo {
     if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
 
     try {
+      const t0 = Date.now();
+      this.logger.info('[DeleteAudit] Qdrant delete by collection start', {
+        collectionId,
+      });
       await this.client.delete(this.collectionName, {
         wait: true,
         filter: {
           must: [{ key: 'collectionId', match: { value: collectionId } }],
         },
       });
+      this.logger.info(
+        '[DeleteAudit] Qdrant delete by collection completed',
+        { collectionId, elapsedMs: Date.now() - t0 },
+      );
     } catch (e) {
       this.logger.warn('deletePointsByCollection: failed to delete points', {
         collectionId,
@@ -267,13 +290,26 @@ export class QdrantRepo implements IQdrantRepo {
     if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
 
     const BATCH_SIZE = 100;
+    this.logger.info('[DeleteAudit] Qdrant delete points start', {
+      collectionId,
+      totalPoints: pointIds.length,
+      batchSize: BATCH_SIZE,
+    });
+    const t0 = Date.now();
     for (let i = 0; i < pointIds.length; i += BATCH_SIZE) {
       const batch = pointIds.slice(i, i + BATCH_SIZE);
 
       try {
+        const tb = Date.now();
         await this.client.delete(this.collectionName, {
           wait: true,
           points: batch,
+        });
+        this.logger.info('[DeleteAudit] Qdrant delete points batch done', {
+          collectionId,
+          batchIndex: Math.floor(i / BATCH_SIZE) + 1,
+          batchSize: batch.length,
+          elapsedMs: Date.now() - tb,
         });
       } catch (e) {
         this.logger.warn(
@@ -286,5 +322,10 @@ export class QdrantRepo implements IQdrantRepo {
         );
       }
     }
+    this.logger.info('[DeleteAudit] Qdrant delete points completed', {
+      collectionId,
+      totalPoints: pointIds.length,
+      totalElapsedMs: Date.now() - t0,
+    });
   }
 }

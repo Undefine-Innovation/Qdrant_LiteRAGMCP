@@ -8,6 +8,7 @@ import {
   ScrapeStatus,
 } from '@domain/entities/scrape.js';
 import { IContentExtractor } from '@domain/entities/scrape.js';
+import { Agent, ProxyAgent } from 'undici';
 
 /**
  * Web爬虫实现类
@@ -45,44 +46,98 @@ export class WebCrawler implements IWebCrawler {
     this.logger.info(`开始爬取网页: ${config.url}`);
 
     try {
-      // 获取网页内容
-      const html = await this.fetchHtml(
-        config.url,
-        config.headers,
-        config.timeout,
-        config.userAgent,
-      );
+      const startedAt = Date.now();
+      const base = new URL(config.url);
+      const follow = !!config.followLinks;
+      const maxDepth = Math.max(1, config.maxDepth ?? 1);
+      const maxPages = 50; // 安全上限，避免爆量
 
-      if (!html) {
-        throw new Error(`无法获取网页内容: ${config.url}`);
+      const visited = new Set<string>();
+      const toVisit: Array<{ url: string; depth: number }> = [
+        { url: base.toString(), depth: 1 },
+      ];
+
+  const pages: Array<{ url: string; title?: string; content?: string }> = [];
+  const linkSet = new Set<string>();
+  const inScopeLinks: Array<{ url: string; text?: string; title?: string }> = [];
+
+      while (toVisit.length > 0 && pages.length < maxPages) {
+        const { url, depth } = toVisit.shift()!;
+        if (visited.has(url)) continue;
+        visited.add(url);
+
+        let html: string | null = null;
+        try {
+          html = await this.fetchHtml(url, config.headers, config.timeout, config.userAgent);
+        } catch (e) {
+          this.logger.warn(`抓取失败，跳过: ${url} -> ${String(e)}`);
+          continue;
+        }
+        if (!html) continue;
+
+        const extracted = this.contentExtractor.extract(html, config.selectors);
+        pages.push({ url, title: extracted.title, content: extracted.content });
+
+        // 聚合链接（严格约束在同源/子路径范围）
+        const links = extracted.links || [];
+        for (const l of links) {
+          try {
+            const abs = new URL(l.url, url);
+            if (abs.origin !== base.origin) continue;
+            if (!abs.pathname.startsWith(base.pathname)) continue;
+            abs.hash = '';
+            const normalizedPath = abs.pathname.endsWith('/') && abs.pathname !== '/' ? abs.pathname.slice(0, -1) : abs.pathname;
+            const normalized = `${abs.origin}${normalizedPath}`;
+            if (!linkSet.has(normalized)) {
+              linkSet.add(normalized);
+              inScopeLinks.push({ url: normalized, text: l.text, title: l.title });
+            }
+          } catch (_) {
+            // ignore
+          }
+        }
+
+        // 链接扩展：同源且路径前缀一致
+        if (follow && depth < maxDepth && links.length) {
+          for (const l of links) {
+            try {
+              const abs = new URL(l.url, url);
+              // 仅同源
+              if (abs.origin !== base.origin) continue;
+              // 仅在同路径前缀（允许子路径）
+              if (!abs.pathname.startsWith(base.pathname)) continue;
+              // 归一化：去掉片段，标准化路径结尾斜杠
+              abs.hash = '';
+              const normalizedPath = abs.pathname.endsWith('/') && abs.pathname !== '/' ? abs.pathname.slice(0, -1) : abs.pathname;
+              const normalized = `${abs.origin}${normalizedPath}`;
+              if (!visited.has(normalized)) {
+                toVisit.push({ url: normalized, depth: depth + 1 });
+              }
+            } catch (_) {
+              // ignore bad url
+            }
+          }
+        }
       }
 
-      // 提取内容
-      const extracted = this.contentExtractor.extract(html, config.selectors);
+      const combinedTitle = pages[0]?.title;
+      const combinedContent = pages.map(p => `# ${p.title || p.url}\n\n${p.content || ''}`).join('\n\n---\n\n');
 
-      // 处理链接跟随（如果启用）
-      let links: Array<{ url: string; text?: string; title?: string }> = [];
-      if (config.followLinks && extracted.links) {
-        // 这里可以添加深度控制和链接过滤逻辑
-        links = extracted.links.slice(0, config.maxDepth || 10);
-      }
-
-      this.logger.info(
-        `内容提取完成，标题: ${extracted.title}, 链接数: ${links.length}`,
-      );
+  this.logger.info(`抓取完成：页面数 ${pages.length}，同域同路径链接数 ${inScopeLinks.length}`);
 
       return {
         taskId: `crawl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         status: 'COMPLETED' as ScrapeStatus,
-        title: extracted.title,
-        content: extracted.content,
-        links,
+        title: combinedTitle,
+        content: combinedContent,
+  links: inScopeLinks,
         metadata: {
           url: config.url,
           extractedAt: Date.now(),
           selectors: config.selectors,
+          pages, // 返回页面数组，供上层按需持久化多条
         },
-        startedAt: Date.now(),
+        startedAt,
         completedAt: Date.now(),
         progress: 100,
         retries: 0,
@@ -114,53 +169,90 @@ export class WebCrawler implements IWebCrawler {
    * @param userAgent - 用户代理
    * @returns HTML内容
    */
-  /**
-   * 获取HTML内容
-   * @param url - 目标URL
-   * @param headers - 请求头
-   * @param timeout - 超时时间
-   * @param userAgent - 用户代理
-   * @returns HTML内容
-   */
   private async fetchHtml(
     url: string,
     headers?: Record<string, string>,
     timeout?: number,
     userAgent?: string,
   ): Promise<string> {
-    // 在实际项目中，应该使用fetch或axios等HTTP客户端
-    // 这里提供一个基础实现
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout || 30000);
+    // 配置连接与请求超时
+    const requestTimeoutMs = Math.max(1, timeout ?? 30000);
+    const connectTimeoutMs = Math.min(requestTimeoutMs - 1, 20000); // 连接超时不超过 20s
 
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent':
-            userAgent ||
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.0 Safari/537.36',
-          ...headers,
-        },
-        signal: controller.signal,
-      });
+    // 可选代理支持（优先 HTTPS_PROXY 其后 HTTP_PROXY）
+    const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const dispatcher = proxyUrl
+      ? new ProxyAgent(proxyUrl)
+      : new Agent({ connect: { timeout: connectTimeoutMs } });
 
-      clearTimeout(timeoutId);
+    // 简单重试（指数退避）
+    const maxRetries = 2;
+    let attempt = 0;
+    let lastErr: unknown;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    while (attempt <= maxRetries) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'User-Agent':
+              userAgent ||
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.0 Safari/537.36',
+            Accept:
+              'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cache-Control': 'no-cache',
+            ...headers,
+          },
+          signal: controller.signal,
+          // 使用 undici dispatcher 定制连接超时/代理
+          dispatcher,
+        } as any);
 
-      return await response.text();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      controller.abort();
+        clearTimeout(timeoutId);
 
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new Error(`网络请求失败: ${error}`);
+        if (!response.ok) {
+          // 对易恢复的 429/503 做重试
+          if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
+            attempt++;
+            const backoff = 500 * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms
+            await new Promise((r) => setTimeout(r, backoff));
+            continue;
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.text();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        controller.abort();
+        lastErr = error;
+        const e = error as any;
+        const code = e?.code || e?.cause?.code;
+        const transient =
+          code === 'UND_ERR_CONNECT_TIMEOUT' ||
+          code === 'ETIMEDOUT' ||
+          code === 'ECONNRESET' ||
+          code === 'ECONNREFUSED' ||
+          code === 'EAI_AGAIN';
+        if (transient && attempt < maxRetries) {
+          attempt++;
+          const backoff = 500 * Math.pow(2, attempt);
+          this.logger.warn(`请求失败(${code})，第 ${attempt} 次重试，等待 ${backoff}ms`);
+          await new Promise((r) => setTimeout(r, backoff));
+          continue;
+        }
+        // 聚合错误细节
+        const name = e?.name || 'Error';
+        const errno = e?.errno || e?.cause?.errno;
+        const msg = e?.message || 'fetch failed';
+        const detail = `[${name}${code ? `/${code}` : ''}${errno ? `:${errno}` : ''}] ${msg}`;
+        throw new Error(detail);
       }
     }
+    // 理论上不会到达这里
+    throw lastErr instanceof Error ? lastErr : new Error('fetch failed');
   }
 }
