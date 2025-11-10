@@ -8,11 +8,7 @@ import {
 } from '@domain/repositories/IStateMachineService.js';
 import { BaseStateMachineEngine } from '@domain/state-machine/BaseStateMachineEngine.js';
 import { BatchUploadStrategy } from '@domain/state-machine/BatchUploadStrategy.js';
-import {
-  InMemoryStatePersistence,
-  SQLiteStatePersistence,
-  TypeORMStatePersistence,
-} from '@infrastructure/state-machine/StatePersistence.js';
+import { InMemoryStatePersistence } from '@infrastructure/state-machine/StatePersistence.js';
 import {
   IStateMachineEngine,
   StateMachineTask,
@@ -34,21 +30,11 @@ export class StateMachineService implements IStateMachineService {
    * @param logger 日志记录器
    * @param dataSource TypeORM数据源实例，可选
    */
-  constructor(
-    private readonly logger: Logger,
-    dataSource?: DataSource, // TypeORM数据源实例
-  ) {
-    // 根据环境选择持久化实现
-    const persistence = dataSource
-      ? new TypeORMStatePersistence(dataSource, logger)
-      : new InMemoryStatePersistence(logger);
+  constructor(private readonly logger: Logger) {
+    // 目前仅使用内存持久化实现
+    const persistence = new InMemoryStatePersistence(logger);
 
     this.engine = new BaseStateMachineEngine(logger, persistence);
-
-    // 如果使用持久化，需要初始化表结构
-    if (persistence instanceof TypeORMStatePersistence) {
-      this.initializePersistence(persistence);
-    }
 
     this.initializeStrategies();
   }
@@ -58,17 +44,7 @@ export class StateMachineService implements IStateMachineService {
    * @param persistence 状态持久化实例
    * @returns {Promise<void>} 返回初始化结果
    */
-  private async initializePersistence(
-    persistence: TypeORMStatePersistence,
-  ): Promise<void> {
-    try {
-      await persistence.initializeTable();
-      this.logger.info('状态机持久化表初始化完成');
-    } catch (error) {
-      this.logger.error('状态机持久化表初始化失败', { error });
-      throw error;
-    }
-  }
+  // 持久化表初始化逻辑已移除，当前仅支持内存状态机
 
   /**
    * 初始化状态机策略

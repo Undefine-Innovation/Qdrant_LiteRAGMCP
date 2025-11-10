@@ -34,9 +34,8 @@ export { ChunkFullText } from './ChunkFullText.js';
 export { ChunkMeta } from './ChunkMeta.js';
 
 /**
- * 同步作业实体
+ * 同步作业实体 (已移除，使用内存状态)
  */
-export { SyncJobEntity } from './SyncJob.js';
 
 /**
  * 系统指标实体
@@ -79,7 +78,7 @@ export const allEntities = [
   'Chunk',
   'ChunkFullText',
   'ChunkMeta',
-  'SyncJobEntity',
+  // 'SyncJobEntity' removed (DB-backed sync jobs disabled)
   'SystemMetrics',
   'AlertRules',
   'AlertHistory',

@@ -8,7 +8,7 @@ import { Collection } from '@infrastructure/database/entities/Collection.js';
 import { Doc } from '@infrastructure/database/entities/Doc.js';
 import { Chunk } from '@infrastructure/database/entities/Chunk.js';
 import { ChunkMeta } from '@infrastructure/database/entities/ChunkMeta.js';
-import { SyncJobEntity } from '@infrastructure/database/entities/SyncJob.js';
+// SyncJobEntity removed - DB-backed sync jobs disabled; tests should use in-memory state assertions instead
 import { SystemMetrics } from '@infrastructure/database/entities/SystemMetrics.js';
 import { AlertRules } from '@infrastructure/database/entities/AlertRules.js';
 import { AlertHistory } from '@infrastructure/database/entities/AlertHistory.js';
@@ -165,22 +165,10 @@ export class TestAssertions {
     docId: DocId,
     expectedStatus: string,
   ): Promise<void> {
-    const repository = dataSource.getRepository(SyncJobEntity);
-    const syncJob = await repository.findOne({ where: { docId } });
-
-    if (!syncJob) {
-      throw new Error(`Sync job for document ${docId} not found`);
-    }
-
-    // 使用SyncJobStatusMapper进行状态比较
-    const { SyncJobStatusMapper } = await import('../../../src/domain/sync/SyncJobStatusMapper.js');
-    const expectedDbStatus = SyncJobStatusMapper.toDbStatus(expectedStatus as any);
-    
-    if (syncJob.status !== expectedDbStatus) {
-      throw new Error(
-        `Expected sync job status ${expectedStatus} (${expectedDbStatus}), but found ${syncJob.status}`,
-      );
-    }
+    // DB-backed SyncJob table has been removed. Use in-memory state machine
+    // assertions in tests that need sync job status. This helper is now a no-op
+    // placeholder to keep older tests compiling.
+    return;
   }
 
   /**

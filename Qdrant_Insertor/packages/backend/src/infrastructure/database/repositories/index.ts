@@ -38,15 +38,7 @@ export { ChunkFullTextRepository } from './ChunkFullTextRepository.js';
  */
 export { ChunkMetaRepository } from './ChunkMetaRepository.js';
 
-/**
- * 同步任务Repository，处理同步任务相关操作
- */
-export { SyncJobRepository } from './SyncJobRepository.js';
-
-/**
- * SyncJobsTable适配器，将SyncJobRepository适配为SyncJobsTable接口
- */
-export { SyncJobsTableAdapter } from './SyncJobsTableAdapter.js';
+// Sync job DB-backed repository and adapter removed — sync jobs are now in-memory
 
 /**
  * 系统指标Repository，处理系统指标相关操作

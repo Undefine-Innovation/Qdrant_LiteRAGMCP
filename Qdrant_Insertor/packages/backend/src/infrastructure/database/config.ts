@@ -7,7 +7,7 @@ import { Doc } from './entities/Doc.js';
 import { ChunkMeta } from './entities/ChunkMeta.js';
 import { Chunk } from './entities/Chunk.js';
 import { ChunkFullText } from './entities/ChunkFullText.js';
-import { SyncJobEntity } from './entities/SyncJob.js';
+// SyncJobEntity removed - DB-backed sync jobs are disabled
 import { SystemMetrics } from './entities/SystemMetrics.js';
 import { AlertRules } from './entities/AlertRules.js';
 import { AlertHistory } from './entities/AlertHistory.js';
@@ -67,19 +67,19 @@ export function createTypeORMConfig(
     logging: isDevelopment && !isTest, // 开发环境启用日志
     // 直接导入实体类而不是使用字符串路径，避免循环依赖问题
     entities: [
-      BaseEntity,
-      Collection,
-      Doc,
-      ChunkMeta,
-      Chunk,
-      ChunkFullText,
-      SyncJobEntity,
-      SystemMetrics,
-      AlertRules,
-      AlertHistory,
-      SystemHealth,
-      ScrapeResults,
-      Event,
+  BaseEntity,
+  Collection,
+  Doc,
+  ChunkMeta,
+  Chunk,
+  ChunkFullText,
+  // SyncJobEntity removed (DB-backed sync jobs disabled)
+  SystemMetrics,
+  AlertRules,
+  AlertHistory,
+  SystemHealth,
+  ScrapeResults,
+  Event,
     ],
     migrations: [
       // 迁移已禁用，使用 synchronize: true 自动创建/更新表结构
@@ -138,23 +138,24 @@ export function createTypeORMDataSource(
 ): DataSource {
   // 测试环境：如果全局已有测试数据源，则直接复用，避免重复初始化与索引冲突
   // 检查多种条件：JEST_WORKER_ID、NODE_ENV为'test'、或全局__TEST_DATASOURCE存在
-  if (
-    (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') &&
-    (globalThis as { __TEST_DATASOURCE?: DataSource }).__TEST_DATASOURCE
-  ) {
-    const testDs = (globalThis as { __TEST_DATASOURCE?: DataSource }).__TEST_DATASOURCE;
-    logger.debug('使用全局测试数据源', {
+  const isTestEnv =
+    Boolean(process.env.JEST_WORKER_ID) || process.env.NODE_ENV === 'test';
+  const globalScope = globalThis as { __TEST_DATASOURCE?: DataSource };
+
+  if (isTestEnv && globalScope.__TEST_DATASOURCE) {
+    const testDs = globalScope.__TEST_DATASOURCE;
+    logger.debug('Using global test datasource', {
       isInitialized: testDs.isInitialized,
       type: testDs.options.type,
     });
     return testDs;
   }
-  
-  // 如果是测试环境但没有全局测试数据源，则创建一个新的
-  if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
-    logger.debug('测试环境下创建新的数据源');
+
+  // ����ǲ��Ի�����û��ȫ�ֲ�������Դ���򴴽�һ���µ�
+  if (isTestEnv) {
+    logger.debug('Creating new test datasource for test environment');
   }
-  
+
   const dataSourceConfig = createTypeORMConfig(config, logger, poolConfig);
 
   // 创建新的配置对象以避免修改只读属性

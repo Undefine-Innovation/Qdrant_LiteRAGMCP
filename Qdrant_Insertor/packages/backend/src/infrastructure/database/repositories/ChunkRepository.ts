@@ -19,6 +19,7 @@ import {
 import { Chunk } from '../entities/Chunk.js';
 import { Logger } from '@logging/logger.js';
 import { DocId, CollectionId, PointId } from '@domain/entities/types.js';
+import { DbSyncJobStatus } from '@domain/sync/SyncJobStatusMapper.js';
 
 interface ChunkPersistenceManager {
   save: (entities: unknown[]) => Promise<unknown>;
@@ -30,6 +31,15 @@ interface ChunkDeletionManager {
     where: unknown,
   ) => Promise<{ affected?: number }>;
 }
+
+type ChunkTimeRangeQueryOptions = {
+  collectionId?: CollectionId;
+  docId?: DocId;
+  status?: DbSyncJobStatus | string;
+  syncStatus?: DbSyncJobStatus | string;
+  limit?: number;
+  orderBy?: Record<string, 'ASC' | 'DESC'>;
+};
 
 /**
  * 块Repository
@@ -60,8 +70,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   async findByDocId(
     docId: DocId,
     options: {
-      status?: 'pending' | 'processing' | 'completed' | 'failed';
-      syncStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+      status?: DbSyncJobStatus | string;
+      syncStatus?: DbSyncJobStatus | string;
       limit?: number;
       orderBy?: Record<string, 'ASC' | 'DESC'>;
       includeContent?: boolean;
@@ -144,8 +154,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   async findByCollectionId(
     collectionId: CollectionId,
     options: {
-      status?: 'pending' | 'processing' | 'completed' | 'failed';
-      syncStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+      status?: DbSyncJobStatus | string;
+      syncStatus?: DbSyncJobStatus | string;
       limit?: number;
       orderBy?: Record<string, 'ASC' | 'DESC'>;
       includeContent?: boolean;
@@ -468,8 +478,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
     docId?: DocId,
     collectionId?: CollectionId,
     options: {
-      status?: 'pending' | 'processing' | 'completed' | 'failed';
-      syncStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+      status?: DbSyncJobStatus | string;
+      syncStatus?: DbSyncJobStatus | string;
     } = {},
   ): Promise<number> {
     try {
@@ -692,24 +702,24 @@ export class ChunkRepository extends BaseRepository<Chunk> {
    * @returns ������
    */
   async findByTimeRange(
+    startTime: number,
+    endTime: number,
+    options?: ChunkTimeRangeQueryOptions,
+  ): Promise<Chunk[]>;
+  async findByTimeRange(
+    fieldName: string,
+    startTime: number,
+    endTime: number,
+    options?: FindManyOptions<Chunk>,
+  ): Promise<Chunk[]>;
+  async findByTimeRange(
     fieldNameOrStartTime: string | number,
     startTimeOrEndTime: number,
-    endTimeOrOptions?:
-      | number
-      | {
-          collectionId?: CollectionId;
-          docId?: DocId;
-          status?: 'pending' | 'processing' | 'completed' | 'failed';
-          syncStatus?: 'pending' | 'processing' | 'completed' | 'failed';
-          limit?: number;
-          orderBy?: Record<string, 'ASC' | 'DESC'>;
-        },
+    endTimeOrOptions?: number | ChunkTimeRangeQueryOptions,
     options?: FindManyOptions<Chunk>,
   ): Promise<Chunk[]> {
-    // 如果调用的是旧的方法签名 (fieldName, startTime, endTime, options)
     if (
       typeof fieldNameOrStartTime === 'string' &&
-      typeof startTimeOrEndTime === 'number' &&
       typeof endTimeOrOptions === 'number'
     ) {
       return super.findByTimeRange(
@@ -720,105 +730,65 @@ export class ChunkRepository extends BaseRepository<Chunk> {
       );
     }
 
-    // 如果调用的是新的方法签名 (startTime, endTime, options)
     const startTime = fieldNameOrStartTime as number;
     const endTime = startTimeOrEndTime;
-    const adaptedOptions = endTimeOrOptions as Record<string, unknown>;
+    const adaptedOptions: ChunkTimeRangeQueryOptions =
+      (endTimeOrOptions as ChunkTimeRangeQueryOptions) || {};
 
-    const queryBuilder = this.createQueryBuilder('chunk').where(
-      'chunk.created_at BETWEEN :startTime AND :endTime',
-      { startTime, endTime },
-    );
-
-    if (adaptedOptions?.collectionId) {
-      queryBuilder.andWhere('chunk.collectionId = :collectionId', {
-        collectionId: adaptedOptions.collectionId,
-      });
-    }
-
-    if (adaptedOptions?.docId) {
-      queryBuilder.andWhere('chunk.docId = :docId', {
-        docId: adaptedOptions.docId,
-      });
-    }
-
-    if (adaptedOptions?.status) {
-      queryBuilder.andWhere('chunk.embeddingStatus = :status', {
-        status: adaptedOptions.status,
-      });
-    }
-
-    if (adaptedOptions?.syncStatus) {
-      queryBuilder.andWhere('chunk.syncStatus = :syncStatus', {
-        syncStatus: adaptedOptions.syncStatus,
-      });
-    }
-
-    if (adaptedOptions?.orderBy) {
-      Object.entries(adaptedOptions.orderBy).forEach(([field, direction]) => {
-        queryBuilder.addOrderBy(`chunk.${field}`, direction as 'ASC' | 'DESC');
-      });
-    } else {
-      queryBuilder.addOrderBy('chunk.created_at', 'DESC');
-    }
-
-    if (adaptedOptions?.limit) {
-      queryBuilder.limit(adaptedOptions.limit);
-    }
-
-    return await queryBuilder.getMany();
     try {
       const queryBuilder = this.createQueryBuilder('chunk').where(
         'chunk.created_at BETWEEN :startTime AND :endTime',
         { startTime, endTime },
       );
 
-      if (options.collectionId) {
+      if (adaptedOptions.collectionId) {
         queryBuilder.andWhere('chunk.collectionId = :collectionId', {
-          collectionId: options.collectionId,
+          collectionId: adaptedOptions.collectionId,
         });
       }
 
-      if (options.docId) {
-        queryBuilder.andWhere('chunk.docId = :docId', { docId: options.docId });
+      if (adaptedOptions.docId) {
+        queryBuilder.andWhere('chunk.docId = :docId', {
+          docId: adaptedOptions.docId,
+        });
       }
 
-      if (options.status) {
+      if (adaptedOptions.status) {
         queryBuilder.andWhere('chunk.embeddingStatus = :status', {
-          status: options.status,
+          status: adaptedOptions.status,
         });
       }
 
-      if (options.syncStatus) {
+      if (adaptedOptions.syncStatus) {
         queryBuilder.andWhere('chunk.syncStatus = :syncStatus', {
-          syncStatus: options.syncStatus,
+          syncStatus: adaptedOptions.syncStatus,
         });
       }
 
-      if (options.orderBy) {
-        Object.entries(options.orderBy).forEach(([field, direction]) => {
+      if (adaptedOptions.orderBy) {
+        Object.entries(adaptedOptions.orderBy).forEach(([field, direction]) => {
           queryBuilder.addOrderBy(`chunk.${field}`, direction);
         });
       } else {
         queryBuilder.addOrderBy('chunk.created_at', 'DESC');
       }
 
-      if (options.limit) {
-        queryBuilder.limit(options.limit);
+      if (adaptedOptions.limit) {
+        queryBuilder.limit(adaptedOptions.limit);
       }
 
-      const results = await queryBuilder.getMany();
-      return results;
+      return await queryBuilder.getMany();
     } catch (error) {
-      this.logger.error(`根据时间范围查找块失败`, {
+      this.logger.error('Failed to fetch chunks by time range', {
         startTime,
         endTime,
-        options,
+        options: adaptedOptions,
         error: (error as Error).message,
       });
       throw error;
     }
   }
+
 
   /**
    * 根据文档ID统计块数量
@@ -832,8 +802,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   async countByDocId(
     docId: DocId,
     options: {
-      status?: 'pending' | 'processing' | 'completed' | 'failed';
-      syncStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+      status?: DbSyncJobStatus | string;
+      syncStatus?: DbSyncJobStatus | string;
     } = {},
   ): Promise<number> {
     try {
@@ -873,8 +843,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   async countCompletedByDocId(docId: DocId): Promise<number> {
     try {
       return await this.countByDocId(docId, {
-        status: 'completed',
-        syncStatus: 'completed',
+        status: DbSyncJobStatus.COMPLETED,
+        syncStatus: DbSyncJobStatus.COMPLETED,
       });
     } catch (error) {
       this.logger.error(`统计文档已完成块数量失败`, {
@@ -893,8 +863,8 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   async countFailedByDocId(docId: DocId): Promise<number> {
     try {
       return await this.countByDocId(docId, {
-        status: 'failed',
-        syncStatus: 'failed',
+        status: DbSyncJobStatus.FAILED,
+        syncStatus: DbSyncJobStatus.FAILED,
       });
     } catch (error) {
       this.logger.error(`统计文档失败块数量失败`, {
@@ -913,11 +883,12 @@ export class ChunkRepository extends BaseRepository<Chunk> {
    */
   async batchUpdateStatus(
     pointIds: PointId[],
-    status: 'pending' | 'processing' | 'completed' | 'failed',
+    status: DbSyncJobStatus | string,
   ): Promise<BatchOperationResult> {
     try {
       const result = await this.updateBatch(pointIds, {
-        embeddingStatus: status,
+        // 类型断言：实体字段使用的是字面量联合类型，允许通过 any 兼容传入的枚举或字符串
+        embeddingStatus: status as any,
       });
       this.logger.debug(`批量更新块状态完成`, {
         requested: pointIds.length,
@@ -944,10 +915,10 @@ export class ChunkRepository extends BaseRepository<Chunk> {
    */
   async batchUpdateSyncStatus(
     pointIds: PointId[],
-    syncStatus: 'pending' | 'processing' | 'completed' | 'failed',
+    syncStatus: DbSyncJobStatus | string,
   ): Promise<BatchOperationResult> {
     try {
-      const result = await this.updateBatch(pointIds, { syncStatus });
+  const result = await this.updateBatch(pointIds, { syncStatus: syncStatus as any });
       this.logger.debug(`批量更新块同步状态完成`, {
         requested: pointIds.length,
         updated: result.success,
@@ -1082,8 +1053,9 @@ export class ChunkRepository extends BaseRepository<Chunk> {
    * @param manager ���������
    */
   async createBatchWithManager(
-    chunks: Partial<Chunk>[],
     manager: ChunkPersistenceManager,
+    chunks: Partial<Chunk>[],
+    _batchSize?: number,
   ): Promise<Chunk[]> {
     try {
       // 预处理块数据，计算内容长度

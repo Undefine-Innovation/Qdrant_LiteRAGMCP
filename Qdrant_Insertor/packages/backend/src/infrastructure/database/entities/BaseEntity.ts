@@ -74,17 +74,20 @@ export abstract class BaseEntity {
       this.id = uuidv4();
     }
 
-    // 如果是Collection实体且有collectionId字段，确保它有值
-    if (
-      (this as { collectionId?: unknown }).collectionId !== undefined &&
-      !(this as { collectionId?: unknown }).collectionId
-    ) {
-      (this as { collectionId: string }).collectionId = this.id;
+    const entityRecord = this as Record<string, unknown>;
+
+    if (Object.prototype.hasOwnProperty.call(entityRecord, 'collectionId')) {
+      const collectionAwareEntity = this as unknown as { collectionId?: string };
+      if (!collectionAwareEntity.collectionId) {
+        collectionAwareEntity.collectionId = this.id;
+      }
     }
 
-    // 如果是Doc实体且有docId字段，确保它有值
-    if ((this as { docId?: unknown }).docId !== undefined && !(this as { docId?: unknown }).docId) {
-      (this as { docId: string }).docId = this.id;
+    if (Object.prototype.hasOwnProperty.call(entityRecord, 'docId')) {
+      const docAwareEntity = this as unknown as { docId?: string };
+      if (!docAwareEntity.docId) {
+        docAwareEntity.docId = this.id;
+      }
     }
 
     const now = Date.now();
@@ -96,7 +99,7 @@ export abstract class BaseEntity {
     }
   }
 
-  /**
+  /**  /**
    * 在更新前更新时间戳和版本号
    */
   @BeforeUpdate()

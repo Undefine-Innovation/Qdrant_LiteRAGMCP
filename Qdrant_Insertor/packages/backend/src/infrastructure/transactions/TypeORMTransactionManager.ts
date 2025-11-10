@@ -15,6 +15,7 @@ import {
   TransactionError,
   TransactionErrorType,
 } from '@infrastructure/transactions/TransactionErrorHandler.js';
+import { Collection } from '@infrastructure/database/entities/Collection.js';
 
 /**
  * TypeORM事务管理器实现
@@ -926,15 +927,13 @@ export class TypeORMTransactionManager implements ITransactionManager {
           const updateData = data as { name?: string; description?: string };
 
           // 获取更新前的状态用于回滚
-          let originalCollection = await queryRunner.manager.findOne(
-            'Collection',
-            {
+          let originalCollection: Collection | null =
+            (await queryRunner.manager.findOne('Collection', {
               where: { id: collectionId },
-            },
-          );
-          const pendingCollection =
-            (operation.data as { collection?: Record<string, unknown> })
-              ?.collection;
+            })) as Collection | null;
+          const pendingCollection = (
+            operation.data as { collection?: Collection }
+          )?.collection;
           if (!originalCollection && pendingCollection) {
             originalCollection = pendingCollection;
           }
@@ -983,15 +982,13 @@ export class TypeORMTransactionManager implements ITransactionManager {
           // 删除集合操作
 
           // 获取删除前的状态用于回滚
-          let originalCollection = await queryRunner.manager.findOne(
-            'Collection',
-            {
+          let originalCollection: Collection | null =
+            (await queryRunner.manager.findOne('Collection', {
               where: { id: collectionId },
-            },
-          );
-          const pendingCollection =
-            (operation.data as { collection?: Record<string, unknown> })
-              ?.collection;
+            })) as Collection | null;
+          const pendingCollection = (
+            operation.data as { collection?: Collection }
+          )?.collection;
           if (!originalCollection && pendingCollection) {
             originalCollection = pendingCollection;
           }

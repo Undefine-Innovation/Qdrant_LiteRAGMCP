@@ -422,6 +422,34 @@ export class SyncJobStatusMapper {
   }
 
   /**
+   * 规范化任意字符串为数据库状态（小写枚举）
+   * 接受历史/大写/混合格式的输入并返回标准的 DbSyncJobStatus 或 undefined
+   * 这样可以逐步兼容仓库中使用的不同大小写常量，并把转换逻辑集中在这里
+   */
+  public static normalizeDbStatusString(
+    status?: string | null,
+  ): DbSyncJobStatus | undefined {
+    if (!status) return undefined;
+    const s = String(status).trim().toLowerCase();
+    switch (s) {
+      case 'pending':
+        return DbSyncJobStatus.PENDING;
+      case 'processing':
+        return DbSyncJobStatus.PROCESSING;
+      case 'completed':
+      case 'complete':
+        return DbSyncJobStatus.COMPLETED;
+      case 'failed':
+        return DbSyncJobStatus.FAILED;
+      case 'cancelled':
+      case 'canceled':
+        return DbSyncJobStatus.CANCELLED;
+      default:
+        return undefined;
+    }
+  }
+
+  /**
    * 根据类别获取状态列表
    * @param category 状态类别
    * @returns 该类别的状态列表

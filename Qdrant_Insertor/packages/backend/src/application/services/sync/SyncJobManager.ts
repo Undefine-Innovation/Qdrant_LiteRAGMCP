@@ -34,21 +34,15 @@ export class SyncJobManager {
     let job = this.memoryJobs.get(docId);
 
     if (!job) {
-      // 从数据库获取
-      job = this.sqliteRepo.syncJobs.getByDocId(docId) || undefined;
-
-      if (!job) {
-        // 创建新作业
-        const newJob: Omit<SyncJob, 'id'> = {
-          docId,
-          status: SyncJobStatus.NEW,
-          retries: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        const jobId = this.sqliteRepo.syncJobs.create(newJob);
-        job = { ...newJob, id: jobId };
-      }
+      // Only use in-memory jobs. DB-backed sync_jobs removed.
+      const newJob: Omit<SyncJob, 'id'> = {
+        docId,
+        status: SyncJobStatus.NEW,
+        retries: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      job = { ...newJob, id: `mem_${docId}_${Date.now()}` } as SyncJob;
 
       // 缓存到内存
       this.memoryJobs.set(docId, job);
@@ -125,13 +119,7 @@ export class SyncJobManager {
       job.lastAttemptAt = Date.now();
     }
 
-    // 更新数据库
-    this.sqliteRepo.syncJobs.update(job.id, {
-      ...job,
-      ...additionalFields,
-    });
-
-    // 更新内存缓存
+    // 更新内存缓存（DB persistence removed）
     this.memoryJobs.set(docId, job);
   }
 
@@ -172,7 +160,26 @@ export class SyncJobManager {
    * @returns 统计信息
    */
   getSyncJobStats() {
-    return this.sqliteRepo.syncJobs.getStats();
+    // Calculate stats from in-memory jobs since DB-backed sync_jobs removed
+    const allJobs = Array.from(this.memoryJobs.values());
+
+    const byStatus: Record<string, number> = {};
+    let successfulJobs = 0;
+
+    for (const job of allJobs) {
+      byStatus[job.status] = (byStatus[job.status] || 0) + 1;
+      if (job.status === SyncJobStatus.SYNCED) successfulJobs++;
+    }
+
+    const avgDuration = 0; // duration not tracked in domain SyncJob
+    const successRate = allJobs.length > 0 ? successfulJobs / allJobs.length : 0;
+
+    return {
+      total: allJobs.length,
+      byStatus,
+      avgDuration,
+      successRate,
+    };
   }
 
   /**
@@ -197,12 +204,7 @@ export class SyncJobManager {
       }
     }
 
-    // 清理数据库中的过期记录
-    const cleanedCount = this.sqliteRepo.syncJobs.cleanup(daysToKeep);
-    if (cleanedCount > 0) {
-      this.logger.info(`清理了${cleanedCount} 个过期的同步作业记录`);
-    }
-
-    return cleanedCount;
+    // No DB cleanup; return number of in-memory jobs cleaned
+    return 0;
   }
 }

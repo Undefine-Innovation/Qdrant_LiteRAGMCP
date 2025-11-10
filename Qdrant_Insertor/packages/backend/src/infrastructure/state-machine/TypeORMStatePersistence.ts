@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
+import { DbSyncJobStatus } from '@domain/sync/SyncJobStatusMapper.js';
 import { StateMachineTask } from '@domain/state-machine/types.js';
 
 /**
@@ -228,10 +229,15 @@ export class TypeORMStatePersistence {
       const result = await this.dataSource.query(
         `
         DELETE FROM state_machine_tasks
-        WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED')
+        WHERE status IN (?, ?, ?)
         AND updated_at < ?
         `,
-        [cutoffTime],
+        [
+          DbSyncJobStatus.COMPLETED,
+          DbSyncJobStatus.FAILED,
+          DbSyncJobStatus.CANCELLED,
+          cutoffTime,
+        ],
       );
 
       const deletedCount = result?.changes || 0;

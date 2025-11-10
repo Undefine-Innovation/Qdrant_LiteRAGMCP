@@ -15,7 +15,6 @@ import { TypeORMRepository } from '@infrastructure/database/repositories/TypeORM
 import {
   CollectionAggregateRepository,
   DocumentAggregateRepository,
-  SyncJobsTableAdapter,
 } from '@infrastructure/database/repositories/index.js';
 import { DocRepository } from '@infrastructure/database/repositories/DocRepository.js';
 import { CollectionRepository } from '@infrastructure/database/repositories/CollectionRepository.js';
@@ -423,24 +422,8 @@ export async function initializeServices(
 
   const graphService: IGraphService = new GraphService();
 
-  // 创建状态机服务
-  const stateMachineService = new StateMachineService(
-    logger,
-    typeormDataSource, // 直接使用TypeORM数据源
-  );
-
-  // 初始化状态机（确保数据库表存在）
-  try {
-    // 使用TypeORM初始化状态机持久化表
-    const { TypeORMStatePersistence } = await import(
-      '../state-machine/TypeORMStatePersistence.js'
-    );
-    const persistence = new TypeORMStatePersistence(typeormDataSource, logger);
-    await persistence.initializeTable();
-    logger.info('状态机数据库表初始化完成');
-  } catch (error: unknown) {
-    logger.error('状态机数据库表初始化失败:', String(error));
-  }
+  // 创建状态机服务（仅使用内存实现）
+  const stateMachineService = new StateMachineService(logger);
 
   const contentExtractor = new ContentExtractor(logger);
   const webCrawler = new WebCrawler(logger, contentExtractor);

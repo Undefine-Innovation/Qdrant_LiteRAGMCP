@@ -69,8 +69,8 @@ export class DocumentAggregateRepository
         const chunkEntities = this.mapAggregateToChunkEntities(aggregate);
         if (chunkEntities.length > 0) {
           await this.chunkRepository.createBatchWithManager(
-            chunkEntities,
             manager,
+            chunkEntities,
           );
         }
 

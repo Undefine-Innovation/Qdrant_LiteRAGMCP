@@ -3,7 +3,6 @@ import { Logger } from '@logging/logger.js';
 import {
   Collection,
   ChunkMeta,
-  SyncJobEntity,
   SystemMetrics,
   AlertRules,
   AlertHistory,
@@ -16,7 +15,7 @@ import { DocRepository } from './DocRepository.js';
 import { ChunkRepository } from './ChunkRepository.js';
 import { ChunkFullTextRepository } from './ChunkFullTextRepository.js';
 import { ChunkMetaRepository } from './ChunkMetaRepository.js';
-import { SyncJobRepository } from './SyncJobRepository.js';
+// SyncJobRepository removed (DB-backed sync jobs are no longer supported)
 import { SimpleBaseRepository } from './SimpleBaseRepository.js';
 import { ScrapeResultsRepository } from './ScrapeResultsRepository.js';
 import { SystemHealthRepository } from './SystemHealthRepository.js';
@@ -60,12 +59,6 @@ interface FTSPlaceholder {
  * 注意：虽然实现了 ISQLiteRepo 接口方法，但由于 TypeORM 的异步性质，
  * 某些同步方法返回空值或抛出错误。应通过类型断言使用此类。
  */
-/**
- * TypeORM Repository实现
- * 替代原有的同步SQLiteRepo，提供异步操作
- * 注意：虽然实现了 ISQLiteRepo 接口方法，但由于 TypeORM 的异步性质，
- * 某些同步方法返回空值或抛出错误。应通过类型断言使用此类。
- */
 export class TypeORMRepository {
   // 公开的Repository实例，使用适配器保持与原有接口的兼容性
   public readonly collections: CollectionRepositoryAdapter;
@@ -73,7 +66,7 @@ export class TypeORMRepository {
   public readonly chunksMeta: ChunkMetaRepository; // 使用具体的ChunkMetaRepository
   public readonly chunksFts5: SimpleBaseRepository<FTSPlaceholder>; // 保持兼容性，FTS功能需要单独实现
   public readonly chunks: ChunkRepositoryAdapter;
-  public readonly syncJobs: SyncJobRepository; // 使用具体的SyncJobRepository
+  // syncJobs (DB-backed) removed - using in-memory state machine instead
   public readonly systemMetrics: SystemMetricsRepository; // 使用具体的SystemMetricsRepository
   public readonly alertRules: AlertRulesRepository; // 使用具体的AlertRulesRepository
   public readonly systemHealth: SystemHealthRepository; // 使用具体的SystemHealthRepository
@@ -94,7 +87,7 @@ export class TypeORMRepository {
   private chunkRepository: ChunkRepository;
   private chunkFullTextRepository: ChunkFullTextRepository;
   private chunkMetaRepository: ChunkMetaRepository;
-  private syncJobRepository: SyncJobRepository;
+  // removed syncJobRepository (DB-backed)
   private scrapeResultsRepository: ScrapeResultsRepository;
   private systemHealthRepository: SystemHealthRepository;
   private systemMetricsRepository: SystemMetricsRepository;
@@ -120,8 +113,8 @@ export class TypeORMRepository {
       dataSource,
       logger,
     );
-    this.chunkMetaRepository = new ChunkMetaRepository(dataSource, logger);
-    this.syncJobRepository = new SyncJobRepository(dataSource, logger);
+  this.chunkMetaRepository = new ChunkMetaRepository(dataSource, logger);
+  // SyncJobRepository (DB-backed) intentionally not created
     this.scrapeResultsRepository = new ScrapeResultsRepository(
       dataSource,
       logger,
@@ -156,7 +149,7 @@ export class TypeORMRepository {
       } as unknown as new () => FTSPlaceholder,
       logger,
     );
-    this.syncJobs = this.syncJobRepository;
+  // this.syncJobs removed (DB-backed sync jobs are no longer supported)
     this.systemMetrics = this.systemMetricsRepository;
     this.alertRules = this.alertRulesRepository;
     this.systemHealth = this.systemHealthRepository;

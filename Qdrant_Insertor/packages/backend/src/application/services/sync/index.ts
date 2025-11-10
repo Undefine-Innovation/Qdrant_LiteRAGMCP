@@ -7,8 +7,8 @@
 /** 同步状态机 */
 export { SyncStateMachine } from './SyncStateMachine.js';
 
-/** 持久化同步状态机 */
-export { PersistentSyncStateMachine } from './PersistentSyncStateMachine.js';
+/** 持久化同步状态机 - 已移除持久化实现，使用内存实现作为兼容导出 */
+export { SyncStateMachine as PersistentSyncStateMachine } from './SyncStateMachine.js';
 
 /** 同步状态机核心 */
 export { SyncStateMachineCore } from './SyncStateMachineCore.js';

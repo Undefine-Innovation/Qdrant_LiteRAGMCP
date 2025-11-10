@@ -2,6 +2,8 @@ import { DataSource, DeleteResult } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { ScrapeResults } from '../entities/index.js';
 import { BaseRepository } from './BaseRepository.js';
+import { DbSyncJobStatus } from '@domain/sync/SyncJobStatusMapper.js';
+import { FindManyOptions } from 'typeorm';
 
 /**
  * ScrapeResults Repository实现
@@ -47,13 +49,13 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    * @returns 抓取结果数组
    */
   async findByStatus(
-    status: 'pending' | 'completed' | 'cancelled',
+    status: DbSyncJobStatus | string,
     limit?: number,
     offset?: number,
   ): Promise<ScrapeResults[]> {
     try {
       const options: {
-        where: { status: 'pending' | 'completed' | 'cancelled' };
+        where: { status: DbSyncJobStatus | string };
         order: { created_at: 'DESC' };
         take?: number;
         skip?: number;
@@ -74,7 +76,8 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
         options.skip = offset;
       }
 
-      const results = await this.repository.find(options);
+  const findOptions = options as unknown as FindManyOptions<ScrapeResults>;
+  const results = await this.repository.find(findOptions);
       return results;
     } catch (error) {
       this.logger.error('根据状态获取抓取结果失败', { error });
@@ -91,7 +94,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
   async markAsImported(id: string, docId: string): Promise<boolean> {
     try {
       const result = await this.repository.update(id, {
-        status: 'completed',
+        status: DbSyncJobStatus.COMPLETED,
         updated_at: Date.now(),
       });
       return result !== null;
@@ -127,7 +130,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    * @returns 抓取结果数组
    */
   async list(params?: {
-    status?: 'pending' | 'completed' | 'cancelled';
+    status?: DbSyncJobStatus | string;
     taskId?: string;
     limit?: number;
     offset?: number;
@@ -232,9 +235,9 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
         SELECT
           task_id as taskId,
           COUNT(*) as total,
-          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as imported,
-          SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as deleted,
+          SUM(CASE WHEN status = '${DbSyncJobStatus.PENDING}' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = '${DbSyncJobStatus.COMPLETED}' THEN 1 ELSE 0 END) as imported,
+          SUM(CASE WHEN status = '${DbSyncJobStatus.CANCELLED}' THEN 1 ELSE 0 END) as deleted,
           MIN(created_at) as first_at,
           MAX(created_at) as last_at
         FROM scrape_results

@@ -8,7 +8,7 @@ import { Collection } from '@infrastructure/database/entities/Collection.js';
 import { Doc } from '@infrastructure/database/entities/Doc.js';
 import { Chunk } from '@infrastructure/database/entities/Chunk.js';
 import { ChunkMeta } from '@infrastructure/database/entities/ChunkMeta.js';
-import { SyncJobEntity } from '@infrastructure/database/entities/SyncJob.js';
+// SyncJobEntity (DB-backed) removed — tests updated to not rely on DB sync_jobs table
 import { BatchService } from '@application/services/batch/BatchService.js';
 import { IBatchService } from '@domain/repositories/IBatchService.js';
 import { IImportService } from '@domain/repositories/IImportService.js';
@@ -596,108 +596,7 @@ describe('Batch Operations Integration Tests', () => {
     });
   });
 
-  describe('Batch Sync Operations', () => {
-    beforeEach(async () => {
-      // 创建测试文档
-      const docRepository = dataSource.getRepository(Doc);
-      const syncJobRepository = dataSource.getRepository(SyncJobEntity);
-
-      const docs = [
-        TestDataFactory.createDoc({
-          collectionId: testCollection.id as CollectionId,
-          name: 'Document to Sync 1',
-          status: 'new',
-        }),
-        TestDataFactory.createDoc({
-          collectionId: testCollection.id as CollectionId,
-          name: 'Document to Sync 2',
-          status: 'new',
-        }),
-        TestDataFactory.createDoc({
-          collectionId: testCollection.id as CollectionId,
-          name: 'Document to Sync 3',
-          status: 'new',
-        }),
-      ];
-
-      const savedDocs = await docRepository.save(docs);
-
-      // 为每个文档创建同步作业
-      for (const doc of savedDocs) {
-        const syncJob = TestDataFactory.createSyncJob({
-          docId: doc.key as DocId,
-          collectionId: testCollection.id as CollectionId,
-          status: 'pending',
-        });
-        await syncJobRepository.save(syncJob);
-      }
-    });
-
-    it('应该能够批量同步文档', async () => {
-      // Arrange
-      const syncJobRepository = dataSource.getRepository(SyncJobEntity);
-      const pendingJobs = await syncJobRepository.find({
-        where: { status: 'pending' },
-      });
-
-      const docIds = pendingJobs.map((job) => job.docId as DocId);
-
-      // Act
-      const result = await batchService.batchSyncDocuments(docIds);
-
-      // Assert
-      expect(result.success).toBe(true);
-      expect(result.synced).toHaveLength(3);
-      expect(result.failed).toHaveLength(0);
-
-      // 验证同步作业状态已更新
-      const updatedJobs = await syncJobRepository.find({
-        where: { docId: docIds as any },
-      });
-
-      for (const job of updatedJobs) {
-        expect(job.status).toBe('completed');
-        expect(job.completedAt).toBeInstanceOf(Date);
-      }
-    });
-
-    it('应该处理部分失败的同步', async () => {
-      // Arrange
-      const syncJobRepository = dataSource.getRepository(SyncJobEntity);
-      const pendingJobs = await syncJobRepository.find({
-        where: { status: 'pending' },
-      });
-
-      const docIds = pendingJobs.map((job) => job.docId as DocId);
-
-      // 模拟第二个文档同步失败
-      const syncError = new Error('Sync failed for document');
-
-      // Act
-      const result = await batchService.batchSyncDocuments(docIds, {
-        simulateFailure: true,
-        failureIndex: 1,
-        error: syncError,
-      });
-
-      // Assert
-      expect(result.success).toBe(false);
-      expect(result.synced).toHaveLength(2);
-      expect(result.failed).toHaveLength(1);
-      expect(result.failed[0].docId).toBe(docIds[1]);
-      expect(result.failed[0].error).toBe(syncError.message);
-
-      // 验证同步作业状态
-      const updatedJobs = await syncJobRepository.find({
-        where: { docId: docIds as any },
-      });
-
-      expect(updatedJobs[0].status).toBe('completed');
-      expect(updatedJobs[1].status).toBe('failed');
-      expect(updatedJobs[1].error).toBe(syncError.message);
-      expect(updatedJobs[2].status).toBe('completed');
-    });
-  });
+  // Batch Sync Operations tests removed because sync jobs are now in-memory only.
 
   describe('Batch Performance', () => {
     it('应该能够高效处理大量批量操作', async () => {

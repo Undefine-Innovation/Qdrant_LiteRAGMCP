@@ -7,7 +7,8 @@ import { Collection } from '@infrastructure/database/entities/Collection.js';
 import { Doc } from '@infrastructure/database/entities/Doc.js';
 import { Chunk } from '@infrastructure/database/entities/Chunk.js';
 import { ChunkMeta } from '@infrastructure/database/entities/ChunkMeta.js';
-import { SyncJobEntity } from '@infrastructure/database/entities/SyncJob.js';
+// SyncJobEntity removed - DB-backed sync jobs disabled
+import { DbSyncJobStatus } from '@domain/sync/SyncJobStatusMapper.js';
 import { SystemMetrics } from '@infrastructure/database/entities/SystemMetrics.js';
 import { AlertRules } from '@infrastructure/database/entities/AlertRules.js';
 import { AlertHistory } from '@infrastructure/database/entities/AlertHistory.js';
@@ -195,23 +196,7 @@ export class TestDataFactory {
   /**
    * 创建测试同步作业
    */
-  static createSyncJob(overrides: Partial<SyncJobEntity> = {}): SyncJobEntity {
-    const syncJob = new SyncJobEntity();
-    syncJob.id = this.generateId('syncjob');
-    syncJob.docId = overrides.docId || (this.generateId('doc') as DocId);
-    syncJob.collectionId =
-      overrides.collectionId || (this.generateId('collection') as CollectionId);
-    syncJob.status = overrides.status || 'pending';
-    syncJob.started_at = overrides.started_at || this.randomDate().getTime();
-    syncJob.completed_at = overrides.completed_at || null;
-    syncJob.error = overrides.error || null;
-    syncJob.retries = overrides.retries || 0;
-    syncJob.maxRetries = overrides.maxRetries || 3;
-    syncJob.created_at = overrides.created_at || this.randomDate().getTime();
-    syncJob.updated_at = overrides.updated_at || new Date().getTime();
-
-    return Object.assign(syncJob, overrides);
-  }
+  // createSyncJob removed - DB-backed SyncJob entity/table no longer present
 
   /**
    * 创建测试系统指标
