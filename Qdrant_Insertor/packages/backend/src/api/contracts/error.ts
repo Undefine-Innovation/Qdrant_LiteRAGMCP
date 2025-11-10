@@ -78,13 +78,19 @@ export class AppError extends Error {
    * @returns {ErrorResponse} 符合API响应格式的错误对象
    */
   public toJSON(): ErrorResponse {
-    return {
+    const response: ErrorResponse = {
       error: {
         code: this.code,
         message: this.message,
-        ...(this.details && { details: this.details }),
       },
     };
+
+    // 只有当details存在且有内容时才添加
+    if (this.details && Object.keys(this.details).length > 0) {
+      response.error.details = this.details;
+    }
+
+    return response;
   }
 
   /**
@@ -96,12 +102,19 @@ export class AppError extends Error {
     if (error instanceof AppError) {
       return error;
     }
-    return new AppError(
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      error.message || 'An unexpected internal server error occurred.',
-      500,
-      { stack: error.stack },
-    );
+
+    // 确保error对象不为空
+    const errorMessage =
+      error?.message || 'An unexpected internal server error occurred.';
+    const errorStack = error?.stack || '';
+
+    return new AppError(ErrorCode.INTERNAL_SERVER_ERROR, errorMessage, 500, {
+      stack: errorStack,
+      originalError: {
+        message: errorMessage,
+        name: error?.name || 'Error',
+      },
+    });
   }
 
   /**
@@ -114,7 +127,7 @@ export class AppError extends Error {
     details: Record<string, unknown>,
     message: string = 'Validation failed.',
   ): AppError {
-    return new AppError(ErrorCode.VALIDATION_ERROR, message, 422, details);
+    return new AppError(ErrorCode.VALIDATION_ERROR, message, 400, details);
   }
 
   /**

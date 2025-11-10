@@ -5,8 +5,23 @@ import { z } from 'zod';
  * 用于验证 `POST /collections` 的请求体
  */
 export const CreateCollectionSchema = z.object({
-  name: z.string().min(1).describe('集合的名称，必须是唯一的'),
-  description: z.string().optional().describe('集合的可选描述'),
+  name: z
+    .string({
+      required_error: 'Name is required',
+      invalid_type_error: 'Name must be a string',
+    })
+    .min(1, 'Name cannot be empty')
+    .max(255, 'Name cannot exceed 255 characters')
+    .refine(
+      (val) => val.trim().length > 0,
+      'Name cannot be empty or whitespace only',
+    )
+    .describe('集合的名称，必须是唯一的'),
+  description: z
+    .string()
+    .max(1000, 'Description cannot exceed 1000 characters')
+    .optional()
+    .describe('集合的可选描述'),
 });
 
 /**
@@ -14,8 +29,18 @@ export const CreateCollectionSchema = z.object({
  * 用于验证 `PATCH /collections/:collectionId` 的请求体
  */
 export const UpdateCollectionSchema = z.object({
-  name: z.string().min(1).optional().describe('集合的新名称'),
-  description: z.string().optional().describe('集合的新描述'),
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(255, 'Name too long')
+    .refine((val) => val.trim().length > 0, 'Name cannot be empty')
+    .optional()
+    .describe('集合的新名称'),
+  description: z
+    .string()
+    .max(1000, 'Description too long')
+    .optional()
+    .describe('集合的新描述'),
 });
 
 /**

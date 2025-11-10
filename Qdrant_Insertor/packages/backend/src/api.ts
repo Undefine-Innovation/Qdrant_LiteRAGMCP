@@ -7,6 +7,7 @@ import { IDocumentService } from '@domain/repositories/IDocumentService.js';
 import { IFileProcessingService } from '@domain/repositories/IFileProcessingService.js';
 import { IBatchService } from '@domain/repositories/IBatchService.js';
 import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
+import { MonitoringApiService } from '@application/services/api/index.js';
 import { IScrapeService } from '@domain/entities/scrape.js';
 import { Logger } from '@logging/logger.js';
 import { createApiRouter } from '@api/routes/index.js';
@@ -28,7 +29,8 @@ interface ApiServices {
   stateMachineService?: {
     getEngine: () => unknown;
   };
-  monitoringApiService?: IMonitoringApiService;
+  monitoringApiService?: IMonitoringApiService | undefined;
+  typeormRepo: import('@infrastructure/database/repositories/TypeORMRepository.js').TypeORMRepository;
 }
 
 /**

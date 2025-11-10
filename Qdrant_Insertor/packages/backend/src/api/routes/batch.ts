@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { IBatchService } from '@domain/repositories/IBatchService.js';
-import { validate, ValidatedRequest } from '../../middlewares/validate.js';
+import { validate, ValidatedRequest } from '@middleware/validate.js';
 import {
   BatchUploadRequestSchema,
   BatchUploadResponseSchema,
@@ -12,9 +12,21 @@ import {
   BatchDeleteCollectionsResponseSchema,
   BatchOperationQuerySchema,
   BatchOperationProgressSchema,
+  BatchOperationListQuerySchema,
 } from '@api/contracts/batch.js';
 import { AppError } from '@api/contracts/error.js';
 import { DocId, CollectionId } from '@domain/entities/types.js';
+import { FILE_CONSTANTS, FILE_SIZE_LIMITS } from '@domain/constants/FileConstants.js';
+
+/**
+ * Maximum number of files allowed in batch upload
+ */
+const MAX_FILES = FILE_CONSTANTS.MAX_FILES;
+
+/**
+ * Maximum number of document IDs allowed in batch delete
+ */
+const MAX_DOC_DELETE_IDS = FILE_CONSTANTS.MAX_DOC_DELETE_IDS;
 
 /**
  * 创建批量操作相关的API路由
@@ -25,14 +37,57 @@ import { DocId, CollectionId } from '@domain/entities/types.js';
 export function createBatchRoutes(batchService: IBatchService): express.Router {
   const router = express.Router();
 
-  // 配置multer用于批量文件上传
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB限制
-      files: 50, // 最多50个文件
+      fileSize: FILE_SIZE_LIMITS.MAX_UPLOAD_SIZE,
+      files: MAX_FILES,
     },
   });
+
+  const uploadFiles = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void => {
+    upload.array('files', MAX_FILES)(req, res, (error) => {
+      if (error) {
+        if (error instanceof multer.MulterError) {
+          if (error.code === 'LIMIT_FILE_SIZE' || error.code === 'LIMIT_FILE_COUNT') {
+            return res.status(413).json({
+              error: {
+                code: 'PAYLOAD_TOO_LARGE',
+                message: 'Batch upload exceeded the maximum allowed payload',
+              },
+            });
+          }
+          return next(
+            AppError.createInternalServerError('File upload failed.', {
+              reason: error.code,
+            }),
+          );
+        }
+        return next(error);
+      }
+      next();
+    });
+  };
+
+  const sendValidationError = (res: Response, message: string) =>
+    res.status(422).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message,
+      },
+    });
+
+  const sendPayloadTooLarge = (res: Response, message: string) =>
+    res.status(413).json({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message,
+      },
+    });
 
   /**
    * @api {post} /upload/batch 批量上传文档
@@ -76,35 +131,54 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
    */
   router.post(
     '/batch/upload',
-    upload.array('files', 50), // 最多50个文件
+    uploadFiles,
     validate({ body: BatchUploadRequestSchema }),
     async (
       req: ValidatedRequest<unknown, z.infer<typeof BatchUploadRequestSchema>>,
       res,
     ) => {
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        return res.status(422).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'No files uploaded',
-          },
-        });
+        return sendValidationError(res, 'No files uploaded');
       }
 
-      const { collectionId } = (req.validated?.body as {
-        collectionId?: CollectionId;
+      if (req.files.length > MAX_FILES) {
+        return sendPayloadTooLarge(
+          res,
+          `Too many files uploaded (max ${MAX_FILES})`,
+        );
+      }
+
+      const validatedBody = (req.validated?.body as {
+        collectionId?: string;
       }) || { collectionId: undefined };
+
+      let resolvedCollectionId = validatedBody.collectionId;
+      const rawBody = req.body as Record<string, unknown>;
+      if (
+        (!resolvedCollectionId || resolvedCollectionId.trim().length === 0) &&
+        typeof rawBody?.collectionId === 'string'
+      ) {
+        resolvedCollectionId = rawBody.collectionId;
+      }
+
+      const normalizedCollectionId =
+        resolvedCollectionId && resolvedCollectionId.trim().length > 0
+          ? (resolvedCollectionId.trim() as CollectionId)
+          : undefined;
 
       try {
         const result = await batchService.batchUploadDocuments(
           req.files,
-          collectionId,
+          normalizedCollectionId,
         );
 
         // 验证响应格式
         const validatedResponse = BatchUploadResponseSchema.parse(result);
         res.status(200).json(validatedResponse);
       } catch (error) {
+        if (error instanceof AppError) {
+          throw error;
+        }
         if (error instanceof Error) {
           throw AppError.createInternalServerError(
             `Batch upload failed: ${error.message}`,
@@ -159,6 +233,13 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
     ) => {
       const { docIds } = req.validated?.body || { docIds: [] };
 
+      if ((docIds?.length ?? 0) > MAX_DOC_DELETE_IDS) {
+        return sendPayloadTooLarge(
+          res,
+          `Cannot delete more than ${MAX_DOC_DELETE_IDS} documents in a single request`,
+        );
+      }
+
       try {
         const result = await batchService.batchDeleteDocuments(
           (docIds || []) as DocId[],
@@ -168,6 +249,9 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
         const validatedResponse = BatchDeleteDocsResponseSchema.parse(result);
         res.status(200).json(validatedResponse);
       } catch (error) {
+        if (error instanceof AppError) {
+          throw error;
+        }
         if (error instanceof Error) {
           throw AppError.createInternalServerError(
             `Batch delete documents failed: ${error.message}`,
@@ -232,6 +316,9 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
           BatchDeleteCollectionsResponseSchema.parse(result);
         res.status(200).json(validatedResponse);
       } catch (error) {
+        if (error instanceof AppError) {
+          throw error;
+        }
         if (error instanceof Error) {
           throw AppError.createInternalServerError(
             `Batch delete collections failed: ${error.message}`,
@@ -243,102 +330,132 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
   );
 
   /**
-   * @api {get} /batch/progress 获取批量操作进度
+
+   * @api {get} /batch/progress 获取批处理进度
+
    * @apiGroup Batch Operations
-   * @apiDescription 获取指定批量操作的进度信息
+
+   * @apiDescription 获取指定批处理操作的进度信息
+
    * @apiParam {string} operationId - 操作ID
-   * @apiSuccess {string} operationId - 操作ID
-   * @apiSuccess {string} type - 操作类型（upload或delete）
-   * @apiSuccess {string} status - 操作状态（pending、processing、completed或failed）
-   * @apiSuccess {number} total - 总项目数量
-   * @apiSuccess {number} processed - 已处理的项目数量
-   * @apiSuccess {number} successful - 成功的项目数量
-   * @apiSuccess {number} failed - 失败的项目数量
-   * @apiSuccess {number} startTime - 开始时间戳
-   * @apiSuccess {number} [endTime] - 结束时间戳
-   * @apiSuccess {number} [estimatedTimeRemaining] - 预估剩余时间（秒）
-   * @apiSuccessExample {json} Success-Response:
-   *     HTTP/1.1 200 OK
-   *     {
-   *       "operationId": "uuid-xxxx",
-   *       "type": "upload",
-   *       "status": "processing",
-   *       "total": 10,
-   *       "processed": 6,
-   *       "successful": 5,
-   *       "failed": 1,
-   *       "startTime": 1640995200000,
-   *       "estimatedTimeRemaining": 30
-   *     }
+
    */
-  router.get('/progress/:operationId', async (req, res) => {
-    const { operationId } = req.params;
 
-    if (!operationId) {
-      return res.status(422).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Operation ID is required',
-        },
-      });
-    }
+  router.get(
 
-    const progress = await batchService.getBatchOperationProgress(operationId);
+    '/batch/progress/:operationId',
 
-    if (!progress) {
-      return res.status(404).json({
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Operation not found or expired',
-        },
-      });
-    }
+    validate({ params: BatchOperationQuerySchema }),
 
-    // 验证响应格式
-    const validatedResponse = BatchOperationProgressSchema.parse(progress);
-    res.status(200).json(validatedResponse);
-  });
+    async (
+
+      req: ValidatedRequest<
+
+        unknown,
+
+        unknown,
+
+        z.infer<typeof BatchOperationQuerySchema>
+
+      >,
+
+      res,
+
+    ) => {
+
+      const { operationId } = req.validated?.params || { operationId: '' };
+
+
+
+      const progress = await batchService.getBatchOperationProgress(operationId);
+
+
+
+      if (!progress) {
+
+        throw AppError.createNotFoundError('Operation not found or expired');
+
+      }
+
+
+
+      const validatedResponse = BatchOperationProgressSchema.parse(progress);
+
+      res.status(200).json(validatedResponse);
+
+    },
+
+  );
+
+
 
   /**
-   * @api {get} /batch/list 获取批量操作任务列表
-   * @apiGroup Batch Operations
-   * @apiDescription 获取批量操作任务列表，支持按状态过滤
-   * @apiParam {string} [status] - 状态过滤器（pending, processing, completed, failed）
-   * @apiSuccess {Object[]} tasks - 任务列表
-   * @apiSuccess {string} tasks.id - 任务ID
-   * @apiSuccess {string} tasks.taskType - 任务类型
-   * @apiSuccess {string} tasks.status - 任务状态
-   * @apiSuccess {number} tasks.progress - 进度百分比
-   * @apiSuccess {number} tasks.createdAt - 创建时间戳
-   * @apiSuccess {number} tasks.updatedAt - 更新时间戳
-   * @apiSuccessExample {json} Success-Response:
-   *     HTTP/1.1 200 OK
-   *     [
-   *       {
-   *         "id": "batch-upload-uuid-12345",
-   *         "taskType": "batch_upload",
-   *         "status": "processing",
-   *         "progress": 45,
-   *         "createdAt": 1640995200000,
-   *         "updatedAt": 1640995260000
-   *       }
-   *     ]
-   */
-  router.get('/list', async (req, res) => {
-    const { status } = req.query;
 
-    try {
-      const tasks = await batchService.getBatchOperationList(status as string);
-      res.status(200).json(tasks);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw AppError.createInternalServerError(
-          `Failed to get batch operation list: ${error.message}`,
-        );
+   * @api {get} /batch/list 获取批处理任务列表
+
+   * @apiGroup Batch Operations
+
+   * @apiDescription 支持按状态过滤批处理任务
+
+   */
+
+  router.get(
+
+    '/batch/list',
+
+    validate({ query: BatchOperationListQuerySchema }),
+
+    async (
+
+      req: ValidatedRequest<
+
+        unknown,
+
+        z.infer<typeof BatchOperationListQuerySchema>
+
+      >,
+
+      res,
+
+    ) => {
+
+      try {
+
+        const status = req.validated?.query?.status;
+
+        const tasks = await batchService.getBatchOperationList(status);
+
+        res.status(200).json(tasks);
+
+      } catch (error) {
+
+        if (error instanceof AppError) {
+
+          throw error;
+
+        }
+
+        if (error instanceof Error) {
+
+          throw AppError.createInternalServerError(
+
+            'Failed to get batch operation list: ' + error.message,
+
+          );
+
+        }
+
+        throw error;
+
       }
-      throw error;
-    }
-  });
+
+    },
+
+  );
+
+
 
   return router;
+
 }
+
