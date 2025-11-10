@@ -1,0 +1,109 @@
+# Redocly OpenAPI 验证和转换配置
+# 
+# 本文件定义了 Redocly CLI 的行为，包括：
+# - 规则扩展和自定义规则
+# - 输出格式和验证规则
+# - 集成和预处理配置
+
+# 使用推荐的规则集
+extends:
+  - recommended
+
+# 自定义规则配置
+rules:
+  # 联系信息不是必需的
+  info-contact: off
+  
+  # License 不是必需的
+  info-license: off
+  
+  # 强制使用操作摘要
+  operation-summary: warn
+  
+  # 强制使用操作描述
+  operation-description: warn
+  
+  # 防止模糊路径
+  no-ambiguous-paths: warn
+  
+  # 强制使用标签分类
+  operation-2xx-response: warn
+  
+  # 强制参数描述
+  parameter-description: warn
+
+# Lint 配置
+lint:
+  # 忽略的路径
+  ignore-paths:
+    - node_modules/**
+    - dist/**
+    - coverage/**
+    - .git/**
+    - build/**
+  
+  # 中止规则（违反时退出代码 1）
+  rules-ignore-paths:
+    - no-invalid-schema-examples: [node_modules]
+    - external-docs-url: [node_modules]
+
+# 输出配置
+output:
+  # 详细输出级别: basic, verbose, json
+  format: stylish
+  
+  # 颜色输出
+  color: true
+  
+  # 生成统计信息
+  stats: true
+
+# 集成配置（可选）
+integrations:
+  # 预定义的集成（例如 GitHub）
+  github:
+    enabled: false
+
+# 预处理步骤（可选）
+preprocessors:
+  []
+
+# 后处理步骤（可选）
+postprocessors:
+  []
+
+# 文档构建配置
+build:
+  # 输出格式
+  format: bundle
+  
+  # 目标文件
+  target: docs/apis/bundled.yaml
+  
+  # 包含外部引用
+  includeExamples: true
+  
+  # 文档来源
+  sourcemap: true
+
+# 文档配置
+docs:
+  # 文档标题
+  title: Qdrant MCP RAG System API
+  
+  # 启用搜索功能
+  enableSearch: true
+  
+  # 启用 API 预览
+  enableApiPreview: true
+  
+  # 暗主题
+  theme:
+    colors:
+      primary: '#0066cc'
+      success: '#00cc00'
+      warning: '#ffcc00'
+      error: '#ff0000'
+    typography:
+      fontSize: 14
+      fontFamily: 'Roboto, sans-serif'

@@ -35,7 +35,7 @@
 ```mermaid
 graph TD
   %% ==== Client ====
-  UI["Web UI<br>(Vue/React/Svelte)"]
+  UI["Web UI<br/>(React 18 + TypeScript + Vite/Tailwind)"]
   %% ==== API ====
   Controller["Express/Koa Controller"]
   UI -->|HTTP| Controller
@@ -138,7 +138,7 @@ graph TD
 
 ### 4.1 表现层（Web UI）
 
-- 技术栈：Vue / React / Svelte 单页应用（SPA）
+- 技术栈：React 18 + TypeScript + Vite + Tailwind CSS；状态统一由 Zustand（devtools + persist）管理，React Router v6 负责路由，Axios + useApi 钩子封装后与后端通信，lucide-react + 自定义 Tailwind 组件提供 UI 表现。
 - 功能：
   - 调用后端 RESTful 或 GraphQL API
   - 实现身份验证（JWT / Cookie）

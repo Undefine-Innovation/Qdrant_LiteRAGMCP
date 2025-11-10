@@ -20,10 +20,11 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit"
+    "dev:watch": "tsc --watch",
+    "build:compile": "npx tsc --build",
+    "build:check": "tsc --noEmit",
+    "clean:build": "tsc --build --clean",
+    "clean:dist": "rm -rf dist"
   },
   "devDependencies": {
     "typescript": "^5.0.2"

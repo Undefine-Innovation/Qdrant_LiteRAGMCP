@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0" initial="NEW" profile="ecmascript">
+  <description>Sync job state machine: NEW -> SPLIT_OK -> EMBED_OK -> SYNCED (with FAILED/RETRYING/DEAD)</description>
+  <state id="NEW">
+    <transition event="split_ok" target="SPLIT_OK"/>
+    <transition event="fail" target="FAILED"/>
+  </state>
+  <state id="SPLIT_OK">
+    <transition event="embed_ok" target="EMBED_OK"/>
+    <transition event="fail" target="FAILED"/>
+  </state>
+  <state id="EMBED_OK">
+    <transition event="synced" target="SYNCED"/>
+    <transition event="fail" target="FAILED"/>
+  </state>
+  <state id="SYNCED"/>
+  <state id="FAILED">
+    <transition event="retry" target="RETRYING"/>
+  </state>
+  <state id="RETRYING">
+    <transition event="dead" target="DEAD"/>
+    <transition event="retry_ok" target="SPLIT_OK"/>
+  </state>
+  <state id="DEAD"/>
+</scxml>

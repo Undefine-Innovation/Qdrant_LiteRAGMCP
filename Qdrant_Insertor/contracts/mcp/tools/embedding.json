@@ -1,0 +1,20 @@
+{
+  "name": "embedding-service",
+  "description": "Tool spec for embedding provider",
+  "type": "embedding",
+  "input": {
+    "texts": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "output": {
+    "vectors": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "number" } }
+    }
+  },
+  "config": {
+    "batchSize": { "type": "integer", "default": 200 }
+  }
+}

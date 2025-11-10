@@ -50,12 +50,12 @@
 
 #### 2.3.1.3 关键实现与技术栈
 
-- **技术栈**：Vue / React / Svelte (选择其中之一作为主框架)。
-- **状态管理**：根据所选框架，可能使用 Vuex / Pinia (Vue), Redux / Zustand (React), Svelte stores (Svelte) 等。
-- **路由管理**：Vue Router (Vue), React Router (React), S客户端路由 (Svelte) 等。
-- **HTTP 客户端**：Axios, Fetch API 等。
-- **构建工具**：Vite, Webpack 等。
-- **UI 组件库**：Element UI, Ant Design, Material UI 等 (可选)。
+- **技术栈**：React 18 + TypeScript，基于 Vite 构建的单页应用（SPA）。
+- **状态管理**：统一使用 Zustand store，并启用 devtools + persist 中间件管理集合、文档、批处理、错误与分页状态。
+- **路由管理**：React Router v6，按 /collections、/documents、/scrape、/monitoring 等视图划分布局与嵌套路由。
+- **HTTP 客户端**：Axios + 自定义 useApi / useBatchUpload / useBatchDelete Hooks，配合 src/services/\*.ts 中的类型化 API 模块与错误拦截。
+- **构建工具**：Vite 4 + @vitejs/plugin-react，配合 TypeScript --noEmit 检查与 Tailwind/PostCSS 管线。
+- **UI 组件与样式**：Tailwind CSS 主题（primary/secondary 色板）+ 自研组件体系，lucide-react 提供图标，React Markdown/remark-gfm 渲染富文本。
 - **搜索限速**：自定义搜索限速器，支持防抖和请求去重。
 - **分页组件**：自定义分页组件，支持灵活的分页配置。
 
@@ -72,7 +72,7 @@
   - 前端日志记录，便于调试和问题追踪。
 - **测试策略**：
   - **单元测试**：仅在必要时对核心业务逻辑或复杂工具函数进行单元测试。
-  - **集成测试**：优先测试涉及具体业务流程的功能，确保组件间交互和页面流程的正确性 (如 React Testing Library, Vue Test Utils)。
+  - **集成测试**：使用 Jest + @testing-library/react + @testing-library/jest-dom 校验核心业务流，并借助 jest-html-reporters、jest-junit 生成报告。
   - **端到端测试 (E2E)**：使用 Playwright 或 Cypress 模拟用户关键行为，覆盖主要用户路径。
 - **依赖管理**：
   - 使用 npm 或 yarn 管理前端依赖。

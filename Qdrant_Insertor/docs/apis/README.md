@@ -1,15 +1,31 @@
-# Qdrant MCP RAG API 文档
+# OpenAPI 文档自动生成系统
 
-## 概述
+## 📋 概述
 
-本文档描述了Qdrant MCP RAG项目的RESTful API接口，包括端点定义、请求/响应格式和使用示例。
+这是 Qdrant MCP RAG 系统的 **OpenAPI 文档自动生成系统**。
 
-## API 基础信息
+所有 API 文档都通过 **JSDoc 注释自动生成**，确保文档与代码始终保持同步。
+
+## 🚀 快速开始
+
+👉 **新用户？从这里开始**: [QUICKSTART.md](./QUICKSTART.md) (5分钟)
+
+## 📚 完整指南
+
+| 文档 | 说明 | 时长 |
+|------|------|------|
+| [QUICKSTART.md](./QUICKSTART.md) | ⭐ 5分钟快速上手 | 5分钟 |
+| [../guide/openapi-auto-generation.md](../guide/openapi-auto-generation.md) | 🎓 完整实施教程 | 15分钟 |
+| [../specs/openapi-best-practices.md](../specs/openapi-best-practices.md) | 📖 最佳实践指南 | 10分钟 |
+| [../guide/openapi-ci-cd-integration.md](../guide/openapi-ci-cd-integration.md) | 🚀 CI/CD 配置 | 10分钟 |
+
+## 🎯 API 基础信息
 
 - **基础URL**: `http://localhost:3000/api`
+- **文档格式**: OpenAPI 3.0
 - **内容类型**: `application/json`
-- **认证方式**: Bearer Token (JWT)
-- **API版本**: v1
+- **Swagger UI**: `http://localhost:3000/api-docs`
+- **OpenAPI JSON**: `http://localhost:3000/api-docs.json`
 
 ## 核心功能模块
 

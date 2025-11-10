@@ -1,0 +1,188 @@
+openapi: 3.0.3
+info:
+  title: Qdrant MCP RAG - Minimal OpenAPI
+  version: '1.0.0'
+  description: Minimal OpenAPI spec for core document APIs (for type/client generation). This file is authoritative for new codegen only and does not replace existing runtime routes.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/collections:
+    post:
+      summary: Create a collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+  /api/collections/{collectionId}/docs:
+    post:
+      summary: Upload a document to a collection
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Document created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+  /api/docs:
+    get:
+      summary: List documents (paginated)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocsResponse'
+  /api/docs/{docId}:
+    get:
+      summary: Get document by id
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          description: Not found
+    delete:
+      summary: Delete document
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+  /api/docs/{docId}/resync:
+    put:
+      summary: Resync a document
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resynced document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+components:
+  schemas:
+    CollectionCreate:
+      type: object
+      required: [collectionId, name]
+      properties:
+        collectionId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    Collection:
+      type: object
+      properties:
+        id:
+          type: string
+        collectionId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+    DocumentResponse:
+      type: object
+      properties:
+        docId:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        collectionId:
+          type: string
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+        content:
+          type: string
+    PaginatedDocsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentResponse'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+            hasNext:
+              type: boolean
+            hasPrev:
+              type: boolean
