@@ -28,10 +28,15 @@ export type PointId = Brand<string, 'PointId'>;
  *
  */
 export interface Collection {
-  collectionId: CollectionId;
-  name: string;
+  id?: CollectionId; // 可选，由数据库自动生成
+  collectionId?: CollectionId; // 向后兼容字段
+  name: string; // 在应用层使用CollectionName值对象，这里保持字符串以兼容数据库层
   description?: string;
-  created_at: number; // epoch ms
+  is_system?: boolean; // 添加is_system字段
+  created_at?: number; // epoch ms
+  updated_at?: number; // 添加updated_at字段
+  docs?: unknown[]; // 添加docs字段
+  chunkMetas?: unknown[]; // 添加chunkMetas字段
 }
 
 /**
@@ -40,24 +45,30 @@ export interface Collection {
  *   之后被拆�?chunks 中。为避免误导，这里把 content 标为可选，并在 DTO 中单独定义�?
  */
 export interface Doc {
-  docId: DocId;
+  id?: DocId; // 改为可选，由数据库自动生成
   collectionId: CollectionId;
   key: string;
   name?: string;
   size_bytes?: number;
   mime?: string;
-  created_at: number;
+  content_hash?: string; // 添加content_hash字段
+  created_at?: number;
   updated_at?: number;
   is_deleted?: boolean;
+  status?: string; // 添加status字段
 
-  // 非持久化字段：仅�?createDoc 返回值里你把源内容回传了
-  content?: string;
+  // 非持久化字段：仅在createDoc 返回值里你把源内容回传了
+  content?: string; // 在应用层使用DocumentContent值对象，这里保持字符串以兼容数据库层
+
+  // 向后兼容字段
+  docId?: DocId; // 向后兼容，实际使用id字段
 }
 
-/** chunk_meta +（非持久化）回表得到的文�?*/
+/** chunk_meta +（非持久化）回表得到的文本*/
 export interface ChunkMeta {
   pointId: PointId;
-  docId: DocId;
+  id: DocId; // 改为id字段以匹配数据库实体
+  docId: DocId; // 向后兼容字段
   collectionId: CollectionId;
   chunkIndex: number;
   titleChain?: string;
@@ -76,7 +87,7 @@ export interface ChunkTextRow {
 
 /** 聚合后的 Chunk（元数据 + 文本�?*/
 export interface Chunk extends ChunkMeta {
-  content: string;
+  content: string; // 在应用层使用ChunkContent值对象，这里保持字符串以兼容数据库层
   title?: string;
 }
 
@@ -84,9 +95,9 @@ export interface Chunk extends ChunkMeta {
  *
  */
 export interface ChunkWithVector extends ChunkMeta {
-  content: string; // The text content of the chunk.
+  content: string; // The text content of the chunk. 在应用层使用ChunkContent值对象
   source?: string; // The source of the chunk, e.g., file path.
-  vector: number[]; // embedding 向量
+  vector: number[]; // embedding 向量. 在应用层使用EmbeddingVector值对象
 }
 
 // ---------------------------------------------
@@ -199,7 +210,7 @@ export interface QdrantSearchHit {
  *
  */
 export interface CreateCollectionRequest {
-  name: string;
+  name: string; // 在应用层使用CollectionName值对象验证
   description?: string;
 }
 /**
@@ -222,7 +233,7 @@ export type GetCollectionResponse = Collection;
 export interface CreateDocRequest {
   collectionId: CollectionId;
   key: string;
-  content: string | Uint8Array; // 输入载荷里才�?content
+  content: string | Uint8Array; // 输入载荷里才�?content，在应用层使用DocumentContent值对象验证
   name?: string;
   mime?: string;
   splitOptions?: SplitOptions;
@@ -246,7 +257,7 @@ export type GetDocResponse = Doc;
  *
  */
 export interface UpdateDocRequest {
-  content: string | Uint8Array;
+  content: string | Uint8Array; // 在应用层使用DocumentContent值对象验证
   name?: string;
   mime?: string;
   splitOptions?: SplitOptions;

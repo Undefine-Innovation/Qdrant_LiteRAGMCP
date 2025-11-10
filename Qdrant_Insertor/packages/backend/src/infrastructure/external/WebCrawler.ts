@@ -57,9 +57,14 @@ export class WebCrawler implements IWebCrawler {
         { url: base.toString(), depth: 1 },
       ];
 
-  const pages: Array<{ url: string; title?: string; content?: string }> = [];
-  const linkSet = new Set<string>();
-  const inScopeLinks: Array<{ url: string; text?: string; title?: string }> = [];
+      const pages: Array<{ url: string; title?: string; content?: string }> =
+        [];
+      const linkSet = new Set<string>();
+      const inScopeLinks: Array<{
+        url: string;
+        text?: string;
+        title?: string;
+      }> = [];
 
       while (toVisit.length > 0 && pages.length < maxPages) {
         const { url, depth } = toVisit.shift()!;
@@ -68,7 +73,12 @@ export class WebCrawler implements IWebCrawler {
 
         let html: string | null = null;
         try {
-          html = await this.fetchHtml(url, config.headers, config.timeout, config.userAgent);
+          html = await this.fetchHtml(
+            url,
+            config.headers,
+            config.timeout,
+            config.userAgent,
+          );
         } catch (e) {
           this.logger.warn(`抓取失败，跳过: ${url} -> ${String(e)}`);
           continue;
@@ -86,11 +96,18 @@ export class WebCrawler implements IWebCrawler {
             if (abs.origin !== base.origin) continue;
             if (!abs.pathname.startsWith(base.pathname)) continue;
             abs.hash = '';
-            const normalizedPath = abs.pathname.endsWith('/') && abs.pathname !== '/' ? abs.pathname.slice(0, -1) : abs.pathname;
+            const normalizedPath =
+              abs.pathname.endsWith('/') && abs.pathname !== '/'
+                ? abs.pathname.slice(0, -1)
+                : abs.pathname;
             const normalized = `${abs.origin}${normalizedPath}`;
             if (!linkSet.has(normalized)) {
               linkSet.add(normalized);
-              inScopeLinks.push({ url: normalized, text: l.text, title: l.title });
+              inScopeLinks.push({
+                url: normalized,
+                text: l.text,
+                title: l.title,
+              });
             }
           } catch (_) {
             // ignore
@@ -108,7 +125,10 @@ export class WebCrawler implements IWebCrawler {
               if (!abs.pathname.startsWith(base.pathname)) continue;
               // 归一化：去掉片段，标准化路径结尾斜杠
               abs.hash = '';
-              const normalizedPath = abs.pathname.endsWith('/') && abs.pathname !== '/' ? abs.pathname.slice(0, -1) : abs.pathname;
+              const normalizedPath =
+                abs.pathname.endsWith('/') && abs.pathname !== '/'
+                  ? abs.pathname.slice(0, -1)
+                  : abs.pathname;
               const normalized = `${abs.origin}${normalizedPath}`;
               if (!visited.has(normalized)) {
                 toVisit.push({ url: normalized, depth: depth + 1 });
@@ -121,16 +141,20 @@ export class WebCrawler implements IWebCrawler {
       }
 
       const combinedTitle = pages[0]?.title;
-      const combinedContent = pages.map(p => `# ${p.title || p.url}\n\n${p.content || ''}`).join('\n\n---\n\n');
+      const combinedContent = pages
+        .map((p) => `# ${p.title || p.url}\n\n${p.content || ''}`)
+        .join('\n\n---\n\n');
 
-  this.logger.info(`抓取完成：页面数 ${pages.length}，同域同路径链接数 ${inScopeLinks.length}`);
+      this.logger.info(
+        `抓取完成：页面数 ${pages.length}，同域同路径链接数 ${inScopeLinks.length}`,
+      );
 
       return {
         taskId: `crawl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         status: 'COMPLETED' as ScrapeStatus,
         title: combinedTitle,
         content: combinedContent,
-  links: inScopeLinks,
+        links: inScopeLinks,
         metadata: {
           url: config.url,
           extractedAt: Date.now(),
@@ -194,7 +218,13 @@ export class WebCrawler implements IWebCrawler {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
       try {
-        const response = await fetch(url, {
+        /**
+         * RequestInit extended with undici dispatcher for custom connection/agent control.
+         */
+        type UndiciFetchOptions = RequestInit & {
+          dispatcher?: Agent | ProxyAgent;
+        };
+        const fetchOpts: UndiciFetchOptions = {
           method: 'GET',
           headers: {
             'User-Agent':
@@ -209,13 +239,18 @@ export class WebCrawler implements IWebCrawler {
           signal: controller.signal,
           // 使用 undici dispatcher 定制连接超时/代理
           dispatcher,
-        } as any);
+        };
+
+        const response = await fetch(url, fetchOpts);
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
           // 对易恢复的 429/503 做重试
-          if ((response.status === 429 || response.status === 503) && attempt < maxRetries) {
+          if (
+            (response.status === 429 || response.status === 503) &&
+            attempt < maxRetries
+          ) {
             attempt++;
             const backoff = 500 * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms
             await new Promise((r) => setTimeout(r, backoff));
@@ -229,8 +264,18 @@ export class WebCrawler implements IWebCrawler {
         clearTimeout(timeoutId);
         controller.abort();
         lastErr = error;
-        const e = error as any;
-        const code = e?.code || e?.cause?.code;
+        const e = error as unknown;
+        const eObj =
+          typeof e === 'object' && e !== null
+            ? (e as Record<string, unknown>)
+            : {};
+        const code =
+          typeof eObj['code'] === 'string'
+            ? (eObj['code'] as string)
+            : typeof (eObj['cause'] as Record<string, unknown>)?.['code'] ===
+                'string'
+              ? ((eObj['cause'] as Record<string, unknown>)['code'] as string)
+              : undefined;
         const transient =
           code === 'UND_ERR_CONNECT_TIMEOUT' ||
           code === 'ETIMEDOUT' ||
@@ -240,15 +285,24 @@ export class WebCrawler implements IWebCrawler {
         if (transient && attempt < maxRetries) {
           attempt++;
           const backoff = 500 * Math.pow(2, attempt);
-          this.logger.warn(`请求失败(${code})，第 ${attempt} 次重试，等待 ${backoff}ms`);
+          this.logger.warn(
+            `请求失败(${code})，第 ${attempt} 次重试，等待 ${backoff}ms`,
+          );
           await new Promise((r) => setTimeout(r, backoff));
           continue;
         }
         // 聚合错误细节
-        const name = e?.name || 'Error';
-        const errno = e?.errno || e?.cause?.errno;
-        const msg = e?.message || 'fetch failed';
-        const detail = `[${name}${code ? `/${code}` : ''}${errno ? `:${errno}` : ''}] ${msg}`;
+        const name =
+          typeof eObj['name'] === 'string' ? (eObj['name'] as string) : 'Error';
+        const errno =
+          typeof eObj['errno'] !== 'undefined'
+            ? eObj['errno']
+            : (eObj['cause'] as Record<string, unknown>)?.['errno'];
+        const msg =
+          typeof eObj['message'] === 'string'
+            ? (eObj['message'] as string)
+            : 'fetch failed';
+        const detail = `[${name}${code ? `/${code}` : ''}${errno ? `:${String(errno)}` : ''}] ${msg}`;
         throw new Error(detail);
       }
     }

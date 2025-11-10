@@ -32,8 +32,8 @@ export class RetryScheduler implements IRetryScheduler {
   private retryTimes: number[] = []; // 用于计算平均重试时间
 
   /**
-   *
-   * @param logger
+   * 构造函数
+   * @param logger 日志记录器
    */
   constructor(private readonly logger: Logger) {
     // 初始化统计对象
@@ -45,12 +45,13 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 调度重试任务
-   * @param docId
-   * @param error
-   * @param errorCategory
-   * @param retryCount
-   * @param strategy
-   * @param callback
+   * @param docId 文档ID
+   * @param error 错误对象
+   * @param errorCategory 错误分类
+   * @param retryCount 重试次数
+   * @param strategy 重试策略
+   * @param callback 重试回调函数
+   * @returns 任务ID
    */
   scheduleRetry(
     docId: string,
@@ -137,7 +138,8 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 取消重试任务
-   * @param taskId
+   * @param taskId 任务ID
+   * @returns 是否成功取消
    */
   cancelRetry(taskId: string): boolean {
     const task = this.retryTasks.get(taskId);
@@ -161,6 +163,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取重试统计信息
+   * @returns 重试统计信息
    */
   getRetryStats(): RetryStats {
     return { ...this.retryStats };
@@ -168,6 +171,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 清理已完成的任务
+   * @returns 无返回值
    */
   cleanupCompletedTasks(): void {
     // 由于任务在完成后会自动删除，这里主要是清理过期的任务
@@ -191,6 +195,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取活跃任务数量
+   * @returns 活跃任务数量
    */
   getActiveTaskCount(): number {
     return this.retryTasks.size;
@@ -198,7 +203,8 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 取消指定文档的所有重试任务
-   * @param docId
+   * @param docId 文档ID
+   * @returns 取消的任务数量
    */
   public cancelAllRetriesForDoc(docId: string): number {
     const tasks = this.getTasksByDocId(docId);
@@ -215,7 +221,8 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取任务详情
-   * @param taskId
+   * @param taskId 任务ID
+   * @returns 任务详情或undefined
    */
   public getTask(taskId: string): RetryTask | undefined {
     return this.retryTasks.get(taskId);
@@ -223,6 +230,7 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取所有活跃任务
+   * @returns 活跃任务列表
    */
   public getAllTasks(): RetryTask[] {
     return Array.from(this.retryTasks.values());
@@ -230,7 +238,8 @@ export class RetryScheduler implements IRetryScheduler {
 
   /**
    * 获取指定文档的重试任务
-   * @param docId
+   * @param docId 文档ID
+   * @returns 重试任务列表
    */
   public getTasksByDocId(docId: string): RetryTask[] {
     return Array.from(this.retryTasks.values()).filter(
@@ -268,7 +277,8 @@ export class RetryScheduler implements IRetryScheduler {
 
 /**
  * 创建重试调度器实现
- * @param logger
+ * @param logger 日志记录器
+ * @returns 重试调度器实例
  */
 export function createRetryScheduler(logger: Logger): IRetryScheduler {
   return new RetryScheduler(logger);

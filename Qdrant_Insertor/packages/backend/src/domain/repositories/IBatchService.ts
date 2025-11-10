@@ -27,7 +27,8 @@ export interface BatchUploadResponse {
  * 批量删除结果
  */
 export interface BatchDeleteResult {
-  id: string;
+  docId?: DocId;
+  collectionId?: CollectionId;
   success: boolean;
   error?: string;
 }
@@ -116,6 +117,15 @@ export interface IBatchService {
    * @returns 批量操作进度
    */
   getBatchOperationProgress(
+    operationId: string,
+  ): Promise<BatchOperationProgress | null>;
+
+  /**
+   * 获取批量进度（别名方法，用于向后兼容）
+   * @param operationId - 操作ID
+   * @returns 批量操作进度
+   */
+  getBatchProgress(
     operationId: string,
   ): Promise<BatchOperationProgress | null>;
 

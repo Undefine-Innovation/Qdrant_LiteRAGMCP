@@ -1,6 +1,7 @@
-import { Logger } from '@logging/logger.js';
-import { MonitoringService } from '@application/services/MonitoringService.js';
-import { AlertService } from '@application/services/AlertService.js';
+import { Logger, EnhancedLogger } from '@logging/logger.js';
+import { MonitoringService } from '@application/services/monitoring/index.js';
+import { AlertService } from '@application/services/alerting/index.js';
+import { LogTag } from '@infrastructure/logging/enhanced-logger.js';
 
 /**
  * 设置优雅关闭处理

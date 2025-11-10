@@ -187,7 +187,15 @@ export interface IScrapeService {
   /**
    * 将抓取结果导入到指定集合
    */
-  importScrapeResult(id: string, collectionId: import('@domain/entities/types.js').CollectionId, name?: string): Promise<{ success: boolean; docId?: import('@domain/entities/types.js').DocId; error?: string }>;
+  importScrapeResult(
+    id: string,
+    collectionId: import('@domain/entities/types.js').CollectionId,
+    name?: string,
+  ): Promise<{
+    success: boolean;
+    docId?: import('@domain/entities/types.js').DocId;
+    error?: string;
+  }>;
 
   /**
    * 删除（软删除）抓取结果

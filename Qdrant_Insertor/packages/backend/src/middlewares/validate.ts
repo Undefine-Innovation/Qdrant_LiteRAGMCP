@@ -28,10 +28,15 @@ export type ValidatedRequest<
  * @param schema.body - 请求体schema
  * @param schema.query - 查询参数schema
  * @param schema.params - 路径参数schema
+ * @param opts 额外配置
+ * @param opts.statusCode 验证失败时返回的状态码
  * @returns Express 中间件函数
  */
 export const validate =
-  (schema: { body?: ZodSchema; query?: ZodSchema; params?: ZodSchema }) =>
+  (
+    schema: { body?: ZodSchema; query?: ZodSchema; params?: ZodSchema },
+    opts?: { statusCode?: number },
+  ) =>
   async (req: ValidatedRequest, res: Response, next: NextFunction) => {
     try {
       req.validated = {};
@@ -56,9 +61,11 @@ export const validate =
           message: err.message,
         }));
         return next(
-          AppError.createValidationError(
-            { issues: validationErrors },
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
             `Validation failed for fields: ${validationErrors.map((e) => e.path).join(', ')}`,
+            opts?.statusCode ?? 400,
+            { issues: validationErrors },
           ),
         );
       }

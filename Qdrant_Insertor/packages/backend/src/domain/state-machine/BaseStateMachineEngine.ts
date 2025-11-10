@@ -33,6 +33,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 注册状态机策略
+   * @param strategy - 状态机策略
+   * @returns 无返回值
    */
   registerStrategy(strategy: StateMachineStrategy): void {
     if (this.strategies.has(strategy.strategyId)) {
@@ -45,6 +47,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取已注册的策略
+   * @param taskType - 任务类型
+   * @returns 状态机策略
    */
   getStrategy(taskType: string): StateMachineStrategy | null {
     return this.strategies.get(taskType) || null;
@@ -52,6 +56,10 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 创建新任务
+   * @param taskType - 任务类型
+   * @param taskId - 任务ID
+   * @param initialContext - 初始上下文
+   * @returns 状态机任务
    */
   async createTask(
     taskType: string,
@@ -74,6 +82,10 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 触发状态转换
+   * @param taskId - 任务ID
+   * @param event - 事件
+   * @param context - 上下文
+   * @returns 是否成功转换状态
    */
   async transitionState(
     taskId: string,
@@ -102,6 +114,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取任务状态
+   * @param taskId - 任务ID
+   * @returns 状态机任务
    */
   async getTask(taskId: string): Promise<StateMachineTask | null> {
     return await this.persistence.getTask(taskId);
@@ -109,6 +123,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取指定状态的任务列表
+   * @param status - 状态
+   * @returns 状态机任务列表
    */
   async getTasksByStatus(status: string): Promise<StateMachineTask[]> {
     return await this.persistence.getTasksByStatus(status);
@@ -116,6 +132,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取指定类型的任务列表
+   * @param taskType - 任务类型
+   * @returns 状态机任务列表
    */
   async getTasksByType(taskType: string): Promise<StateMachineTask[]> {
     return await this.persistence.getTasksByType(taskType);
@@ -123,6 +141,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 执行任务
+   * @param taskId - 任务ID
+   * @returns 无返回值
    */
   async executeTask(taskId: string): Promise<void> {
     const task = await this.persistence.getTask(taskId);
@@ -148,6 +168,9 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 处理任务错误
+   * @param taskId - 任务ID
+   * @param error - 错误对象
+   * @returns 无返回值
    */
   async handleTaskError(taskId: string, error: Error): Promise<void> {
     const task = await this.persistence.getTask(taskId);
@@ -167,6 +190,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 清理过期任务
+   * @param olderThan - 过期时间阈值（毫秒）
+   * @returns 清理的任务数量
    */
   async cleanupExpiredTasks(
     olderThan: number = 24 * 60 * 60 * 1000,
@@ -179,6 +204,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取所有已注册的策略
+   * @returns 策略ID列表
    */
   getRegisteredStrategies(): string[] {
     return Array.from(this.strategies.keys());
@@ -186,6 +212,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取任务统计信息
+   * @returns 任务统计信息
    */
   async getTaskStats(): Promise<Record<string, Record<string, number>>> {
     const stats: Record<string, Record<string, number>> = {};
@@ -209,6 +236,10 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 批量创建任务
+   * @param taskType - 任务类型
+   * @param taskIds - 任务ID列表
+   * @param initialContext - 初始上下文
+   * @returns 状态机任务列表
    */
   async createTasks(
     taskType: string,
@@ -244,6 +275,9 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 批量执行任务
+   * @param taskIds - 任务ID列表
+   * @param concurrency - 并发数
+   * @returns 无返回值
    */
   async executeTasks(
     taskIds: string[],
@@ -270,6 +304,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 取消任务
+   * @param taskId - 任务ID
+   * @returns 是否成功取消
    */
   async cancelTask(taskId: string): Promise<boolean> {
     const task = await this.persistence.getTask(taskId);
@@ -298,6 +334,8 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 重试任务
+   * @param taskId - 任务ID
+   * @returns 是否成功重试
    */
   async retryTask(taskId: string): Promise<boolean> {
     const task = await this.persistence.getTask(taskId);
@@ -327,6 +365,7 @@ export class BaseStateMachineEngine implements IStateMachineEngine {
 
   /**
    * 获取状态持久化实例
+   * @returns 状态持久化实例
    */
   getPersistence(): StatePersistence {
     return this.persistence;

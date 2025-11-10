@@ -31,10 +31,6 @@ interface TaskDatabaseRow {
  * 内存状态持久化实现
  * 用于开发和测试环境，不提供持久化存储
  */
-/**
- * 内存状态持久化实现
- * 用于开发和测试环境，不提供持久化存储
- */
 export class InMemoryStatePersistence implements IStatePersistence {
   private tasks: Map<string, StateMachineTask> = new Map();
 
@@ -410,6 +406,8 @@ export class SQLiteStatePersistence implements IStatePersistence {
 
   /**
    * 将数据库行映射为StateMachineTask对象
+   * @param row 数据库行对象
+   * @returns StateMachineTask对象
    */
   private mapRowToTask(row: TaskDatabaseRow): StateMachineTask {
     return {
@@ -428,3 +426,8 @@ export class SQLiteStatePersistence implements IStatePersistence {
     };
   }
 }
+
+/**
+ * 导出TypeORMStatePersistence
+ */
+export { TypeORMStatePersistence } from './TypeORMStatePersistence.js';

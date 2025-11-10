@@ -3,12 +3,16 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "strict": true,
+  "esModuleInterop": true,
+  "isolatedModules": true,
+  "strict": true,
+  "experimentalDecorators": true,
+  "emitDecoratorMetadata": true,
+  "strictPropertyInitialization": false,
     "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
       "@shared/*": ["../../shared/*"],
       "@domain/*": ["./src/domain/*"],
       "@application/*": ["./src/application/*"],
@@ -19,9 +23,16 @@
       "@di/*": ["./src/infrastructure/di/*"],
       "@lifecycle/*": ["./src/infrastructure/lifecycle/*"],
       "@scheduling/*": ["./src/infrastructure/scheduling/*"],
-      "@middleware/*": ["./src/api/middleware/*"]
+      "@middleware/*": ["./src/api/middleware/*", "./src/middlewares/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.js",
+    // exclude generated code since it's produced by tools and may not follow project lint/ts rules
+    "src/generated",
+    "src/generated/**"
+  ]
 }

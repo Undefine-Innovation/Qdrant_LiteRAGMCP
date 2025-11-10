@@ -1,15 +1,15 @@
 /**
- * @file Defines the interface for an embedding provider.
+ * @file 定义嵌入提供者的接口
  */
 
 /**
- * Represents a provider that can generate embeddings for a list of texts.
+ * 表示可以为文本列表生成嵌入的提供者
  */
 export interface IEmbeddingProvider {
   /**
-   * Generates embeddings for the given texts.
-   * @param texts - An array of strings to generate embeddings for.
-   * @returns A promise that resolves to an array of number arrays, where each inner array is the embedding for the corresponding text.
+   * 为给定文本生成嵌入向量
+   * @param texts - 要生成嵌入的字符串数组
+   * @returns 返回一个 Promise，解析为数字数组的数组，其中每个内部数组是对应文本的嵌入向量
    */
   generate(texts: string[]): Promise<number[][]>;
 }

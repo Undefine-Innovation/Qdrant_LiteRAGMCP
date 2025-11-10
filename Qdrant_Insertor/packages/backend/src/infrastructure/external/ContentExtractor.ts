@@ -59,7 +59,8 @@ export class ContentExtractor implements IContentExtractor {
 
       // 内容（合并多个选择器的文本，保持换行）
       let content: string | undefined;
-      const contentSel = selectors?.content?.trim() || 'main, article, .content, #content';
+      const contentSel =
+        selectors?.content?.trim() || 'main, article, .content, #content';
       try {
         const parts: string[] = [];
         $(contentSel).each((_, el) => {
@@ -72,10 +73,13 @@ export class ContentExtractor implements IContentExtractor {
       }
 
       // 链接
-      let links: Array<{ url: string; text?: string; title?: string }> | undefined;
+      let links:
+        | Array<{ url: string; text?: string; title?: string }>
+        | undefined;
       const linkSel = selectors?.links?.trim() || 'a[href]';
       try {
-        const linkList: Array<{ url: string; text?: string; title?: string }> = [];
+        const linkList: Array<{ url: string; text?: string; title?: string }> =
+          [];
         $(linkSel).each((_, el) => {
           const href = $(el).attr('href');
           if (!href) return;

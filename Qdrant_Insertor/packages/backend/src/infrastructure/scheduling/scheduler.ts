@@ -1,8 +1,8 @@
 import cron from 'node-cron';
-import { Logger } from '@logging/logger.js';
-import { MonitoringService } from '@application/services/MonitoringService.js';
-import { AlertService } from '@application/services/AlertService.js';
-import { AutoGCService } from '@application/services/AutoGCService.js';
+import { Logger, EnhancedLogger } from '@logging/logger.js';
+import { MonitoringService } from '@application/services/monitoring/index.js';
+import { AlertService } from '@application/services/alerting/index.js';
+import { AutoGCService } from '@application/services/system/index.js';
 import { AppConfig } from '@config/config.js';
 
 /**
@@ -13,6 +13,7 @@ import { AppConfig } from '@config/config.js';
  * @param autoGCService - 自动垃圾回收服务实例
  * @param config - 应用程序配置
  * @param logger - 日志器实例
+ * @param enhancedLogger ��ѡǿ���־��
  */
 export function setupScheduledTasks(
   monitoringService: MonitoringService,
@@ -20,6 +21,7 @@ export function setupScheduledTasks(
   autoGCService: AutoGCService,
   config: AppConfig,
   logger: Logger,
+  enhancedLogger?: EnhancedLogger,
 ): void {
   logger.info('启动监控服务...');
 
@@ -64,7 +66,7 @@ function setupGCTasks(
   const gcIntervalHours = config.gc.intervalHours; // 垃圾回收间隔小时数
   logger.info(`AutoGC 定时任务已设置，每${gcIntervalHours} 小时运行一次。`);
 
-  // 立即运行一次垃圾回收（可选）
+  // 立即运行一次垃圾回收
   setTimeout(() => {
     logger.info('执行初始垃圾回收...');
     autoGCService.runGC().catch((err) => {

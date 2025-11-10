@@ -98,6 +98,13 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
   /**
    * 构造函数
    * @param persistence 状态持久化实现
+   * @param persistence.saveTask 保存任务方法
+   * @param persistence.getTask 获取任务方法
+   * @param persistence.getTasksByStatus 根据状态获取任务方法
+   * @param persistence.getTasksByType 根据类型获取任务方法
+   * @param persistence.updateTask 更新任务方法
+   * @param persistence.deleteTask 删除任务方法
+   * @param persistence.cleanupExpiredTasks 清理过期任务方法
    * @param logger 日志记录器
    */
   constructor(
@@ -242,6 +249,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 执行批量上传任务
+   * @param taskId 任务ID
+   * @returns 无返回值
    */
   async executeTask(taskId: string): Promise<void> {
     const task = await this.persistence.getTask(taskId);
@@ -293,6 +302,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 开始验证时的动作
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async onStartValidation(context: BatchUploadContext): Promise<void> {
     this.logger.info(`开始验证批量上传任务: ${context.batchId}`);
@@ -318,6 +329,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 开始处理时的动作
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async onStartProcessing(context: BatchUploadContext): Promise<void> {
     this.logger.info(`开始处理批量上传任务: ${context.batchId}`);
@@ -326,6 +339,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 开始上传时的动作
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async onStartUploading(context: BatchUploadContext): Promise<void> {
     this.logger.info(`开始上传批量上传任务: ${context.batchId}`);
@@ -334,6 +349,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 开始索引时的动作
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async onStartIndexing(context: BatchUploadContext): Promise<void> {
     this.logger.info(`开始索引批量上传任务: ${context.batchId}`);
@@ -342,6 +359,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 完成时的动作
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async onComplete(context: BatchUploadContext): Promise<void> {
     this.logger.info(`批量上传任务完成: ${context.batchId}`);
@@ -357,6 +376,8 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 检查是否可以开始处理
+   * @param context 批量上传上下文
+   * @returns 是否可以开始处理
    */
   private canStartProcessing(context: BatchUploadContext): boolean {
     return context.progressDetails?.validated === context.files.length;
@@ -364,6 +385,9 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 验证文件
+   * @param taskId 任务ID
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async validateFiles(
     taskId: string,
@@ -406,6 +430,9 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 处理文件
+   * @param taskId 任务ID
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async processFiles(
     taskId: string,
@@ -448,6 +475,9 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 上传文件
+   * @param taskId 任务ID
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async uploadFiles(
     taskId: string,
@@ -490,6 +520,9 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 索引文件
+   * @param taskId 任务ID
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async indexFiles(
     taskId: string,
@@ -532,6 +565,13 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 验证单个文件
+   * @param file 文件对象
+   * @param file.id 文件ID
+   * @param file.name 文件名
+   * @param file.size 文件大小
+   * @param file.type 文件类型
+   * @param file.path 文件路径
+   * @returns 无返回值
    */
   private async validateFile(file: {
     id: string;
@@ -547,6 +587,14 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 处理单个文件
+   * @param file 文件对象
+   * @param file.id 文件ID
+   * @param file.name 文件名
+   * @param file.size 文件大小
+   * @param file.type 文件类型
+   * @param file.path 文件路径
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async processFile(
     file: {
@@ -565,6 +613,14 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 上传单个文件
+   * @param file 文件对象
+   * @param file.id 文件ID
+   * @param file.name 文件名
+   * @param file.size 文件大小
+   * @param file.type 文件类型
+   * @param file.path 文件路径
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async uploadFile(
     file: {
@@ -583,6 +639,14 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
 
   /**
    * 索引单个文件
+   * @param file 文件对象
+   * @param file.id 文件ID
+   * @param file.name 文件名
+   * @param file.size 文件大小
+   * @param file.type 文件类型
+   * @param file.path 文件路径
+   * @param context 批量上传上下文
+   * @returns 无返回值
    */
   private async indexFile(
     file: {

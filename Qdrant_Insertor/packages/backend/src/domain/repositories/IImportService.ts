@@ -68,5 +68,9 @@ export interface IImportService {
    * @param content 文本内容
    * @param collectionId 目标集合
    */
-  importText(name: string, content: string, collectionId: CollectionId): Promise<Doc>;
+  importText(
+    name: string,
+    content: string,
+    collectionId: CollectionId,
+  ): Promise<Doc>;
 }

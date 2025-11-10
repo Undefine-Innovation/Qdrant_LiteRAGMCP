@@ -9,10 +9,11 @@ import {
   CollectionId,
   SearchResult,
 } from '@domain/entities/types.js';
+import { FILE_CONSTANTS } from '@domain/constants/FileConstants.js';
 
 /**
- * A repository class for interacting with Qdrant vector database.
- * It encapsulates all Qdrant-related operations.
+ * 与 Qdrant 向量数据库交互的仓库类。
+ * 封装了所有与 Qdrant 相关的操作。
  */
 export class QdrantRepo implements IQdrantRepo {
   private client: QdrantClient;
@@ -21,9 +22,9 @@ export class QdrantRepo implements IQdrantRepo {
   private logger: Logger;
 
   /**
-   *
-   * @param appConfig
-   * @param logger
+   * 构造函数
+   * @param appConfig - 应用配置
+   * @param logger - 日志记录器
    */
   constructor(appConfig: AppConfig, logger: Logger) {
     this.config = appConfig.qdrant;
@@ -36,9 +37,9 @@ export class QdrantRepo implements IQdrantRepo {
   }
 
   /**
-   * Ensures that the configured Qdrant collection exists and has the correct vector parameters.
-   * If the collection does not exist, it will be created.
-   * @throws {Error} If the collection cannot be created or verified.
+   * 确保配置的 Qdrant 集合存在并具有正确的向量参数。
+   * 如果集合不存在，将会被创建。
+   * @throws {Error} 如果无法创建或验证集合。
    */
   async ensureCollection(): Promise<void> {
     try {
@@ -78,10 +79,10 @@ export class QdrantRepo implements IQdrantRepo {
   }
 
   /**
-   * Extracts the vector size from the collection info response,
-   * handling different response structures for compatibility.
-   * @param {Schemas['CollectionInfo']} info - The collection information object.
-   * @returns {number | undefined} The vector size, or undefined if not found.
+   * 从集合信息响应中提取向量大小，
+   * 处理不同的响应结构以确保兼容性。
+   * @param {Schemas['CollectionInfo']} info - 集合信息对象。
+   * @returns {number | undefined} 向量大小，如果未找到则返回 undefined。
    */
   private getVectorSizeFromCollectionInfo(
     info: Schemas['CollectionInfo'],
@@ -95,19 +96,31 @@ export class QdrantRepo implements IQdrantRepo {
       }
     }
 
-    // Fallback for older or different response structures
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const infoAny = info as any;
-    return (
-      infoAny?.result?.config?.params?.vectors?.size ??
-      infoAny?.result?.vectors?.size
-    );
+    // Fallback for older or different response structures - attempt safe key access
+    const infoRec = info as unknown as Record<string, unknown> | undefined;
+    const result = infoRec?.result as Record<string, unknown> | undefined;
+    const maybeVectors =
+      result?.config && (result.config as Record<string, unknown>).params
+        ? (
+            (result.config as Record<string, unknown>).params as Record<
+              string,
+              unknown
+            >
+          ).vectors
+        : (result?.vectors as unknown);
+
+    if (maybeVectors && typeof maybeVectors === 'object') {
+      const vecRec = maybeVectors as Record<string, unknown>;
+      if (typeof vecRec.size === 'number') return vecRec.size;
+    }
+
+    return undefined;
   }
 
   /**
-   * Upserts a batch of chunks into the Qdrant collection.
-   * @param {CollectionId} collectionId - The ID of the collection to upsert into.
-   * @param {Point[]} points - An array of points to upsert.
+   * 将一批数据块插入到 Qdrant 集合中。
+   * @param {CollectionId} collectionId - 要插入的集合 ID。
+   * @param {Point[]} points - 要插入的点数组。
    */
   async upsertCollection(
     collectionId: CollectionId,
@@ -118,36 +131,79 @@ export class QdrantRepo implements IQdrantRepo {
       return;
     }
 
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = FILE_CONSTANTS.BATCH_SIZE;
+    const totalBatches = Math.ceil(points.length / BATCH_SIZE);
+    let successfulBatches = 0;
+    let totalPointsProcessed = 0;
+
+    this.logger.info(`[QdrantSync] 开始向集合 ${collectionId} 插入向量点`, {
+      totalPoints: points.length,
+      batchSize: BATCH_SIZE,
+      totalBatches,
+    });
+
     for (let i = 0; i < points.length; i += BATCH_SIZE) {
       const batch = points.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
 
       try {
+        const startTime = Date.now();
         await this.client.upsert(this.collectionName, {
           wait: true,
           ordering: 'medium',
           points: batch,
         });
+        const duration = Date.now() - startTime;
+
+        successfulBatches++;
+        totalPointsProcessed += batch.length;
+
+        this.logger.info(
+          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入成功`,
+          {
+            collectionId,
+            batchNumber,
+            batchSize: batch.length,
+            duration: `${duration}ms`,
+            totalProcessed: totalPointsProcessed,
+            totalPoints: points.length,
+            progress: `${Math.round((totalPointsProcessed / points.length) * 100)}%`,
+          },
+        );
       } catch (e) {
         this.logger.error(
-          `Error upserting batch ${Math.floor(i / BATCH_SIZE) + 1}:`,
+          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入失败`,
           {
             error: e,
             batchSize: batch.length,
+            collectionId,
+            batchNumber,
+            totalProcessed: totalPointsProcessed,
+            totalPoints: points.length,
           },
         );
+        throw e; // 重新抛出错误，确保调用方能感知失败
       }
     }
+
+    this.logger.info(`[QdrantSync] 集合 ${collectionId} 向量点插入完成`, {
+      collectionId,
+      totalPoints: points.length,
+      totalBatches,
+      successfulBatches,
+      totalPointsProcessed,
+      successRate: `${Math.round((successfulBatches / totalBatches) * 100)}%`,
+    });
   }
 
   /**
-   * Searches for similar vectors in the Qdrant collection.
-   * @param {CollectionId} collectionId - The ID of the collection to search in.
-   * @param {object} opts - The search options.
-   * @param {number[]} opts.vector - The vector to search for.
-   * @param {number} [opts.limit=10] - The maximum number of results to return.
-   * @param {Schemas['Filter']} [opts.filter] - The filter to apply to the search.
-   * @returns {Promise<SearchResult[]>} A promise that resolves to an array of search results.
+   * 在 Qdrant 集合中搜索相似的向量。
+   * @param {CollectionId} collectionId - 要搜索的集合 ID。
+   * @param {object} opts - 搜索选项。
+   * @param {number[]} opts.vector - 要搜索的向量。
+   * @param {number} [opts.limit=10] - 返回的最大结果数。
+   * @param {Schemas['Filter']} [opts.filter] - 应用到搜索的过滤器。
+   * @returns {Promise<SearchResult[]>} 一个 Promise，解析为搜索结果数组。
    */
   async search(
     collectionId: CollectionId,
@@ -159,45 +215,101 @@ export class QdrantRepo implements IQdrantRepo {
   ): Promise<SearchResult[]> {
     const { vector, limit = 10, filter } = opts;
     if (!vector?.length) {
-      this.logger.error('Cannot search with an empty vector.');
+      this.logger.error('[QdrantSync] 无法使用空向量进行搜索');
       return [];
     }
 
-    try {
-      const res = await this.client.search(this.collectionName, {
-        vector,
-        limit,
-        filter,
-        with_payload: true,
-      });
-      return res.map((item) => ({
-        pointId: item.id as PointId,
-        score: item.score,
-        content: item.payload?.content as string,
-        titleChain: item.payload?.titleChain as string,
-        docId: item.payload?.docId as DocId,
-        collectionId: item.payload?.collectionId as CollectionId,
-        chunkIndex: item.payload?.chunkIndex as number,
-      })) as SearchResult[];
-    } catch (e) {
-      // 提升错误可观测性：展开常见字段，便于定位问题（如维度不匹配、网络异常等）
-      const err: any = e;
-      this.logger.error('Error searching Qdrant:', {
-        message: err?.message,
-        name: err?.name,
-        code: err?.code,
-        status: err?.status,
-        response: err?.response?.data ?? err?.response,
-        stack: err?.stack,
-      });
-      return [];
+    this.logger.info(`[QdrantSync] 开始在集合 ${collectionId} 中搜索`, {
+      collectionId,
+      vectorLength: vector.length,
+      limit,
+      hasFilter: !!filter,
+    });
+
+    // Add simple retry/backoff for transient network errors (e.g. "fetch failed").
+    const maxAttempts = 3;
+    const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const startTime = Date.now();
+        const res = await this.client.search(this.collectionName, {
+          vector,
+          limit,
+          filter,
+          with_payload: true,
+        });
+        const duration = Date.now() - startTime;
+
+        const results = res.map((item) => ({
+          pointId: item.id as PointId,
+          score: item.score,
+          content: item.payload?.content as string,
+          titleChain: item.payload?.titleChain as string,
+          docId: item.payload?.docId as DocId,
+          collectionId: item.payload?.collectionId as CollectionId,
+          chunkIndex: item.payload?.chunkIndex as number,
+        })) as SearchResult[];
+
+        this.logger.info(`[QdrantSync] 集合 ${collectionId} 搜索成功`, {
+          collectionId,
+          attempt,
+          duration: `${duration}ms`,
+          resultCount: results.length,
+          limit,
+          vectorLength: vector.length,
+        });
+
+        return results;
+      } catch (e) {
+        const maybe = e as Record<string, unknown> | undefined;
+        const msg =
+          typeof maybe?.message === 'string' ? maybe.message : undefined;
+
+        // If this looks like a transient fetch/network error, retry with backoff.
+        const isTransient =
+          typeof msg === 'string' && /fetch failed/i.test(msg);
+
+        this.logger.warn(
+          `[QdrantSync] 搜索尝试 ${attempt} 失败` +
+            (isTransient ? ' (可能是临时错误)' : ''),
+          {
+            collectionId,
+            collection: this.collectionName,
+            vectorLength: vector.length,
+            limit,
+            attempt,
+            message: msg,
+            name: typeof maybe?.name === 'string' ? maybe.name : undefined,
+          },
+        );
+
+        if (attempt < maxAttempts && isTransient) {
+          // exponential-ish backoff
+          await wait(150 * attempt);
+          continue;
+        }
+
+        const response = maybe?.response as Record<string, unknown> | undefined;
+        this.logger.error('[QdrantSync] 搜索失败:', {
+          collectionId,
+          message: msg,
+          name: typeof maybe?.name === 'string' ? maybe.name : undefined,
+          code: typeof maybe?.code === 'string' ? maybe.code : undefined,
+          status: maybe?.status,
+          response: response?.data ?? maybe?.response,
+          stack: typeof maybe?.stack === 'string' ? maybe.stack : undefined,
+        });
+        return [];
+      }
     }
+    return [];
   }
 
   /**
-   * Deletes all points associated with a specific document ID from the Qdrant collection.
-   * This operation is skipped in test environments.
-   * @param {string} docId - The ID of the document whose points should be deleted.
+   * 删除与特定文档 ID 相关的所有点。
+   * 此操作在测试环境中被跳过。
+   * @param {string} docId - 要删除点的文档 ID。
    */
   async deletePointsByDoc(docId: string): Promise<void> {
     if (!docId) return;
@@ -205,29 +317,38 @@ export class QdrantRepo implements IQdrantRepo {
 
     try {
       const t0 = Date.now();
-      this.logger.info('[DeleteAudit] Qdrant delete by doc start', { docId });
+      this.logger.info(`[QdrantSync] 开始删除文档 ${docId} 的向量点`, {
+        docId,
+        collectionName: this.collectionName,
+      });
+
       await this.client.delete(this.collectionName, {
         wait: true,
         filter: {
           must: [{ key: 'docId', match: { value: docId } }],
         },
       });
-      this.logger.info('[DeleteAudit] Qdrant delete by doc completed', {
+
+      const elapsedMs = Date.now() - t0;
+      this.logger.info(`[QdrantSync] 文档 ${docId} 向量点删除成功`, {
         docId,
-        elapsedMs: Date.now() - t0,
+        collectionName: this.collectionName,
+        elapsedMs: `${elapsedMs}ms`,
       });
     } catch (e) {
-      this.logger.warn('deletePointsByDoc: failed to delete points', {
+      this.logger.error(`[QdrantSync] 文档 ${docId} 向量点删除失败`, {
         docId,
+        collectionName: this.collectionName,
         error: e,
       });
+      throw e; // 重新抛出错误，确保调用方能感知失败
     }
   }
 
   /**
-   * Deletes all points associated with a specific collection ID from the Qdrant collection.
-   * This operation is skipped in test environments.
-   * @param {string} collectionId - The ID of the collection whose points should be deleted.
+   * 删除与特定集合 ID 相关的所有点。
+   * 此操作在测试环境中被跳过。
+   * @param {string} collectionId - 要删除点的集合 ID。
    */
   async deletePointsByCollection(collectionId: string): Promise<void> {
     if (!collectionId) return;
@@ -235,31 +356,38 @@ export class QdrantRepo implements IQdrantRepo {
 
     try {
       const t0 = Date.now();
-      this.logger.info('[DeleteAudit] Qdrant delete by collection start', {
+      this.logger.info(`[QdrantSync] 开始删除集合 ${collectionId} 的向量点`, {
         collectionId,
+        collectionName: this.collectionName,
       });
+
       await this.client.delete(this.collectionName, {
         wait: true,
         filter: {
           must: [{ key: 'collectionId', match: { value: collectionId } }],
         },
       });
-      this.logger.info(
-        '[DeleteAudit] Qdrant delete by collection completed',
-        { collectionId, elapsedMs: Date.now() - t0 },
-      );
-    } catch (e) {
-      this.logger.warn('deletePointsByCollection: failed to delete points', {
+
+      const elapsedMs = Date.now() - t0;
+      this.logger.info(`[QdrantSync] 集合 ${collectionId} 向量点删除成功`, {
         collectionId,
+        collectionName: this.collectionName,
+        elapsedMs: `${elapsedMs}ms`,
+      });
+    } catch (e) {
+      this.logger.error(`[QdrantSync] 集合 ${collectionId} 向量点删除失败`, {
+        collectionId,
+        collectionName: this.collectionName,
         error: e,
       });
+      throw e; // 重新抛出错误，确保调用方能感知失败
     }
   }
 
   /**
-   * Gets all point IDs in a specific collection.
-   * @param {string} collectionId - The ID of the collection to get points for.
-   * @returns {Promise<PointId[]>} A promise that resolves to an array of point IDs.
+   * 获取特定集合中的所有点 ID。
+   * @param {string} collectionId - 要获取点的集合 ID。
+   * @returns {Promise<PointId[]>} 一个 Promise，解析为点 ID 数组。
    */
   async getAllPointIdsInCollection(collectionId: string): Promise<PointId[]> {
     try {
@@ -278,26 +406,34 @@ export class QdrantRepo implements IQdrantRepo {
   }
 
   /**
-   * Deletes points in batches from a specific collection.
-   * @param {string} collectionId - The ID of the collection to delete points from.
-   * @param {PointId[]} pointIds - The point IDs to delete.
+   * 从特定集合中批量删除点。
+   * @param {string} collectionId - 要删除点的集合 ID。
+   * @param {PointId[]} pointIds - 要删除的点 ID。
    */
   async deletePoints(collectionId: string, pointIds: PointId[]): Promise<void> {
     if (!pointIds?.length) {
-      this.logger.info('没有要删除的点');
+      this.logger.info('[QdrantSync] 没有要删除的向量点');
       return;
     }
     if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
 
-    const BATCH_SIZE = 100;
-    this.logger.info('[DeleteAudit] Qdrant delete points start', {
+    const BATCH_SIZE = FILE_CONSTANTS.BATCH_SIZE;
+    const totalBatches = Math.ceil(pointIds.length / BATCH_SIZE);
+    let successfulBatches = 0;
+    let totalPointsProcessed = 0;
+
+    this.logger.info(`[QdrantSync] 开始删除集合 ${collectionId} 的指定向量点`, {
       collectionId,
+      collectionName: this.collectionName,
       totalPoints: pointIds.length,
       batchSize: BATCH_SIZE,
+      totalBatches,
     });
+
     const t0 = Date.now();
     for (let i = 0; i < pointIds.length; i += BATCH_SIZE) {
       const batch = pointIds.slice(i, i + BATCH_SIZE);
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
 
       try {
         const tb = Date.now();
@@ -305,27 +441,47 @@ export class QdrantRepo implements IQdrantRepo {
           wait: true,
           points: batch,
         });
-        this.logger.info('[DeleteAudit] Qdrant delete points batch done', {
-          collectionId,
-          batchIndex: Math.floor(i / BATCH_SIZE) + 1,
-          batchSize: batch.length,
-          elapsedMs: Date.now() - tb,
-        });
-      } catch (e) {
-        this.logger.warn(
-          `Qdrant 删除点批次时出错 (批次 ${Math.floor(i / BATCH_SIZE) + 1}):`,
+        const batchDuration = Date.now() - tb;
+
+        successfulBatches++;
+        totalPointsProcessed += batch.length;
+
+        this.logger.info(
+          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 删除成功`,
           {
             collectionId,
+            batchNumber,
+            batchSize: batch.length,
+            batchDuration: `${batchDuration}ms`,
+            totalProcessed: totalPointsProcessed,
+            totalPoints: pointIds.length,
+            progress: `${Math.round((totalPointsProcessed / pointIds.length) * 100)}%`,
+          },
+        );
+      } catch (e) {
+        this.logger.error(
+          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 删除失败`,
+          {
+            collectionId,
+            batchNumber,
             pointIds: batch,
             error: e,
           },
         );
+        throw e; // 重新抛出错误，确保调用方能感知失败
       }
     }
-    this.logger.info('[DeleteAudit] Qdrant delete points completed', {
+
+    const totalElapsedMs = Date.now() - t0;
+    this.logger.info(`[QdrantSync] 集合 ${collectionId} 指定向量点删除完成`, {
       collectionId,
+      collectionName: this.collectionName,
       totalPoints: pointIds.length,
-      totalElapsedMs: Date.now() - t0,
+      totalBatches,
+      successfulBatches,
+      totalPointsProcessed,
+      totalElapsedMs: `${totalElapsedMs}ms`,
+      successRate: `${Math.round((successfulBatches / totalBatches) * 100)}%`,
     });
   }
 }

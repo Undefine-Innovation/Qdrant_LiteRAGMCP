@@ -2,10 +2,44 @@
  * 告警服务接口
  * @description 定义告警管理的核心业务接口，遵循依赖倒置原则
  */
-import {
-  AlertRule,
-  AlertHistory,
-} from '../../infrastructure/sqlite/dao/index.js';
+
+/**
+ * 告警规则接口
+ */
+export interface AlertRule {
+  id: string;
+  name: string;
+  description?: string;
+  condition: string;
+  threshold: number;
+  thresholdValue?: number;
+  enabled: boolean;
+  isActive?: boolean;
+  notificationChannels?: string[];
+  metricName?: string;
+  conditionOperator?: '>' | '<' | '>=' | '<=' | '==' | '!=';
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  cooldownMinutes?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/**
+ * 告警历史接口
+ */
+export interface AlertHistory {
+  id: string;
+  ruleId: string;
+  severity: 'low' | 'medium' | 'high' | 'critical' | 'triggered';
+  message: string;
+  triggeredAt: number;
+  resolvedAt?: number;
+  status: 'active' | 'resolved' | 'suppressed' | 'triggered';
+  metricValue?: number;
+  thresholdValue?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 /**
  * 告警规则配置接口
@@ -38,7 +72,7 @@ export interface NotificationChannel {
   id: string;
   name: string;
   type: string;
-  config: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  config: Record<string, unknown>; // Changed to use unknown instead of any
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
@@ -82,38 +116,38 @@ export interface IAlertService {
    */
   createAlertRule(
     rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>,
-  ): string;
+  ): Promise<string>;
 
   /**
    * 更新告警规则
    * @param id
    * @param updates
    */
-  updateAlertRule(id: string, updates: Partial<AlertRule>): boolean;
+  updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<boolean>;
 
   /**
    * 删除告警规则
    * @param id
    */
-  deleteAlertRule(id: string): boolean;
+  deleteAlertRule(id: string): Promise<boolean>;
 
   /**
    * 获取告警规则
    * @param id
    */
-  getAlertRule(id: string): AlertRule | null;
+  getAlertRule(id: string): Promise<AlertRule | null>;
 
   /**
    * 获取所有告警规则
    * @param activeOnly
    */
-  getAllAlertRules(activeOnly?: boolean): AlertRule[];
+  getAllAlertRules(activeOnly?: boolean): Promise<AlertRule[]>;
 
   /**
    * 获取告警规则总数
    * @param activeOnly
    */
-  getAlertRulesCount(activeOnly?: boolean): number;
+  getAlertRulesCount(activeOnly?: boolean): Promise<number>;
 
   /**
    * 分页获取告警规则

@@ -27,10 +27,10 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 构造函数
-   * @param strategyId 策略标识符
-   * @param config 状态机配置
-   * @param persistence 状态持久化实现
-   * @param logger 日志记录器
+   * @param strategyId - 策略标识符
+   * @param config - 状态机配置
+   * @param persistence - 状态持久化实现
+   * @param logger - 日志记录器
    */
   constructor(
     public readonly strategyId: string,
@@ -43,6 +43,7 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 初始化状态转换规则
+   * @returns 无返回值
    */
   protected initializeTransitions(): void {
     // 清空现有转换规则
@@ -65,6 +66,10 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 处理状态转换
+   * @param taskId - 任务ID
+   * @param event - 事件
+   * @param context - 上下文
+   * @returns 是否成功转换状态
    */
   async handleTransition(
     taskId: string,
@@ -132,6 +137,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 获取当前状态
+   * @param taskId - 任务ID
+   * @returns 当前状态
    */
   async getCurrentState(taskId: string): Promise<string | null> {
     const task = await this.persistence.getTask(taskId);
@@ -140,6 +147,9 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 创建新任务
+   * @param taskId - 任务ID
+   * @param initialContext - 初始上下文
+   * @returns 状态机任务
    */
   async createTask(
     taskId: string,
@@ -167,11 +177,16 @@ export abstract class BaseStateMachineStrategy
   /**
    * 执行任务逻辑
    * 子类需要实现具体的执行逻辑
+   * @param taskId - 任务ID
+   * @returns 无返回值
    */
   abstract executeTask(taskId: string): Promise<void>;
 
   /**
    * 处理错误
+   * @param taskId - 任务ID
+   * @param error - 错误对象
+   * @returns 无返回值
    */
   async handleError(taskId: string, error: Error): Promise<void> {
     const task = await this.persistence.getTask(taskId);
@@ -217,6 +232,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 检查是否为终态
+   * @param status - 状态
+   * @returns 是否为终态
    */
   protected isFinalState(status: string): boolean {
     return this.config.finalStates.includes(status);
@@ -224,6 +241,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 获取状态的所有可能转换
+   * @param status - 状态
+   * @returns 状态转换列表
    */
   protected getAvailableTransitions(status: string): StateTransition[] {
     const transitions = this.transitions.get(status);
@@ -232,6 +251,9 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 更新任务进度
+   * @param taskId - 任务ID
+   * @param progress - 进度值
+   * @returns 无返回值
    */
   protected async updateProgress(
     taskId: string,
@@ -244,6 +266,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 标记任务开始
+   * @param taskId - 任务ID
+   * @returns 无返回值
    */
   protected async markTaskStarted(taskId: string): Promise<void> {
     await this.persistence.updateTask(taskId, {
@@ -254,6 +278,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 标记任务完成
+   * @param taskId - 任务ID
+   * @returns 无返回值
    */
   protected async markTaskCompleted(taskId: string): Promise<void> {
     await this.persistence.updateTask(taskId, {
@@ -265,6 +291,9 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 标记任务失败
+   * @param taskId - 任务ID
+   * @param error - 错误信息
+   * @returns 无返回值
    */
   protected async markTaskFailed(taskId: string, error: string): Promise<void> {
     await this.persistence.updateTask(taskId, {
@@ -276,6 +305,8 @@ export abstract class BaseStateMachineStrategy
 
   /**
    * 标记任务取消
+   * @param taskId - 任务ID
+   * @returns 无返回值
    */
   protected async markTaskCancelled(taskId: string): Promise<void> {
     await this.persistence.updateTask(taskId, {

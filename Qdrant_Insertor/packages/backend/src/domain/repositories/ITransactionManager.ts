@@ -68,7 +68,7 @@ export interface ITransactionManager {
    * @param metadata 事务元数据（可选）
    * @returns 事务上下文
    */
-  beginTransaction(metadata?: Record<string, unknown>): TransactionContext;
+  beginTransaction(metadata?: Record<string, unknown>): Promise<TransactionContext>;
 
   /**
    * 开始一个嵌套事务
@@ -79,7 +79,7 @@ export interface ITransactionManager {
   beginNestedTransaction(
     parentTransactionId: string,
     metadata?: Record<string, unknown>,
-  ): TransactionContext;
+  ): Promise<TransactionContext>;
 
   /**
    * 提交事务

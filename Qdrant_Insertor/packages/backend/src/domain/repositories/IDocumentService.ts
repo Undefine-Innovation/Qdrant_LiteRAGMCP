@@ -4,8 +4,27 @@ import {
   CollectionId,
   PaginationQuery,
   PaginatedResponse,
-  DocumentChunk,
 } from '@domain/entities/types.js';
+import { PointId } from '@domain/entities/types.js';
+
+/**
+ * 文档块视图接口
+ * 表示文档分块后的单个块信息
+ */
+export interface DocumentChunkView {
+  /** 向量点ID */
+  pointId: PointId;
+  /** 文档ID */
+  docId: DocId;
+  /** 集合ID */
+  collectionId: CollectionId;
+  /** 块索引 */
+  chunkIndex: number;
+  /** 块标题（可选） */
+  title?: string;
+  /** 块内容 */
+  content: string;
+}
 
 /**
  * 文档服务接口
@@ -16,7 +35,7 @@ export interface IDocumentService {
    * 获取所有文档列�?
    * @returns 所有文档的数组
    */
-  listAllDocuments(): Doc[];
+  listAllDocuments(): Promise<Doc[]>;
 
   /**
    * 分页获取文档列表
@@ -27,14 +46,14 @@ export interface IDocumentService {
   listDocumentsPaginated(
     query: PaginationQuery,
     collectionId?: CollectionId,
-  ): PaginatedResponse<Doc>;
+  ): Promise<PaginatedResponse<Doc>>;
 
   /**
    * 根据ID获取文档
    * @param docId - 文档ID
    * @returns 文档对象，如果不存在则返回undefined
    */
-  getDocumentById(docId: DocId): Doc | undefined;
+  getDocumentById(docId: DocId): Promise<Doc | null>;
 
   /**
    * 重新同步文档
@@ -48,7 +67,7 @@ export interface IDocumentService {
    * @param docId - 文档ID
    * @returns 文档块数�?
    */
-  getDocumentChunks(docId: DocId): DocumentChunk[];
+  getDocumentChunks(docId: DocId): Promise<DocumentChunkView[]>;
 
   /**
    * 分页获取文档的块列表
@@ -59,7 +78,7 @@ export interface IDocumentService {
   getDocumentChunksPaginated(
     docId: DocId,
     query: PaginationQuery,
-  ): PaginatedResponse<DocumentChunk>;
+  ): Promise<PaginatedResponse<DocumentChunkView>>;
 
   /**
    * 删除文档

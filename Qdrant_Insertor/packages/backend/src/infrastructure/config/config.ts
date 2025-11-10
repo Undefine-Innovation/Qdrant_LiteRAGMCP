@@ -1,11 +1,22 @@
 import dotenv from 'dotenv';
 dotenv.config();
 /**
- * Interface for application configuration object.
+ * 应用程序配置对象的接口定义
  */
 export type AppConfig = {
   openai: { baseUrl: string; apiKey: string; model: string };
-  db: { path: string };
+  db: {
+    type: 'sqlite' | 'postgres';
+    path?: string;
+    postgres?: {
+      host: string;
+      port: number;
+      username: string;
+      password: string;
+      database: string;
+      ssl?: boolean;
+    };
+  };
   qdrant: { url: string; collection: string; vectorSize: number };
   embedding: { batchSize: number };
   api: { port: number };
@@ -17,6 +28,11 @@ export type AppConfig = {
     maxSize?: string; // 例如 '20m'
     datePattern?: string; // 例如 'YYYY-MM-DD'
     zippedArchive?: boolean; // 是否压缩归档
+    // 增强日志功能配置
+    enableTraceId?: boolean; // 是否启用traceID
+    enableModuleTag?: boolean; // 是否启用模块TAG
+    enablePerformanceLogging?: boolean; // 是否启用性能日志
+    logSlowQueriesThreshold?: number; // 慢查询阈值（毫秒）
   };
   gc: { intervalHours: number };
 };
@@ -69,7 +85,50 @@ export function validateConfig(env = process.env): AppConfig {
   const OPENAI_MODEL =
     env.OPENAI_MODEL || env.EMBEDDING_MODEL_NAME || 'text-embedding-ada-002';
 
-  const DB_PATH = validateString(env.DB_PATH, 'DB_PATH');
+  // 数据库配置
+  const DB_TYPE = (env.DB_TYPE || 'sqlite') as 'sqlite' | 'postgres';
+
+  let dbConfig: AppConfig['db'];
+
+  if (DB_TYPE === 'postgres') {
+    const POSTGRES_HOST = validateString(env.POSTGRES_HOST, 'POSTGRES_HOST');
+    const POSTGRES_PORT = validateNumber(
+      env.POSTGRES_PORT,
+      'POSTGRES_PORT',
+      5432,
+    );
+    const POSTGRES_USERNAME = validateString(
+      env.POSTGRES_USERNAME,
+      'POSTGRES_USERNAME',
+    );
+    const POSTGRES_PASSWORD = validateString(
+      env.POSTGRES_PASSWORD,
+      'POSTGRES_PASSWORD',
+    );
+    const POSTGRES_DATABASE = validateString(
+      env.POSTGRES_DATABASE,
+      'POSTGRES_DATABASE',
+    );
+    const POSTGRES_SSL = env.POSTGRES_SSL === 'true';
+
+    dbConfig = {
+      type: 'postgres',
+      postgres: {
+        host: POSTGRES_HOST,
+        port: POSTGRES_PORT,
+        username: POSTGRES_USERNAME,
+        password: POSTGRES_PASSWORD,
+        database: POSTGRES_DATABASE,
+        ssl: POSTGRES_SSL,
+      },
+    };
+  } else {
+    const DB_PATH = validateString(env.DB_PATH, 'DB_PATH');
+    dbConfig = {
+      type: 'sqlite',
+      path: DB_PATH,
+    };
+  }
 
   // Qdrant 直读 URL（缺失直接抛错）
   const QDRANT_URL = validateString(env.QDRANT_URL, 'QDRANT_URL');
@@ -96,7 +155,7 @@ export function validateConfig(env = process.env): AppConfig {
       apiKey: OPENAI_API_KEY,
       model: OPENAI_MODEL,
     },
-    db: { path: DB_PATH },
+    db: dbConfig,
     qdrant: {
       url: QDRANT_URL,
       collection: QDRANT_COLLECTION,
@@ -111,6 +170,17 @@ export function validateConfig(env = process.env): AppConfig {
       maxSize: env.LOG_MAX_SIZE || undefined,
       datePattern: env.LOG_DATE_PATTERN || undefined,
       zippedArchive: env.LOG_ZIP ? env.LOG_ZIP === 'true' : undefined,
+      // 增强日志功能配置
+      enableTraceId: env.LOG_ENABLE_TRACE_ID
+        ? env.LOG_ENABLE_TRACE_ID === 'true'
+        : true,
+      enableModuleTag: env.LOG_ENABLE_MODULE_TAG
+        ? env.LOG_ENABLE_MODULE_TAG === 'true'
+        : true,
+      enablePerformanceLogging: env.LOG_ENABLE_PERFORMANCE
+        ? env.LOG_ENABLE_PERFORMANCE === 'true'
+        : true,
+      logSlowQueriesThreshold: Number(env.LOG_SLOW_QUERIES_THRESHOLD) || 1000,
     },
     gc: { intervalHours: GC_INTERVAL_HOURS },
   };

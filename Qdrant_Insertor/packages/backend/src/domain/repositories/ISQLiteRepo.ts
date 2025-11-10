@@ -10,103 +10,63 @@ import {
   PaginatedResponse,
 } from '@domain/entities/types.js';
 import { Logger } from '@logging/logger.js';
-import type { Database } from 'better-sqlite3';
-
-// 导入表类型
-import type { CollectionsTable } from '../../infrastructure/sqlite/dao/CollectionsTable.js';
-import type { DocsTable } from '../../infrastructure/sqlite/dao/DocsTable.js';
-import type { ChunkMetaTable } from '../../infrastructure/sqlite/dao/ChunkMetaTable.js';
-import type { ChunksFts5Table } from '../../infrastructure/sqlite/dao/ChunksFts5Table.js';
-import type { ChunksTable } from '../../infrastructure/sqlite/dao/ChunksTable.js';
-import type { SyncJobsTable } from '../../infrastructure/sqlite/dao/SyncJobsTable.js';
-import type { SystemMetricsTable } from '../../infrastructure/sqlite/dao/SystemMetricsTable.js';
-import type { AlertRulesTable } from '../../infrastructure/sqlite/dao/AlertRulesTable.js';
-import type { SystemHealthTable } from '../../infrastructure/sqlite/dao/SystemHealthTable.js';
-import type { AlertHistoryTable } from '../../infrastructure/sqlite/dao/AlertHistoryTable.js';
-import type { ScrapeResultsTable } from '../../infrastructure/sqlite/dao/ScrapeResultsTable.js';
-import type { SQLiteRepoCore } from '../../infrastructure/repositories/SQLiteRepositoryCore.js';
-import type { CollectionManager } from '../../infrastructure/repositories/CollectionManager.js';
-import type { DocumentManager } from '../../infrastructure/repositories/DocumentManager.js';
+import { DAOStub } from '@infrastructure/persistence/DAOStub.js';
 
 /**
  * SQLite仓库接口
  * 定义SQLite数据库操作的核心方法
+ * 注意：已迁移到 TypeORM，仅保留必要的兼容性属性
  */
 export interface ISQLiteRepo {
   /**
-   * 集合表访问器
-   */
-  readonly collections: CollectionsTable;
-
-  /**
-   * 文档表访问器
-   */
-  readonly docs: DocsTable;
-
-  /**
-   * 块元数据表访问器
-   */
-  readonly chunkMeta: ChunkMetaTable;
-
-  /**
-   * 块全文搜索表访问器
-   */
-  readonly chunksFts5: ChunksFts5Table;
-
-  /**
-   * 块表访问器
-   */
-  readonly chunks: ChunksTable;
-
-  /**
-   * 同步任务表访问器
-   */
-  readonly syncJobs: SyncJobsTable;
-
-  /**
-   * 系统指标表访问器
-   */
-  readonly systemMetrics: SystemMetricsTable;
-
-  /**
-   * 告警规则表访问器
-   */
-  readonly alertRules: AlertRulesTable;
-
-  /**
-   * 系统健康表访问器
-   */
-  readonly systemHealth: SystemHealthTable;
-
-  /**
-   * 告警历史表访问器
-   */
-  readonly alertHistory: AlertHistoryTable;
-
-  /**
-   * 爬虫结果表访问器
-   */
-  readonly scrapeResults: ScrapeResultsTable;
-
-  /**
-   * 数据库实例（用于兼容性）
-   */
-  readonly db: Database;
-
-  /**
-   * 核心仓库实例（用于兼容性）
-   */
-  readonly core: SQLiteRepoCore;
-
-  /**
    * 集合管理器（用于兼容性）
    */
-  readonly collectionManager: CollectionManager;
+  readonly collectionManager: DAOStub;
 
   /**
    * 文档管理器（用于兼容性）
    */
-  readonly documentManager: DocumentManager;
+  readonly documentManager: DAOStub;
+
+  /**
+   * 系统健康表访问器（用于兼容性）
+   */
+  readonly systemHealth: DAOStub;
+
+  /**
+   * 系统指标表访问器（用于兼容性）
+   */
+  readonly systemMetrics: DAOStub;
+
+  /**
+   * 爬虫结果表访问器（用于兼容性）
+   */
+  readonly scrapeResults: DAOStub;
+
+  /**
+   * 同步任务表访问器（用于兼容性）
+   */
+  readonly syncJobs: DAOStub;
+
+  /**
+   * 文档表访问器（用于兼容性）
+   */
+  readonly docs: DAOStub;
+
+  /**
+   * 集合表访问器（用于兼容性）
+   */
+  readonly collections: DAOStub;
+
+  /**
+   * 告警规则表访问器（用于兼容性）
+   */
+  readonly alertRules: DAOStub;
+
+  /**
+   * 告警历史表访问器（用于兼容性）
+   */
+  readonly alertHistory: DAOStub;
 
   /**
    * 在数据库事务中执行一个函数
@@ -258,4 +218,23 @@ export interface ISQLiteRepo {
    * @param pointIds - 要删除的点ID数组
    */
   deleteBatch(pointIds: PointId[]): void;
+  /**
+   * 获取集合的块元数据
+   * @param collectionId 集合ID
+   * @returns 块元数据数组
+   */
+  getChunkMetasByCollectionId(collectionId: CollectionId): Promise<ChunkMeta[]>;
+
+  /**
+   * 异步事务方法
+   * @param fn 包含数据库操作的函数
+   * @returns 事务函数的返回值
+   */
+  asyncTransaction<T>(fn: () => Promise<T>): Promise<T>;
+
+  /**
+   * 异步版本的硬删除文档
+   * @param docId 要删除的文档ID
+   */
+  asyncDeleteDoc(docId: DocId): Promise<void>;
 }

@@ -1,58 +1,102 @@
 /**
- * DAO模块导出文件
- * 导出所有数据访问对象相关的类型和类
+ * SQLite DAO 索引文件
+ * 注意：此文件仅用于兼容性，所有DAO类已迁移到TypeORM
  */
 
-// 导出系统指标相关类型和类
 /**
- *
+ * 健康状态类型
  */
-export type { SystemMetric } from './SystemMetricsTable.js';
-/**
- *
- */
-export { SystemMetricsTable } from './SystemMetricsTable.js';
+export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
-// 导出告警规则相关类型和类
 /**
- *
+ * 健康状态值常量（用于运行时值检查）
  */
-export type { AlertRule } from './AlertRulesTable.js';
-/**
- *
- */
-export { AlertSeverity } from './AlertRulesTable.js';
-/**
- *
- */
-export { AlertRulesTable } from './AlertRulesTable.js';
+export const HealthStatusValues = {
+  HEALTHY: 'healthy' as HealthStatus,
+  DEGRADED: 'degraded' as HealthStatus,
+  UNHEALTHY: 'unhealthy' as HealthStatus,
+};
 
-// 导出系统健康相关类型和类
 /**
- *
+ * 告警规则类型
  */
-export type { SystemHealth } from './SystemHealthTable.js';
-/**
- *
- */
-export { HealthStatus } from './SystemHealthTable.js';
-/**
- *
- */
-export { SystemHealthTable } from './SystemHealthTable.js';
+export interface AlertRule {
+  id: string;
+  name: string;
+  condition: string;
+  threshold: number;
+  enabled: boolean;
+  notificationChannels: string[];
+  createdAt?: number;
+  updatedAt?: number;
+  // 扩展属性
+  description?: string;
+  metricName: string;
+  conditionOperator: '>' | '<' | '>=' | '<=' | '==' | '!=';
+  thresholdValue: number;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  cooldownMinutes: number;
+  isActive?: boolean;
+}
 
-// 导出同步作业相关类型和类
 /**
- *
+ * 告警历史类型
  */
-export { SyncJobsTable } from './SyncJobsTable.js';
+export interface AlertHistory {
+  id: string;
+  ruleId: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  triggeredAt: number;
+  resolvedAt?: number;
+  status: 'active' | 'resolved' | 'suppressed' | 'triggered';
+  createdAt?: number;
+  updatedAt?: number;
+  // 扩展属性
+  metricValue: number;
+  thresholdValue: number;
+}
 
-// 导出告警历史相关类型和类
 /**
- *
+ * 系统指标类型
  */
-export type { AlertHistory } from './AlertHistoryTable.js';
+export interface SystemMetric {
+  id: string;
+  // 主字段（新的命名方式）
+  metricName?: string;
+  metricValue?: number;
+  metricUnit?: string;
+  // 备选字段（旧的命名方式）
+  name?: string;
+  value?: number;
+  tags?: Record<string, string | number>;
+  timestamp: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 /**
- *
+ * 系统健康类型
  */
-export { AlertHistoryTable } from './AlertHistoryTable.js';
+export interface SystemHealth {
+  id: string;
+  status: HealthStatus;
+  component?: string;
+  lastCheck: number;
+  responseTimeMs?: number;
+  errorMessage?: string;
+  details?: Record<string, unknown>;
+  components?: Record<string, unknown>;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/**
+ * 告警严重程度枚举
+ */
+export enum AlertSeverity {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical',
+}

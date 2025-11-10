@@ -88,7 +88,7 @@ const task = await stateMachineService.createBatchUploadTask(
   {
     skipDuplicates: true,
     generateThumbnails: true,
-  }
+  },
 );
 ```
 
@@ -177,21 +177,25 @@ stateMachineService.getEngine().registerStrategy(myStrategy);
 ## 架构优势
 
 ### 1. 策略模式
+
 - 不同类型的任务可以有不同的状态转换逻辑
 - 易于扩展新的任务类型
 - 策略之间相互独立
 
 ### 2. 分层架构
+
 - 领域层定义接口和核心逻辑
 - 基础设施层提供具体实现
 - 应用层提供统一的服务接口
 
 ### 3. 持久化抽象
+
 - 支持多种存储后端
 - 易于测试和开发
 - 生产环境可使用SQLite持久化
 
 ### 4. 错误处理
+
 - 统一的错误处理机制
 - 自动重试功能
 - 详细的错误日志
@@ -199,16 +203,19 @@ stateMachineService.getEngine().registerStrategy(myStrategy);
 ## 性能考虑
 
 ### 1. 批量操作
+
 - 支持批量创建和执行任务
 - 可配置并发数量
 - 减少数据库访问次数
 
 ### 2. 内存管理
+
 - 定期清理过期任务
 - 避免内存泄漏
 - 合理的数据结构设计
 
 ### 3. 异步处理
+
 - 所有操作都是异步的
 - 不阻塞主线程
 - 支持并发执行
@@ -216,16 +223,19 @@ stateMachineService.getEngine().registerStrategy(myStrategy);
 ## 监控和调试
 
 ### 1. 日志记录
+
 - 详细的状态转换日志
 - 错误信息和堆栈跟踪
 - 性能指标记录
 
 ### 2. 统计信息
+
 - 任务状态分布
 - 成功率和失败率
 - 执行时间统计
 
 ### 3. 健康检查
+
 - 任务队列状态
 - 系统资源使用
 - 错误率监控
