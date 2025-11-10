@@ -36,6 +36,13 @@ const SearchPage = () => {
     collectionId: string;
     page: number;
   } | null>(null);
+  // 保持 executeSearch 的稳定引用，避免其 identity 变化导致 effect 不必要的重新执行
+  const executeSearchRef = useRef<(() => Promise<void>) | null>(null);
+  useEffect(() => {
+    // 在这里不直接引用 executeSearch 的类型（避免在它声明前使用），
+    // useEffect 会在 executeSearch 被声明后运行并同步引用
+    // (依赖项会在 executeSearch 可用时触发)
+  }, []);
 
   // 获取集合列表
   const { state: collectionsState, execute: loadCollections } = useApi(() =>
@@ -43,7 +50,11 @@ const SearchPage = () => {
   );
 
   // 获取搜索结果
-  const { state: searchState, execute: executeSearch } = useApi(
+  const {
+    state: searchState,
+    execute: executeSearch,
+    reset: resetSearch,
+  } = useApi(
     () =>
       searchApi.searchPaginated({
         q: query,
@@ -59,6 +70,11 @@ const SearchPage = () => {
       },
     },
   );
+
+  // 同步 executeSearch 到 ref（用于稳定调用）
+  useEffect(() => {
+    executeSearchRef.current = executeSearch;
+  }, [executeSearch]);
 
   // 执行搜索
   const handleSearch = useCallback(
@@ -140,7 +156,8 @@ const SearchPage = () => {
       .execute(
         `${query}_${selectedCollection}_${paginationParams.page}`,
         async () => {
-          await executeSearch();
+          // 使用 ref 调用，避免依赖 executeSearch identity
+          if (executeSearchRef.current) await executeSearchRef.current();
           return Promise.resolve();
         },
       )
@@ -153,12 +170,29 @@ const SearchPage = () => {
           console.error('搜索执行失败:', error);
         }
       });
-  }, [paginationParams.page, selectedCollection, query, executeSearch]);
+    // 清理：组件卸载或依赖变化时取消限速器中的请求并中止进行中的 API 请求
+    return () => {
+      try {
+        defaultSearchLimiter.cancelAll();
+      } catch {
+        // ignore
+      }
+      try {
+        // resetSearch 会中止 useApi 内部的 AbortController
+        resetSearch?.();
+      } catch {
+        // ignore
+      }
+    };
+  }, [paginationParams.page, selectedCollection, query]);
 
   // 更新搜索结果
   useEffect(() => {
     if (searchState.data && !isSearchStale) {
-      const data = searchState.data as { data: SearchResult[]; pagination: { total: number; totalPages: number } };
+      const data = searchState.data as {
+        data: SearchResult[];
+        pagination: { total: number; totalPages: number };
+      };
       setSearchResults(data.data || []);
       setTotalResults(data.pagination?.total || 0);
       setTotalPages(data.pagination?.totalPages || 0);
@@ -169,6 +203,17 @@ const SearchPage = () => {
   useEffect(() => {
     loadCollections();
   }, []);
+
+  // 当集合列表加载完成且未选择集合时，设置一个默认集合（如果存在）
+  useEffect(() => {
+    const list =
+      (collectionsState.data as { data: Collection[] })?.data ||
+      (collectionsState.data as unknown as Collection[]) ||
+      [];
+    if (list.length > 0 && !selectedCollection) {
+      setSelectedCollection(list[0].collectionId);
+    }
+  }, [collectionsState.data]);
 
   return (
     <div className="space-y-6">
@@ -185,25 +230,10 @@ const SearchPage = () => {
                 undefined
               }
               placeholder="输入搜索关键词..."
+              onCollectionChange={handleCollectionChange}
+              selectedCollection={selectedCollection}
             />
           </div>
-          <select
-            value={selectedCollection}
-            onChange={e => handleCollectionChange(e.target.value)}
-            className="input max-w-xs"
-          >
-            <option value="">所有集合</option>
-            {(collectionsState.data as { data: Collection[] })?.data?.map(
-              (collection: Collection) => (
-                <option
-                  key={collection.collectionId}
-                  value={collection.collectionId}
-                >
-                  {collection.name}
-                </option>
-              ),
-            )}
-          </select>
           <SearchStatusIndicator />
         </div>
       </div>

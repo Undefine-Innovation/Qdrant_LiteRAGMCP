@@ -6,17 +6,25 @@
 // 重新导出所有共享类型
 export * from '../../../../shared/types/index';
 
+// 导出通用类型
+export * from './common';
+
 /**
  * 集合接口
  */
 export interface Collection {
-  collectionId: string;
+  id: string; // 后端使用的id字段
+  collectionId: string; // 保持向后兼容
   name: string;
   description?: string;
+  is_system?: boolean; // 新增字段
   docCount?: number;
   chunkCount?: number;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number; // 后端使用的字段名
+  updated_at?: number; // 后端使用的字段名
+  // 保持向后兼容的字段
+  createdAt: number; // 改为必需字段
+  updatedAt?: number;
 }
 
 /**
@@ -40,15 +48,21 @@ export interface UpdateCollectionRequest {
  */
 export interface Document {
   docId: string;
-  name: string;
+  name?: string;
   collectionId: string;
   key: string;
-  sizeBytes?: number;
+  size_bytes?: number; // 后端使用的字段名
   mime?: string;
-  createdAt: number;
+  created_at: number; // 后端使用的字段名
+  updated_at?: number; // 后端使用的字段名
+  is_deleted?: boolean; // 后端使用的字段名
+  status?: 'new' | 'processing' | 'completed' | 'failed' | 'deleted'; // 与后端DocStatus枚举匹配
+  content?: string; // 非持久化字段，仅在创建/更新时返回
+  // 保持向后兼容的字段
+  sizeBytes?: number;
+  createdAt: number; // 改为必需字段
   updatedAt?: number;
   isDeleted?: boolean;
-  status?: 'new' | 'processing' | 'completed' | 'failed' | 'dead';
   errorMessage?: string;
 }
 
@@ -56,10 +70,18 @@ export interface Document {
  * 搜索结果接口
  */
 export interface SearchResult {
-  type: 'chunkResult' | 'graphResult';
-  score: number;
+  pointId: string; // 后端使用的字段
   content: string;
+  title?: string;
+  docId: string;
+  chunkIndex: number;
+  collectionId?: string;
+  titleChain?: string;
+  score: number; // 改为必需字段
+  // 保持向后兼容的metadata结构
+  type?: 'chunkResult' | 'graphResult';
   metadata: {
+    // 改为必需字段以避免undefined错误
     docId: string;
     docName?: string;
     collectionId: string;
@@ -104,7 +126,8 @@ export interface PaginationParams {
 /**
  * API 分页查询参数接口
  */
-export interface PaginationQueryParams extends Record<string, string | number | boolean | undefined> {
+export interface PaginationQueryParams
+  extends Record<string, string | number | boolean | undefined> {
   page?: number;
   limit?: number;
   sort?: string;
@@ -153,6 +176,9 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   message?: string;
   error?: string;
+  // 新增字段以匹配后端错误响应
+  code?: string;
+  details?: unknown;
 }
 
 /**
@@ -160,14 +186,21 @@ export interface ApiResponse<T = unknown> {
  */
 export interface Chunk {
   pointId: string;
-  id: string;
   docId: string;
+  collectionId: string; // 新增字段
   chunkIndex: number;
   content: string;
-  titleChain: string;
   title?: string;
+  titleChain?: string;
   contentHash?: string;
-  createdAt?: number;
+  embedding?: number[]; // 新增字段
+  status?: 'new' | 'embedding_generated' | 'synced' | 'failed'; // 与后端ChunkStatus匹配
+  created_at: number; // 后端使用的字段名
+  updated_at?: number; // 后端使用的字段名
+  // 保持向后兼容的字段
+  id?: string;
+  createdAt: number; // 改为必需字段
+  updatedAt?: number;
   tokenCount?: number;
 }
 
@@ -175,15 +208,22 @@ export interface Chunk {
  * 文档块接口（用于文档详情）
  */
 export interface DocumentChunk {
-  id: string;
   pointId: string;
   docId: string;
+  collectionId: string; // 新增字段
   chunkIndex: number;
   content: string;
-  titleChain: string;
   title?: string;
+  titleChain?: string;
   contentHash?: string;
-  createdAt?: number;
+  embedding?: number[]; // 新增字段
+  status?: 'new' | 'embedding_generated' | 'synced' | 'failed'; // 与后端ChunkStatus匹配
+  created_at: number; // 后端使用的字段名
+  updated_at?: number; // 后端使用的字段名
+  // 保持向后兼容的字段
+  id?: string;
+  createdAt: number; // 改为必需字段
+  updatedAt?: number;
   tokenCount?: number;
 }
 
@@ -201,16 +241,29 @@ export interface UploadDocumentResponse {
  */
 export interface HealthCheckResponse {
   ok: boolean;
-  status?: 'ok' | 'degraded' | 'unhealthy';
 }
 
 /**
  * 详细健康检查响应接口
  */
 export interface DetailedHealthCheckResponse {
-  status: 'ok' | 'degraded' | 'unhealthy';
-  qdrant: 'ok' | 'unhealthy';
-  sqlite: 'ok' | 'unhealthy';
+  success: boolean;
+  status: 'healthy' | 'degraded' | 'unhealthy'; // 与后端匹配
+  timestamp: string; // ISO 8601格式
+  version: string;
+  services: {
+    database: 'healthy' | 'unhealthy';
+    qdrant: 'healthy' | 'unhealthy';
+    filesystem: 'healthy' | 'unhealthy';
+  };
+  metrics: {
+    uptime: number; // 秒
+    memoryUsage: string; // 百分比字符串
+    diskUsage: string; // 百分比字符串
+  };
+  // 保持向后兼容
+  qdrant?: 'ok' | 'unhealthy';
+  sqlite?: 'ok' | 'unhealthy';
 }
 
 /**
@@ -289,7 +342,7 @@ export interface BatchOperationProgress {
   estimatedTimeRemaining?: number;
   percentage?: number;
   error?: string;
-  details?: any[];
+  details?: unknown[];
 }
 
 /**

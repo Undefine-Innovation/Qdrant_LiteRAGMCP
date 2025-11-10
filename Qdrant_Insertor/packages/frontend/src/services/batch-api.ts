@@ -7,6 +7,11 @@ import {
   BatchDeleteResponse,
   BatchOperationProgress,
 } from '../types/index.js';
+import {
+  transformBatchUploadResponse,
+  transformBatchDeleteResponse,
+  transformBatchOperationProgress,
+} from '../utils/typeTransformers.js';
 
 /**
  * 批量操作相关API
@@ -30,7 +35,8 @@ export const batchApi = {
       formData.append('collectionId', data.collectionId);
     }
 
-    return apiClient.upload('/upload/batch', formData);
+    const response = await apiClient.upload('/batch/upload', formData);
+    return transformBatchUploadResponse(response as Record<string, unknown>);
   },
 
   /**
@@ -39,7 +45,8 @@ export const batchApi = {
   deleteDocuments: async (
     data: BatchDeleteDocumentsRequest,
   ): Promise<BatchDeleteResponse> => {
-    return apiClient.delete('/docs/batch', { data });
+    const response = await apiClient.delete('/docs/batch', { data });
+    return transformBatchDeleteResponse(response as Record<string, unknown>);
   },
 
   /**
@@ -48,7 +55,8 @@ export const batchApi = {
   deleteCollections: async (
     data: BatchDeleteCollectionsRequest,
   ): Promise<BatchDeleteResponse> => {
-    return apiClient.delete('/collections/batch', { data });
+    const response = await apiClient.delete('/collections/batch', { data });
+    return transformBatchDeleteResponse(response as Record<string, unknown>);
   },
 
   /**
@@ -57,6 +65,7 @@ export const batchApi = {
   getOperationProgress: async (
     operationId: string,
   ): Promise<BatchOperationProgress> => {
-    return apiClient.get(`/batch/progress/${operationId}`);
+    const response = await apiClient.get(`/batch/progress/${operationId}`);
+    return transformBatchOperationProgress(response as Record<string, unknown>);
   },
 };

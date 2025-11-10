@@ -19,7 +19,7 @@ export const ScrapePage: React.FC = () => {
       message: `爬虫任务已创建，任务ID: ${taskId}`,
     });
     setRefreshTrigger(prev => prev + 1);
-    
+
     // 3秒后清除通知
     setTimeout(() => {
       setNotification(null);
@@ -31,7 +31,7 @@ export const ScrapePage: React.FC = () => {
       type: 'error',
       message: error,
     });
-    
+
     // 5秒后清除通知
     setTimeout(() => {
       setNotification(null);
@@ -43,19 +43,27 @@ export const ScrapePage: React.FC = () => {
   };
 
   // 仅基于 taskId 进行轮询依赖，避免每次对象更新导致重复创建轮询器
-  const selectedTaskId = useMemo(() => selectedTask?.id ?? null, [selectedTask?.id]);
+  const selectedTaskId = useMemo(
+    () => selectedTask?.id ?? null,
+    [selectedTask?.id],
+  );
 
   // 当打开任务详情时，开始可取消的轮询，关闭或切换任务时停止
   useEffect(() => {
     if (!selectedTaskId) return;
     // 结束状态不轮询
-    if (selectedTask && (selectedTask.status === 'COMPLETED' || selectedTask.status === 'FAILED' || selectedTask.status === 'CANCELLED')) {
+    if (
+      selectedTask &&
+      (selectedTask.status === 'COMPLETED' ||
+        selectedTask.status === 'FAILED' ||
+        selectedTask.status === 'CANCELLED')
+    ) {
       return;
     }
 
     const stop = scrapeApiService.startPollingTask(
       selectedTaskId,
-      (task) => {
+      task => {
         // 仅当返回的是同一个任务时更新，避免竞态
         if (task.id === selectedTaskId) {
           setSelectedTask(task);
@@ -91,20 +99,38 @@ export const ScrapePage: React.FC = () => {
 
         {/* 通知 */}
         {notification && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            notification.type === 'success' 
-              ? 'bg-green-100 border border-green-400 text-green-700'
-              : 'bg-red-100 border border-red-400 text-red-700'
-          }`}>
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              notification.type === 'success'
+                ? 'bg-green-100 border border-green-400 text-green-700'
+                : 'bg-red-100 border border-red-400 text-red-700'
+            }`}
+          >
             <div className="flex">
               <div className="flex-shrink-0">
                 {notification.type === 'success' ? (
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 ) : (
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
               </div>
@@ -116,8 +142,16 @@ export const ScrapePage: React.FC = () => {
                   onClick={() => setNotification(null)}
                   className="inline-flex text-gray-400 hover:text-gray-600"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </button>
               </div>
@@ -154,8 +188,18 @@ export const ScrapePage: React.FC = () => {
                   onClick={() => setSelectedTask(null)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -182,36 +226,50 @@ export const ScrapePage: React.FC = () => {
 
                 <div>
                   <span className="font-medium text-gray-700">目标URL:</span>
-                  <p className="text-gray-900 break-all">{selectedTask.context?.config?.url ?? 'N/A'}</p>
+                  <p className="text-gray-900 break-all">
+                    {selectedTask.context?.config?.url ?? 'N/A'}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-700">最大深度:</span>
-                    <p className="text-gray-900">{selectedTask.context?.config?.maxDepth ?? 0}</p>
+                    <p className="text-gray-900">
+                      {selectedTask.context?.config?.maxDepth ?? 0}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">跟随链接:</span>
-                    <p className="text-gray-900">{selectedTask.context?.config?.followLinks ? '是' : '否'}</p>
+                    <p className="text-gray-900">
+                      {selectedTask.context?.config?.followLinks ? '是' : '否'}
+                    </p>
                   </div>
                 </div>
 
                 <div>
                   <span className="font-medium text-gray-700">创建时间:</span>
-                  <p className="text-gray-900">{new Date(selectedTask.createdAt).toLocaleString('zh-CN')}</p>
+                  <p className="text-gray-900">
+                    {new Date(selectedTask.createdAt).toLocaleString('zh-CN')}
+                  </p>
                 </div>
 
                 {selectedTask.startedAt && (
                   <div>
                     <span className="font-medium text-gray-700">开始时间:</span>
-                    <p className="text-gray-900">{new Date(selectedTask.startedAt).toLocaleString('zh-CN')}</p>
+                    <p className="text-gray-900">
+                      {new Date(selectedTask.startedAt).toLocaleString('zh-CN')}
+                    </p>
                   </div>
                 )}
 
                 {selectedTask.completedAt && (
                   <div>
                     <span className="font-medium text-gray-700">完成时间:</span>
-                    <p className="text-gray-900">{new Date(selectedTask.completedAt).toLocaleString('zh-CN')}</p>
+                    <p className="text-gray-900">
+                      {new Date(selectedTask.completedAt).toLocaleString(
+                        'zh-CN',
+                      )}
+                    </p>
                   </div>
                 )}
 
@@ -226,16 +284,27 @@ export const ScrapePage: React.FC = () => {
 
                 {selectedTask.context?.config?.selectors && (
                   <div>
-                    <span className="font-medium text-gray-700">CSS选择器:</span>
+                    <span className="font-medium text-gray-700">
+                      CSS选择器:
+                    </span>
                     <div className="text-sm bg-gray-50 p-2 rounded border space-y-1">
                       {selectedTask.context?.config?.selectors?.title && (
-                        <div><span className="font-medium">标题:</span> {selectedTask.context.config.selectors.title}</div>
+                        <div>
+                          <span className="font-medium">标题:</span>{' '}
+                          {selectedTask.context.config.selectors.title}
+                        </div>
                       )}
                       {selectedTask.context?.config?.selectors?.content && (
-                        <div><span className="font-medium">内容:</span> {selectedTask.context.config.selectors.content}</div>
+                        <div>
+                          <span className="font-medium">内容:</span>{' '}
+                          {selectedTask.context.config.selectors.content}
+                        </div>
                       )}
                       {selectedTask.context?.config?.selectors?.links && (
-                        <div><span className="font-medium">链接:</span> {selectedTask.context.config.selectors.links}</div>
+                        <div>
+                          <span className="font-medium">链接:</span>{' '}
+                          {selectedTask.context.config.selectors.links}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -251,19 +320,26 @@ export const ScrapePage: React.FC = () => {
                 </button>
               </div>
               {/* 执行日志 */}
-              {Array.isArray(selectedTask.context?.logs) && selectedTask.context?.logs?.length ? (
+              {Array.isArray(selectedTask.context?.logs) &&
+              selectedTask.context?.logs?.length ? (
                 <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">执行日志</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    执行日志
+                  </h4>
                   <div className="max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded border space-y-1">
                     {selectedTask.context.logs!.map((log, idx) => (
                       <div key={idx} className="flex items-start">
-                        <span className={`inline-block px-1 mr-2 rounded text-white ${log.level === 'error' ? 'bg-red-500' : log.level === 'debug' ? 'bg-gray-500' : 'bg-blue-500'}`}>
+                        <span
+                          className={`inline-block px-1 mr-2 rounded text-white ${log.level === 'error' ? 'bg-red-500' : log.level === 'debug' ? 'bg-gray-500' : 'bg-blue-500'}`}
+                        >
                           {log.level}
                         </span>
                         <span className="text-gray-500 mr-2 whitespace-nowrap">
                           {new Date(log.ts).toLocaleTimeString('zh-CN')}
                         </span>
-                        <span className="text-gray-900 break-words flex-1">{log.message}</span>
+                        <span className="text-gray-900 break-words flex-1">
+                          {log.message}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -271,7 +347,9 @@ export const ScrapePage: React.FC = () => {
               ) : null}
               {/* 原始任务数据，便于调试（显示任何额外字段/控制台输出） */}
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">原始任务数据</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  原始任务数据
+                </h4>
                 <pre className="max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded border">
                   {JSON.stringify(selectedTask, null, 2)}
                 </pre>

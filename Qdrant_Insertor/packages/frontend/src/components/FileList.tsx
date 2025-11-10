@@ -1,4 +1,4 @@
-import { formatFileSize } from '../utils/fileValidator';
+import { formatFileSize } from '@/utils/fileValidator';
 
 interface FileListProps {
   files: File[];

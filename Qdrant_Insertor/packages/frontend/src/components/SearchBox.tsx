@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, useCallback, KeyboardEvent, FocusEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  KeyboardEvent,
+  FocusEvent,
+} from 'react';
 import { SearchResult } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
 import { defaultSearchLimiter, SearchHistory } from '../utils/searchLimiter';
@@ -8,6 +15,8 @@ interface SearchBoxProps {
   onSearch: (query: string, collectionId?: string) => Promise<void>;
   onResultSelect?: (result: SearchResult) => void;
   collections?: { collectionId: string; name: string }[];
+  onCollectionChange?: (collectionId: string) => void;
+  selectedCollection?: string;
   placeholder?: string;
   className?: string;
   showSuggestions?: boolean;
@@ -22,6 +31,8 @@ const SearchBox = ({
   onSearch,
   onResultSelect,
   collections = [],
+  onCollectionChange,
+  selectedCollection: selectedCollectionProp,
   placeholder = '输入搜索关键词...',
   className = '',
   showSuggestions = true,
@@ -246,6 +257,13 @@ const SearchBox = ({
     };
   }, []);
 
+  // 如果父组件传入 selectedCollection（受控场景），同步内部状态
+  useEffect(() => {
+    if (typeof selectedCollectionProp === 'string') {
+      setSelectedCollection(selectedCollectionProp);
+    }
+  }, [selectedCollectionProp]);
+
   // 高亮搜索关键词
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
@@ -314,7 +332,11 @@ const SearchBox = ({
         {collections.length > 0 && (
           <select
             value={selectedCollection}
-            onChange={e => setSelectedCollection(e.target.value)}
+            onChange={e => {
+              setSelectedCollection(e.target.value);
+              // notify parent page about collection changes so it can sync state
+              onCollectionChange?.(e.target.value);
+            }}
             className="input max-w-xs"
           >
             <option value="">全部集合</option>

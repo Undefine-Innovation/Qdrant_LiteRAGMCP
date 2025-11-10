@@ -84,7 +84,7 @@ export interface ScrapeStats {
 /**
  * 爬虫启动请求
  */
-export interface ScrapeStartRequest extends ScrapeConfig {}
+export type ScrapeStartRequest = ScrapeConfig;
 
 /**
  * 爬虫启动响应

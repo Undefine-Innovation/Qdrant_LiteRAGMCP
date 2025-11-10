@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { documentsApi } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
+import type { ApiError } from '../services/api-client';
 
 interface DocumentPreviewProps {
   documentId: string;
@@ -21,7 +22,7 @@ const DocumentPreview = ({
   const [content, setContent] = useState<string>('');
   const [mimeType, setMimeType] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | ApiError | null>(null);
   const [activeFormat, setActiveFormat] = useState<'html' | 'text' | 'json'>(
     format,
   );
@@ -106,7 +107,7 @@ const DocumentPreview = ({
   if (error) {
     return (
       <div className={`space-y-4 ${className}`}>
-        <ErrorMessage message={error} />
+        <ErrorMessage error={error} showCloseButton={false} autoHide={false} />
       </div>
     );
   }

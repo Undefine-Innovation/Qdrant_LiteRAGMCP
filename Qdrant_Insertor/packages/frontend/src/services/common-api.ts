@@ -1,5 +1,8 @@
 import { apiClient } from './api-client.js';
-import { HealthCheckResponse, DetailedHealthCheckResponse } from '../types/index.js';
+import {
+  HealthCheckResponse,
+  DetailedHealthCheckResponse,
+} from '../types/index.js';
 
 /**
  * 通用API

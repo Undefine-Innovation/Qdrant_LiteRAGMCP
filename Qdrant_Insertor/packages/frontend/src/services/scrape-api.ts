@@ -27,8 +27,13 @@ export class ScrapeApiService {
    * @param config 爬虫配置
    * @returns 爬虫启动响应
    */
-  async startScrapeTask(config: ScrapeStartRequest): Promise<ScrapeStartResponse> {
-    return apiClient.post<ScrapeStartResponse>(`${this.basePath}/start`, config);
+  async startScrapeTask(
+    config: ScrapeStartRequest,
+  ): Promise<ScrapeStartResponse> {
+    return apiClient.post<ScrapeStartResponse>(
+      `${this.basePath}/start`,
+      config,
+    );
   }
 
   /**
@@ -37,7 +42,9 @@ export class ScrapeApiService {
    * @returns 爬虫状态响应
    */
   async getScrapeTaskStatus(taskId: string): Promise<ScrapeStatusResponse> {
-    return apiClient.get<ScrapeStatusResponse>(`${this.basePath}/status/${taskId}`);
+    return apiClient.get<ScrapeStatusResponse>(
+      `${this.basePath}/status/${taskId}`,
+    );
   }
 
   /**
@@ -56,11 +63,11 @@ export class ScrapeApiService {
    */
   async cancelScrapeTask(
     taskId: string,
-    request: ScrapeCancelRequest = {}
+    request: ScrapeCancelRequest = {},
   ): Promise<ScrapeCancelResponse> {
     return apiClient.post<ScrapeCancelResponse>(
       `${this.basePath}/cancel/${taskId}`,
-      request
+      request,
     );
   }
 
@@ -72,11 +79,11 @@ export class ScrapeApiService {
    */
   async retryScrapeTask(
     taskId: string,
-    request: ScrapeRetryRequest = {}
+    request: ScrapeRetryRequest = {},
   ): Promise<ScrapeRetryResponse> {
     return apiClient.post<ScrapeRetryResponse>(
       `${this.basePath}/retry/${taskId}`,
-      request
+      request,
     );
   }
 
@@ -91,12 +98,20 @@ export class ScrapeApiService {
   /**
    * 获取抓取结果列表（默认PENDING）
    */
-  async getScrapeResults(params?: { status?: string; taskId?: string; limit?: number; offset?: number; includeContent?: boolean }): Promise<ScrapeResultsListResponse> {
+  async getScrapeResults(params?: {
+    status?: string;
+    taskId?: string;
+    limit?: number;
+    offset?: number;
+    includeContent?: boolean;
+  }): Promise<ScrapeResultsListResponse> {
     const query = new URLSearchParams();
     if (params?.status) query.set('status', params.status);
     if (params?.taskId) query.set('taskId', params.taskId);
-    if (typeof params?.limit === 'number') query.set('limit', String(params.limit));
-    if (typeof params?.offset === 'number') query.set('offset', String(params.offset));
+    if (typeof params?.limit === 'number')
+      query.set('limit', String(params.limit));
+    if (typeof params?.offset === 'number')
+      query.set('offset', String(params.offset));
     query.set('includeContent', String(params?.includeContent ?? false));
     const qs = query.toString();
     const url = `${this.basePath}/results${qs ? `?${qs}` : ''}`;
@@ -105,41 +120,65 @@ export class ScrapeApiService {
 
   /** 获取单条抓取结果（包含全文） */
   async getScrapeResult(id: string) {
-    return apiClient.get<import('../types/scrape').ScrapeResultDetailResponse>(`${this.basePath}/results/${id}`);
+    return apiClient.get<import('../types/scrape').ScrapeResultDetailResponse>(
+      `${this.basePath}/results/${id}`,
+    );
   }
 
   /** 获取抓取任务分组 */
   async getScrapeGroups(params?: { limit?: number; offset?: number }) {
     const query = new URLSearchParams();
-    if (typeof params?.limit === 'number') query.set('limit', String(params.limit));
-    if (typeof params?.offset === 'number') query.set('offset', String(params.offset));
+    if (typeof params?.limit === 'number')
+      query.set('limit', String(params.limit));
+    if (typeof params?.offset === 'number')
+      query.set('offset', String(params.offset));
     const qs = query.toString();
     const url = `${this.basePath}/results-groups${qs ? `?${qs}` : ''}`;
-    return apiClient.get<import('../types/scrape').ScrapeTaskGroupsResponse>(url);
+    return apiClient.get<import('../types/scrape').ScrapeTaskGroupsResponse>(
+      url,
+    );
   }
 
   /**
    * 导入指定抓取结果为文档
    */
-  async importScrapeResult(id: string, body: ImportScrapeResultRequest): Promise<ImportScrapeResultResponse> {
-    return apiClient.post<ImportScrapeResultResponse>(`${this.basePath}/results/${id}/import`, body);
+  async importScrapeResult(
+    id: string,
+    body: ImportScrapeResultRequest,
+  ): Promise<ImportScrapeResultResponse> {
+    return apiClient.post<ImportScrapeResultResponse>(
+      `${this.basePath}/results/${id}/import`,
+      body,
+    );
   }
 
   /**
    * 删除（软删除）指定抓取结果
    */
   async deleteScrapeResult(id: string): Promise<DeleteScrapeResultResponse> {
-    return apiClient.post<DeleteScrapeResultResponse>(`${this.basePath}/results/${id}/delete`, {});
+    return apiClient.post<DeleteScrapeResultResponse>(
+      `${this.basePath}/results/${id}/delete`,
+      {},
+    );
   }
 
   /** 批量导入任务 */
-  async importTask(taskId: string, body: { collectionId: string; namePrefix?: string }) {
-    return apiClient.post<import('../types/scrape').ImportTaskResultsResponse>(`${this.basePath}/results/task/${taskId}/import`, body);
+  async importTask(
+    taskId: string,
+    body: { collectionId: string; namePrefix?: string },
+  ) {
+    return apiClient.post<import('../types/scrape').ImportTaskResultsResponse>(
+      `${this.basePath}/results/task/${taskId}/import`,
+      body,
+    );
   }
 
   /** 批量删除任务 */
   async deleteTask(taskId: string) {
-    return apiClient.post<import('../types/scrape').DeleteTaskResultsResponse>(`${this.basePath}/results/task/${taskId}/delete`, {});
+    return apiClient.post<import('../types/scrape').DeleteTaskResultsResponse>(
+      `${this.basePath}/results/task/${taskId}/delete`,
+      {},
+    );
   }
 
   /**
@@ -151,9 +190,9 @@ export class ScrapeApiService {
    */
   async pollTaskStatus(
     taskId: string,
-    onProgress?: (task: any) => void,
-    interval: number = 2000
-  ): Promise<any> {
+    onProgress?: (task: import('../types/scrape').ScrapeTask) => void,
+    interval: number = 2000,
+  ): Promise<import('../types/scrape').ScrapeTask> {
     return new Promise((resolve, reject) => {
       const poll = async () => {
         try {
@@ -165,7 +204,11 @@ export class ScrapeApiService {
           }
 
           // 检查任务是否完成
-          if (task.status === 'COMPLETED' || task.status === 'FAILED' || task.status === 'CANCELLED') {
+          if (
+            task.status === 'COMPLETED' ||
+            task.status === 'FAILED' ||
+            task.status === 'CANCELLED'
+          ) {
             resolve(task);
             return;
           }
@@ -187,7 +230,7 @@ export class ScrapeApiService {
    */
   startPollingTask(
     taskId: string,
-    onProgress?: (task: any) => void,
+    onProgress?: (task: import('../types/scrape').ScrapeTask) => void,
     interval: number = 2000,
   ): () => void {
     let stopped = false;
@@ -201,10 +244,14 @@ export class ScrapeApiService {
         onProgress?.(task);
         if (stopped) return;
         // 终止条件：到达结束状态则不再继续
-        if (task.status === 'COMPLETED' || task.status === 'FAILED' || task.status === 'CANCELLED') {
+        if (
+          task.status === 'COMPLETED' ||
+          task.status === 'FAILED' ||
+          task.status === 'CANCELLED'
+        ) {
           return;
         }
-      } catch (e) {
+      } catch {
         // 发生错误时，稍后重试一次，避免爆栈/热循环
       }
       if (!stopped) {

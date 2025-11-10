@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Document } from '../types';
-import { DocumentListCore } from './DocumentListCore';
+import { Document } from '@/types';
+import { DocumentListCore } from '@/components/DocumentListCore';
 import {
   DocumentTable,
-  Pagination,
   LoadingState,
   ErrorState,
   EmptyState,
   BatchActions,
-} from './DocumentListUI';
+} from '@/components/DocumentListUI';
+import Pagination from '@/components/Pagination';
 
 /**
  * 文档列表组件属性
@@ -103,11 +103,21 @@ const DocumentList = ({
         onDocumentView={onView || (() => {})}
         onDocumentRetry={onRetry || (() => {})}
         onDocumentDelete={onDelete || (() => {})}
-        getStatusInfo={(status?: string) => DocumentListCore.getStatusInfo(status as any)}
+        getStatusInfo={DocumentListCore.getStatusInfo}
       />
 
       {/* 分页控件 */}
-      {pagination && <Pagination {...pagination} />}
+      {pagination && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          limit={20}
+          onPageChange={pagination.onPageChange}
+          onLimitChange={() => {}}
+          loading={false}
+        />
+      )}
     </div>
   );
 };

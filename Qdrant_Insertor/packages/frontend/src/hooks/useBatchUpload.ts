@@ -1,10 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAppStore } from '../stores/useAppStore';
-import {
-  BatchUploadResponse,
-  Collection,
-  BatchUploadRequest,
-} from '../types';
+import { BatchUploadResponse, Collection, BatchUploadRequest } from '../types';
 import { batchApi } from '../services/api';
 
 /**

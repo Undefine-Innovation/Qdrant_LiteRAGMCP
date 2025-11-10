@@ -117,7 +117,7 @@ const DocumentsPage = () => {
             className="input max-w-xs"
           >
             <option value="">选择集合</option>
-            {(collectionsState.data as any)?.data?.map(
+            {(collectionsState.data as { data?: Collection[] })?.data?.map(
               (collection: Collection) => (
                 <option
                   key={collection.collectionId}
@@ -143,6 +143,7 @@ const DocumentsPage = () => {
           <button
             onClick={() => setShowBatchDeleteModal(true)}
             className="btn btn-danger"
+            data-testid="batch-delete-button"
           >
             批量删除
           </button>
@@ -152,8 +153,8 @@ const DocumentsPage = () => {
       <DocumentList
         documents={
           Array.isArray(documentsState.data)
-            ? documentsState.data as Document[]
-            : (documentsState.data as any)?.data || []
+            ? (documentsState.data as Document[])
+            : (documentsState.data as { data?: Document[] })?.data || []
         }
         loading={documentsState.loading}
         error={documentsState.error}
@@ -164,13 +165,69 @@ const DocumentsPage = () => {
       />
 
       {/* 分页组件 - 仅在有分页数据时显示 */}
-      {(documentsState.data as any)?.pagination &&
-        (Array.isArray(documentsState.data) ? documentsState.data.length : (documentsState.data as any)?.data?.length || 0) > 0 && (
+      {(
+        documentsState.data as {
+          pagination?: {
+            page: number;
+            totalPages: number;
+            total: number;
+            limit: number;
+          };
+        }
+      )?.pagination &&
+        (Array.isArray(documentsState.data)
+          ? documentsState.data.length
+          : (documentsState.data as { data?: Document[] })?.data?.length || 0) >
+          0 && (
           <Pagination
-            currentPage={(documentsState.data as any).pagination.page}
-            totalPages={(documentsState.data as any).pagination.totalPages}
-            total={(documentsState.data as any).pagination.total}
-            limit={(documentsState.data as any).pagination.limit}
+            currentPage={
+              (
+                documentsState.data as {
+                  pagination: {
+                    page: number;
+                    totalPages: number;
+                    total: number;
+                    limit: number;
+                  };
+                }
+              ).pagination.page
+            }
+            totalPages={
+              (
+                documentsState.data as {
+                  pagination: {
+                    page: number;
+                    totalPages: number;
+                    total: number;
+                    limit: number;
+                  };
+                }
+              ).pagination.totalPages
+            }
+            total={
+              (
+                documentsState.data as {
+                  pagination: {
+                    page: number;
+                    totalPages: number;
+                    total: number;
+                    limit: number;
+                  };
+                }
+              ).pagination.total
+            }
+            limit={
+              (
+                documentsState.data as {
+                  pagination: {
+                    page: number;
+                    totalPages: number;
+                    total: number;
+                    limit: number;
+                  };
+                }
+              ).pagination.limit
+            }
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             loading={documentsState.loading}
@@ -214,13 +271,15 @@ const DocumentsPage = () => {
         title="批量删除"
         size="xl"
       >
-        <BatchDelete
-          collectionId={selectedCollection}
-          onComplete={() => {
-            setShowBatchDeleteModal(false);
-            loadDocuments();
-          }}
-        />
+        <div data-testid="batch-delete-modal">
+          <BatchDelete
+            collectionId={selectedCollection}
+            onComplete={() => {
+              setShowBatchDeleteModal(false);
+              loadDocuments();
+            }}
+          />
+        </div>
       </Modal>
 
       {/* 详情模态框 */}

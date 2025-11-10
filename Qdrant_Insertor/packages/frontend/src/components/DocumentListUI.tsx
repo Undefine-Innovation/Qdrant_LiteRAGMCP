@@ -1,91 +1,11 @@
 import React from 'react';
-import { Document } from '../types';
-import LoadingSpinner from './LoadingSpinner';
-import ErrorMessage from './ErrorMessage';
-import DocumentThumbnail from './DocumentThumbnail';
-
-/**
- * 分页控件组件属性
- */
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}
-
-/**
- * 分页控件组件
- */
-export const Pagination: React.FC<PaginationProps> = ({
-  currentPage,
-  totalPages,
-  onPageChange,
-}) => {
-  if (totalPages <= 1) return null;
-
-  const pages = [];
-  const startPage = Math.max(1, currentPage - 2);
-  const endPage = Math.min(totalPages, currentPage + 2);
-
-  // 显示页码范围
-  if (startPage > 1) {
-    pages.push(1);
-    if (startPage > 2) pages.push('...');
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(i);
-  }
-
-  if (endPage < totalPages - 1) {
-    if (endPage < totalPages - 2) pages.push('...');
-    if (endPage < totalPages - 1) pages.push(totalPages);
-  }
-
-  return (
-    <div className="flex items-center justify-between px-6 py-3 bg-secondary-50 border-t border-secondary-200">
-      <div className="text-sm text-secondary-700">
-        显示第 {(currentPage - 1) * 10 + 1} 到{' '}
-        {Math.min(currentPage * 10, totalPages)} 条，共 {totalPages} 条记录
-      </div>
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 text-sm border border-secondary-300 rounded-md hover:bg-secondary-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          上一页
-        </button>
-        {pages.map((page, index) =>
-          page === '...' ? (
-            <span key={`ellipsis-${index}`} className="px-2 text-secondary-500">
-              ...
-            </span>
-          ) : (
-            <button
-              key={page}
-              onClick={() => onPageChange(page as number)}
-              className={`px-3 py-1 text-sm border rounded-md ${
-                page === currentPage
-                  ? 'bg-primary-600 text-white border-primary-600'
-                  : 'border-secondary-300 hover:bg-secondary-100'
-              }`}
-            >
-              {page}
-            </button>
-          ),
-        )}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 text-sm border border-secondary-300 rounded-md hover:bg-secondary-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          下一页
-        </button>
-      </div>
-    </div>
-  );
-};
+import { Document } from '@/types';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorMessage from '@/components/ErrorMessage';
+import DocumentThumbnail from '@/components/DocumentThumbnail';
+import { DocumentListCore } from '@/components/DocumentListCore';
+import Button from '@/components/Button';
+import type { ApiError } from '@/services/api-client';
 
 /**
  * 加载状态组件属性
@@ -112,7 +32,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
  * 错误状态组件属性
  */
 interface ErrorStateProps {
-  error: string;
+  error: string | ApiError;
   onRefresh: () => void;
 }
 
@@ -122,10 +42,12 @@ interface ErrorStateProps {
 export const ErrorState: React.FC<ErrorStateProps> = ({ error, onRefresh }) => {
   return (
     <div className="space-y-4">
-      <ErrorMessage message={error} />
-      <button onClick={onRefresh} className="btn btn-secondary">
-        重试
-      </button>
+      <ErrorMessage
+        error={error}
+        onRetry={onRefresh}
+        showCloseButton={false}
+        autoHide={false}
+      />
     </div>
   );
 };
@@ -187,26 +109,15 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   getStatusInfo,
 }) => {
   /**
-   * 格式化日期
-   */
-  const formatDate = (timestamp?: number | string) => {
-    if (!timestamp) return '-';
-    // 如果是字符串，直接解析；如果是数字，作为时间戳处理
-    const date =
-      typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
-    return date.toLocaleString('zh-CN');
-  };
-
-  /**
    * 处理全选/取消全选
    */
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       // 全选
-      documents.forEach((doc: any) => onDocumentSelect(doc.docId, true));
+      documents.forEach(doc => onDocumentSelect(doc.docId, true));
     } else {
       // 取消全选
-      documents.forEach((doc: any) => onDocumentSelect(doc.docId, false));
+      documents.forEach(doc => onDocumentSelect(doc.docId, false));
     }
   };
 
@@ -262,7 +173,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
       </thead>
       <tbody className="bg-white divide-y divide-secondary-200">
         {documents.map(document => {
-          const statusInfo = getStatusInfo((document as any).status);
+          const statusInfo = getStatusInfo(document.status);
           return (
             <tr key={document.docId} className="hover:bg-secondary-50">
               <td className="px-6 py-4 whitespace-nowrap">
@@ -304,7 +215,15 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {formatDate((document as any).created_at || (document as any).createdAt)}
+                {DocumentListCore.formatDate(
+                  Number(
+                    (document as { created_at?: number; createdAt?: number })
+                      .created_at ||
+                      (document as { created_at?: number; createdAt?: number })
+                        .createdAt ||
+                      0,
+                  ),
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center space-x-2">
@@ -316,16 +235,14 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                       查看
                     </button>
                   )}
-                  {((document as any).status === 'failed' ||
-                    (document as any).status === 'dead') &&
-                    onDocumentRetry && (
-                      <button
-                        onClick={() => onDocumentRetry(document.docId)}
-                        className="text-yellow-600 hover:text-yellow-900"
-                      >
-                        重试
-                      </button>
-                    )}
+                  {document.status === 'failed' && onDocumentRetry && (
+                    <button
+                      onClick={() => onDocumentRetry(document.docId)}
+                      className="text-yellow-600 hover:text-yellow-900"
+                    >
+                      重试
+                    </button>
+                  )}
                   {onDocumentDelete && (
                     <button
                       onClick={() => {
@@ -375,19 +292,13 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
         </span>
         <div className="space-x-2">
           {onBatchDelete && (
-            <button
-              onClick={onBatchDelete}
-              className="btn btn-secondary text-sm"
-            >
+            <Button onClick={onBatchDelete} variant="secondary" size="sm">
               批量删除
-            </button>
+            </Button>
           )}
-          <button
-            onClick={onClearSelection}
-            className="btn btn-secondary text-sm"
-          >
+          <Button onClick={onClearSelection} variant="secondary" size="sm">
             取消选择
-          </button>
+          </Button>
         </div>
       </div>
     </div>

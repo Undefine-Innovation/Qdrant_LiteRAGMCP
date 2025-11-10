@@ -8,11 +8,12 @@ import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import CollectionForm from './CollectionForm';
 import CollectionList from './CollectionList';
+import type { ApiError } from '../services/api-client';
 
 interface CollectionManagerProps {
   collections: Collection[] | null;
   loading: boolean;
-  error: string | null;
+  error: string | ApiError | null;
   onRefresh: () => void;
   onCreate: (data: CreateCollectionRequest) => Promise<void>;
   onUpdate: (id: string, data: UpdateCollectionRequest) => Promise<void>;
@@ -75,10 +76,12 @@ const CollectionManager = ({
   if (error) {
     return (
       <div className="space-y-4">
-        <ErrorMessage message={error} />
-        <button onClick={onRefresh} className="btn btn-secondary">
-          重试
-        </button>
+        <ErrorMessage
+          error={error}
+          onRetry={onRefresh}
+          showCloseButton={false}
+          autoHide={false}
+        />
       </div>
     );
   }

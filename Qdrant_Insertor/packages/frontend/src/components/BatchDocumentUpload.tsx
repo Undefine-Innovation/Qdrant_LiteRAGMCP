@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
-import { BatchUploadProgress, BatchUploadResult } from '../types';
-import FileUploadArea from './FileUploadArea';
-import FileList from './FileList';
-import UploadProgress from './UploadProgress';
-import UploadResults from './UploadResults';
+import { BatchUploadProgress, BatchUploadResult } from '@/types';
+import FileUploadArea from '@/components/FileUploadArea';
+import FileList from '@/components/FileList';
+import UploadProgress from '@/components/UploadProgress';
+import UploadResults from '@/components/UploadResults';
+import Button from '@/components/Button';
 
 interface BatchDocumentUploadProps {
   onComplete?: () => void;
@@ -36,7 +37,9 @@ const BatchDocumentUpload = ({
     useState<BatchUploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string>(propCollectionId || '');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>(
+    propCollectionId || '',
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 处理文件选择
@@ -87,7 +90,7 @@ const BatchDocumentUpload = ({
       if (!onBatchUpload) {
         throw new Error('onBatchUpload function is required');
       }
-      
+
       const result = await onBatchUpload(
         fileList,
         selectedCollectionId || undefined,
@@ -172,14 +175,17 @@ const BatchDocumentUpload = ({
 
           {/* 上传按钮 */}
           <div className="mt-4">
-            <button
+            <Button
               type="button"
               onClick={handleBatchUpload}
-              className="btn btn-primary w-full"
+              variant="primary"
+              size="lg"
               disabled={isUploading}
+              loading={isUploading}
+              className="w-full"
             >
               开始批量上传
-            </button>
+            </Button>
           </div>
         </div>
       )}

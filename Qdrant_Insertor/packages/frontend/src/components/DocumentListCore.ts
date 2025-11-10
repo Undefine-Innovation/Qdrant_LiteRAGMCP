@@ -29,17 +29,26 @@ export class DocumentListCore {
       case 'dead':
         return { text: '已放弃', className: 'bg-gray-100 text-gray-800' };
       default:
-        return { text: status || '未知', className: 'bg-gray-100 text-gray-800' };
+        return {
+          text: status || '未知',
+          className: 'bg-gray-100 text-gray-800',
+        };
     }
   }
 
   /**
    * 格式化日期
+   * @param timestamp - 时间戳或日期字符串
+   * @returns 格式化后的日期字符串
    */
-  static formatDate(dateString: string): string {
-    if (!dateString) return '未知时间';
+  static formatDate(timestamp?: number | string): string {
+    if (!timestamp) return '-';
     try {
-      const date = new Date(dateString);
+      // 如果是字符串，直接解析；如果是数字，作为时间戳处理
+      const date =
+        typeof timestamp === 'string'
+          ? new Date(timestamp)
+          : new Date(timestamp);
       if (isNaN(date.getTime())) return '无效日期';
       return date.toLocaleString('zh-CN', {
         year: 'numeric',
@@ -82,7 +91,7 @@ export class DocumentListCore {
       return [];
     } else {
       // 全选
-      return documents.map(doc => (doc as any).id || doc.docId);
+      return documents.map(doc => (doc as { id?: string }).id || doc.docId);
     }
   }
 

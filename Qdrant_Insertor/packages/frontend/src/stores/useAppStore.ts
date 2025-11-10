@@ -8,6 +8,7 @@ import {
   BatchUploadProgress,
   BatchOperationProgress,
 } from '../types';
+import type { ApiError } from '../services/api-client';
 
 /**
  * 应用状态接口
@@ -61,11 +62,17 @@ interface AppState {
   }>;
 
   // 错误状态
-  error: string | null;
+  error: string | ApiError | null;
   lastError: {
     message: string;
+    code?: string;
     timestamp: number;
   } | null;
+  errorHistory: Array<{
+    message: string;
+    code?: string;
+    timestamp: number;
+  }>;
 
   // 操作方法
   setLoading: (loading: boolean) => void;
@@ -81,8 +88,10 @@ interface AppState {
   ) => void;
   setDocumentsPagination: (pagination: AppState['documentsPagination']) => void;
   setSearchPagination: (pagination: AppState['searchPagination']) => void;
-  setError: (error: string | null) => void;
+  setError: (error: string | ApiError | null) => void;
   clearError: () => void;
+  addErrorToHistory: (error: string | ApiError) => void;
+  clearErrorHistory: () => void;
   resetSearch: () => void;
   refreshData: () => Promise<void>;
 
@@ -124,6 +133,7 @@ export const useAppStore = create<AppState>()(
         batchOperationHistory: [],
         error: null,
         lastError: null,
+        errorHistory: [],
 
         // 设置加载状态
         setLoading: (loading: boolean) => {
@@ -193,17 +203,22 @@ export const useAppStore = create<AppState>()(
         },
 
         // 设置错误信息
-        setError: (error: string | null) => {
+        setError: (error: string | ApiError | null) => {
           set(
-            state => ({
-              error,
-              lastError: error
+            state => {
+              const newLastError = error
                 ? {
-                    message: error,
+                    message: typeof error === 'string' ? error : error.message,
+                    code: typeof error === 'string' ? undefined : error.code,
                     timestamp: Date.now(),
                   }
-                : state.lastError,
-            }),
+                : state.lastError;
+
+              return {
+                error,
+                lastError: newLastError,
+              };
+            },
             false,
             'setError',
           );
@@ -212,6 +227,29 @@ export const useAppStore = create<AppState>()(
         // 清除错误信息
         clearError: () => {
           set({ error: null }, false, 'clearError');
+        },
+
+        // 添加错误到历史记录
+        addErrorToHistory: (error: string | ApiError) => {
+          set(
+            state => ({
+              errorHistory: [
+                {
+                  message: typeof error === 'string' ? error : error.message,
+                  code: typeof error === 'string' ? undefined : error.code,
+                  timestamp: Date.now(),
+                },
+                ...state.errorHistory.slice(0, 49), // 保留最近50条错误记录
+              ],
+            }),
+            false,
+            'addErrorToHistory',
+          );
+        },
+
+        // 清除错误历史
+        clearErrorHistory: () => {
+          set({ errorHistory: [] }, false, 'clearErrorHistory');
         },
 
         // 重置搜索状态
@@ -248,22 +286,40 @@ export const useAppStore = create<AppState>()(
 
         // 设置批量上传进度
         setBatchUploadProgress: (progress: BatchUploadProgress | null) => {
-          set({ batchUploadProgress: progress }, false, 'setBatchUploadProgress');
+          set(
+            { batchUploadProgress: progress },
+            false,
+            'setBatchUploadProgress',
+          );
         },
 
         // 设置批量操作进度
-        setBatchOperationProgress: (progress: BatchOperationProgress | null) => {
-          set({ batchOperationProgress: progress }, false, 'setBatchOperationProgress');
+        setBatchOperationProgress: (
+          progress: BatchOperationProgress | null,
+        ) => {
+          set(
+            { batchOperationProgress: progress },
+            false,
+            'setBatchOperationProgress',
+          );
         },
 
         // 设置选中的文档
         setSelectedDocuments: (documentIds: string[]) => {
-          set({ selectedDocuments: documentIds }, false, 'setSelectedDocuments');
+          set(
+            { selectedDocuments: documentIds },
+            false,
+            'setSelectedDocuments',
+          );
         },
 
         // 设置选中的集合
         setSelectedCollections: (collectionIds: string[]) => {
-          set({ selectedCollections: collectionIds }, false, 'setSelectedCollections');
+          set(
+            { selectedCollections: collectionIds },
+            false,
+            'setSelectedCollections',
+          );
         },
 
         // 添加批量操作到历史记录
@@ -272,7 +328,10 @@ export const useAppStore = create<AppState>()(
         ) => {
           set(
             state => ({
-              batchOperationHistory: [operation, ...state.batchOperationHistory].slice(0, 50),
+              batchOperationHistory: [
+                operation,
+                ...state.batchOperationHistory,
+              ].slice(0, 50),
             }),
             false,
             'addBatchOperationToHistory',
@@ -281,7 +340,11 @@ export const useAppStore = create<AppState>()(
 
         // 清空批量操作历史
         clearBatchOperationHistory: () => {
-          set({ batchOperationHistory: [] }, false, 'clearBatchOperationHistory');
+          set(
+            { batchOperationHistory: [] },
+            false,
+            'clearBatchOperationHistory',
+          );
         },
       }),
       {

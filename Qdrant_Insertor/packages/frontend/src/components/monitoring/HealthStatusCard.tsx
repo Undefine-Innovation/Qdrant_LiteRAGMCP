@@ -6,7 +6,10 @@ interface HealthStatusCardProps {
   loading?: boolean;
 }
 
-export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({ health, loading }) => {
+export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
+  health,
+  loading,
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'healthy':
@@ -22,7 +25,9 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({ health, load
 
   const formatUptime = (uptime: number) => {
     const days = Math.floor(uptime / (24 * 60 * 60 * 1000));
-    const hours = Math.floor((uptime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const hours = Math.floor(
+      (uptime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000),
+    );
     const minutes = Math.floor((uptime % (60 * 60 * 1000)) / (60 * 1000));
 
     if (days > 0) {
@@ -54,9 +59,7 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({ health, load
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">系统健康状态</h3>
-        <div className="text-center text-gray-500">
-          无法获取健康状态数据
-        </div>
+        <div className="text-center text-gray-500">无法获取健康状态数据</div>
       </div>
     );
   }
@@ -64,14 +67,19 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({ health, load
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">系统健康状态</h3>
-      
+
       {/* 总体状态 */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">总体状态</span>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(health.status)}`}>
-            {health.status === 'healthy' ? '健康' : 
-             health.status === 'degraded' ? '降级' : '不健康'}
+          <span
+            className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(health.status)}`}
+          >
+            {health.status === 'healthy'
+              ? '健康'
+              : health.status === 'degraded'
+                ? '降级'
+                : '不健康'}
           </span>
         </div>
         <div className="text-sm text-gray-500">
@@ -84,22 +92,35 @@ export const HealthStatusCard: React.FC<HealthStatusCardProps> = ({ health, load
         <h4 className="text-sm font-medium text-gray-700 mb-3">组件状态</h4>
         <div className="space-y-2">
           {Object.entries(health.components).map(([name, component]) => (
-            <div key={name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div
+              key={name}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
               <div className="flex-1">
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-900 capitalize">
-                    {name === 'database' ? '数据库' :
-                     name === 'qdrant' ? 'Qdrant' :
-                     name === 'embedding' ? '嵌入服务' :
-                     name}
+                    {name === 'database'
+                      ? '数据库'
+                      : name === 'qdrant'
+                        ? 'Qdrant'
+                        : name === 'embedding'
+                          ? '嵌入服务'
+                          : name}
                   </span>
-                  <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(component.status)}`}>
-                    {component.status === 'healthy' ? '健康' : 
-                     component.status === 'degraded' ? '降级' : '不健康'}
+                  <span
+                    className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(component.status)}`}
+                  >
+                    {component.status === 'healthy'
+                      ? '健康'
+                      : component.status === 'degraded'
+                        ? '降级'
+                        : '不健康'}
                   </span>
                 </div>
                 {component.message && (
-                  <div className="text-xs text-gray-500 mt-1">{component.message}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {component.message}
+                  </div>
                 )}
               </div>
               {component.responseTime !== undefined && (

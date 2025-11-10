@@ -63,7 +63,10 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
   };
 
   // 格式化URL显示
-  const formatUrl = (url: string | undefined, maxLength: number = 50): string => {
+  const formatUrl = (
+    url: string | undefined,
+    maxLength: number = 50,
+  ): string => {
     if (!url) return 'N/A';
     if (url.length <= maxLength) return url;
     return url.substring(0, maxLength) + '...';
@@ -72,10 +75,10 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
   // 计算任务持续时间
   const calculateDuration = (task: ScrapeTask): string => {
     if (!task.startedAt) return '-';
-    
+
     const endTime = task.completedAt || Date.now();
     const duration = endTime - task.startedAt;
-    
+
     if (duration < 1000) return `${duration}ms`;
     if (duration < 60000) return `${Math.round(duration / 1000)}s`;
     return `${Math.round(duration / 60000)}m`;
@@ -85,7 +88,7 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
   const loadTasks = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await scrapeApiService.getAllScrapeTasks();
       if (response.success) {
@@ -134,7 +137,7 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
   // 自动刷新正在进行的任务
   useEffect(() => {
     const hasActiveTasks = tasks.some(
-      task => task.status === 'PROCESSING' || task.status === 'RETRYING'
+      task => task.status === 'PROCESSING' || task.status === 'RETRYING',
     );
 
     if (hasActiveTasks) {
@@ -182,11 +185,13 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
             暂无爬虫任务
           </div>
         ) : (
-          tasks.map((task) => (
+          tasks.map(task => (
             <div
               key={task.id}
               className={`px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                selectedTaskId === task.id ? 'bg-blue-50 border-l-4 border-blue-400' : ''
+                selectedTaskId === task.id
+                  ? 'bg-blue-50 border-l-4 border-blue-400'
+                  : ''
               }`}
               onClick={() => handleTaskSelect(task)}
             >
@@ -195,7 +200,7 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
                   <div className="flex items-center space-x-3">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        task.status
+                        task.status,
                       )}`}
                     >
                       {getStatusLabel(task.status)}
@@ -204,7 +209,7 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
                       {formatUrl(task.context?.config?.url)}
                     </p>
                   </div>
-                  
+
                   <div className="mt-2 flex items-center space-x-6 text-sm text-gray-500">
                     <span>深度: {task.context?.config?.maxDepth || 0}</span>
                     <span>重试: {task.retries}</span>
@@ -215,7 +220,9 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
 
                   {task.error && (
                     <div className="mt-2">
-                      <p className="text-sm text-red-600 truncate">{task.error}</p>
+                      <p className="text-sm text-red-600 truncate">
+                        {task.error}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -223,7 +230,7 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
                 <div className="flex items-center space-x-2 ml-4">
                   {task.status === 'PROCESSING' && (
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleCancelTask(task.id);
                       }}
@@ -232,10 +239,11 @@ export const ScrapeTaskList: React.FC<ScrapeTaskListProps> = ({
                       取消
                     </button>
                   )}
-                  
-                  {(task.status === 'FAILED' || task.status === 'CANCELLED') && (
+
+                  {(task.status === 'FAILED' ||
+                    task.status === 'CANCELLED') && (
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleRetryTask(task.id);
                       }}

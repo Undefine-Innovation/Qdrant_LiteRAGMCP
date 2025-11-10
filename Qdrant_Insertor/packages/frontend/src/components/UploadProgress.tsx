@@ -1,4 +1,4 @@
-import { BatchUploadProgress } from '../types';
+import { BatchUploadProgress } from '@/types';
 
 interface UploadProgressProps {
   progress: BatchUploadProgress;

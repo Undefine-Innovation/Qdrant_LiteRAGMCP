@@ -21,3 +21,20 @@ export { default as Pagination } from './Pagination';
 export { default as BatchOperationProgress } from './BatchOperationProgress';
 export { default as BatchOperationHistory } from './BatchOperationHistory';
 export { default as BatchOperationStatus } from './BatchOperationStatus';
+export { default as FileUploadArea } from './FileUploadArea';
+export { default as FileUploadBase } from './FileUploadBase';
+export { default as FileList } from './FileList';
+export { default as UploadProgress } from './UploadProgress';
+export { default as UploadResults } from './UploadResults';
+export { DocumentListCore } from './DocumentListCore';
+export { default as Table } from './Table';
+export { default as Toast, ToastContainer } from './Toast';
+export { default as Button } from './Button';
+// 导出DocumentListUI中的子组件
+export {
+  LoadingState,
+  ErrorState,
+  EmptyState,
+  DocumentTable,
+  BatchActions,
+} from './DocumentListUI';

@@ -5,12 +5,15 @@ export interface HealthCheckResponse {
   success: boolean;
   status: 'healthy' | 'degraded' | 'unhealthy';
   lastCheck: number;
-  components: Record<string, {
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    lastCheck: string;
-    message?: string;
-    responseTime?: number;
-  }>;
+  components: Record<
+    string,
+    {
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      lastCheck: string;
+      message?: string;
+      responseTime?: number;
+    }
+  >;
   uptime: number;
 }
 
@@ -96,7 +99,7 @@ export interface NotificationChannel {
   id: string;
   name: string;
   type: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
@@ -155,11 +158,13 @@ export const monitoringApi = {
   /**
    * 获取告警规则列表（支持分页）
    */
-  getAlertRulesPaginated: async (params?: PaginationQueryParams & {
-    activeOnly?: boolean;
-    sort?: string;
-    order?: 'asc' | 'desc';
-  }) => {
+  getAlertRulesPaginated: async (
+    params?: PaginationQueryParams & {
+      activeOnly?: boolean;
+      sort?: string;
+      order?: 'asc' | 'desc';
+    },
+  ) => {
     return apiClient.get('/monitoring/alert-rules', { params });
   },
 
@@ -202,7 +207,9 @@ export const monitoringApi = {
   /**
    * 获取通知渠道列表
    */
-  getNotificationChannels: async (): Promise<{ data: NotificationChannel[] }> => {
+  getNotificationChannels: async (): Promise<{
+    data: NotificationChannel[];
+  }> => {
     return apiClient.get('/monitoring/notification-channels');
   },
 
@@ -216,7 +223,10 @@ export const monitoringApi = {
   /**
    * 更新通知渠道
    */
-  updateNotificationChannel: async (id: string, data: Partial<NotificationChannel>) => {
+  updateNotificationChannel: async (
+    id: string,
+    data: Partial<NotificationChannel>,
+  ) => {
     return apiClient.put(`/monitoring/notification-channels/${id}`, data);
   },
 
@@ -230,10 +240,13 @@ export const monitoringApi = {
   /**
    * 测试通知
    */
-  testNotification: async (id: string, data: { 
-    message?: string;
-    severity?: string;
-  }) => {
+  testNotification: async (
+    id: string,
+    data: {
+      message?: string;
+      severity?: string;
+    },
+  ) => {
     return apiClient.post(`/monitoring/notification-channels/${id}/test`, data);
   },
 };

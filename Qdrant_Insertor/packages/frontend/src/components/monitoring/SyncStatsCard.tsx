@@ -6,7 +6,10 @@ interface SyncStatsCardProps {
   loading?: boolean;
 }
 
-export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) => {
+export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({
+  stats,
+  loading,
+}) => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
@@ -55,9 +58,7 @@ export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) 
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">同步任务统计</h3>
-        <div className="text-center text-gray-500">
-          无法获取同步统计数据
-        </div>
+        <div className="text-center text-gray-500">无法获取同步统计数据</div>
       </div>
     );
   }
@@ -65,7 +66,7 @@ export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">同步任务统计</h3>
-      
+
       {/* 主要统计 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div className="text-center p-3 bg-blue-50 rounded-lg">
@@ -73,11 +74,15 @@ export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) 
           <div className="text-xs text-gray-500">总任务数</div>
         </div>
         <div className="text-center p-3 bg-green-50 rounded-lg">
-          <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+          <div className="text-2xl font-bold text-green-600">
+            {stats.completed}
+          </div>
           <div className="text-xs text-gray-500">已完成</div>
         </div>
         <div className="text-center p-3 bg-yellow-50 rounded-lg">
-          <div className="text-2xl font-bold text-yellow-600">{stats.processing + stats.pending}</div>
+          <div className="text-2xl font-bold text-yellow-600">
+            {stats.processing + stats.pending}
+          </div>
           <div className="text-xs text-gray-500">进行中</div>
         </div>
         <div className="text-center p-3 bg-red-50 rounded-lg">
@@ -94,7 +99,7 @@ export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) 
           </div>
           <div className="text-sm text-gray-500">成功率</div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-            <div 
+            <div
               className="bg-green-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${stats.successRate * 100}%` }}
             ></div>
@@ -116,23 +121,36 @@ export const SyncStatsCard: React.FC<SyncStatsCardProps> = ({ stats, loading }) 
             {Object.entries(stats.byStatus)
               .sort(([, a], [, b]) => b - a)
               .map(([status, count]) => {
-                const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                const percentage =
+                  stats.total > 0 ? (count / stats.total) * 100 : 0;
                 return (
-                  <div key={status} className="flex items-center justify-between">
+                  <div
+                    key={status}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(status)}`}>
-                        {status === 'NEW' ? '新建' :
-                         status === 'SPLIT_OK' ? '已分割' :
-                         status === 'EMBED_OK' ? '已嵌入' :
-                         status === 'SYNCED' ? '已同步' :
-                         status === 'FAILED' ? '失败' :
-                         status}
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(status)}`}
+                      >
+                        {status === 'NEW'
+                          ? '新建'
+                          : status === 'SPLIT_OK'
+                            ? '已分割'
+                            : status === 'EMBED_OK'
+                              ? '已嵌入'
+                              : status === 'SYNCED'
+                                ? '已同步'
+                                : status === 'FAILED'
+                                  ? '失败'
+                                  : status}
                       </span>
-                      <span className="text-sm text-gray-600">{count} 个任务</span>
+                      <span className="text-sm text-gray-600">
+                        {count} 个任务
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${percentage}%` }}
                         ></div>

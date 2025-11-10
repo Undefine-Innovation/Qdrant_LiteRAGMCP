@@ -1,4 +1,4 @@
-import { BatchUploadProgress } from '../types';
+import { BatchUploadProgress } from '@/types';
 
 interface UploadResultsProps {
   results: BatchUploadProgress['results'];
@@ -16,9 +16,7 @@ const UploadResults = ({ results, className = '' }: UploadResultsProps) => {
 
   return (
     <div className={`mt-4 ${className}`}>
-      <h3 className="text-sm font-medium text-secondary-900 mb-2">
-        上传结果
-      </h3>
+      <h3 className="text-sm font-medium text-secondary-900 mb-2">上传结果</h3>
       <div className="border border-secondary-200 rounded-md divide-y divide-secondary-200 max-h-60 overflow-y-auto">
         {results.map((result, index) => (
           <div

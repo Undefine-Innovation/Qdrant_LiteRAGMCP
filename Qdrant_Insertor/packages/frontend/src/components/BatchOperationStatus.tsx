@@ -1,32 +1,105 @@
-import React, { useState } from 'react';
-import { useAppStore } from '../stores/useAppStore';
+import React, { useState, useMemo } from 'react';
 import BatchOperationProgressComponent from './BatchOperationProgress';
 import BatchOperationHistory from './BatchOperationHistory';
 import Modal from './Modal';
+import { useAppStore } from '../stores/useAppStore';
+
+interface ActiveOperation {
+  id: string;
+  type: string;
+  status: string;
+  progress: number;
+  total: number;
+  processed: number;
+  message: string;
+}
 
 /**
  * 批量操作状态管理组件
  * 全局显示批量操作进度和历史记录
  */
 const BatchOperationStatus: React.FC = () => {
-  const { batchUploadProgress, batchOperationProgress, batchOperationHistory } =
-    useAppStore();
+  const { batchUploadProgress, batchOperationProgress, batchOperationHistory } = useAppStore();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
 
   // 判断是否有正在进行的批量操作
-  const hasActiveOperation = batchUploadProgress || batchOperationProgress;
+  const hasActiveOperation = Boolean(batchUploadProgress || batchOperationProgress);
 
   // 获取当前操作的进度
   const currentProgress = batchOperationProgress || batchUploadProgress;
 
+  // 使用 useMemo 优化活动操作的计算
+  const activeOperations: ActiveOperation[] = useMemo(() => {
+    const operations: ActiveOperation[] = [];
+    
+    if (batchOperationProgress && batchOperationProgress.status === 'processing') {
+      operations.push({
+        id: `batch-${batchOperationProgress.operationId}`,
+        type: batchOperationProgress.type,
+        status: batchOperationProgress.status,
+        progress: batchOperationProgress.percentage || 0,
+        total: batchOperationProgress.total,
+        processed: batchOperationProgress.processed,
+        message: `正在${batchOperationProgress.type === 'upload' ? '上传' : '删除'}文档...`,
+      });
+    }
+
+    if (batchUploadProgress && batchUploadProgress.status === 'processing') {
+      operations.push({
+        id: 'batch-upload',
+        type: 'upload',
+        status: 'processing',
+        progress: batchUploadProgress.percentage,
+        total: batchUploadProgress.total,
+        processed: batchUploadProgress.processed,
+        message: '正在上传文档...',
+      });
+    }
+
+    return operations;
+  }, [batchOperationProgress, batchUploadProgress]);
+
   return (
-    <>
+    <div data-testid="batch-operation-status">
+      <>
+      {/* 当前进行中的批量操作 */}
+      {activeOperations.length > 0 && (
+        <div className="fixed bottom-32 right-6 z-40 space-y-2">
+          {activeOperations.map((operation, index) => (
+            <div
+              key={operation.id || `batch-${index}`}
+              data-testid={`batch-operation-batch-${index + 1}`}
+              className="bg-white rounded-lg shadow-lg p-4 max-w-xs"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {operation.message}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {operation.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>{operation.processed} / {operation.total}</span>
+                <span>{operation.progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${operation.progress}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 浮动按钮 */}
       <div className="fixed bottom-6 right-6 z-50 space-y-3">
         {/* 历史记录按钮 */}
-        {batchOperationHistory.length > 0 && (
+        {batchOperationHistory && batchOperationHistory.length > 0 && (
           <button
             onClick={() => setShowHistoryModal(true)}
             className="bg-white rounded-full shadow-lg p-3 hover:shadow-xl transition-shadow"
@@ -45,7 +118,7 @@ const BatchOperationStatus: React.FC = () => {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            {batchOperationHistory.length > 0 && (
+            {batchOperationHistory && batchOperationHistory.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {batchOperationHistory.length}
               </span>
@@ -144,7 +217,8 @@ const BatchOperationStatus: React.FC = () => {
           </div>
         </div>
       )}
-    </>
+      </>
+    </div>
   );
 };
 

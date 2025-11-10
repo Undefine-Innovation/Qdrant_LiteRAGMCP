@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ApiError } from '../services/api';
-import { useAppStore } from '../stores/useAppStore';
+import { ApiError } from '@/services/api';
+import { useAppStore } from '@/stores/useAppStore';
 
 /**
  * API 请求状态接口
@@ -265,6 +265,12 @@ export const usePaginatedApi = <T = unknown>(
 
   useEffect(() => {
     if (currentPage > 0) {
+      console.log(
+        '[usePaginatedApi] Executing API call - Page:',
+        currentPage,
+        'Limit:',
+        currentLimit,
+      );
       execute();
     }
   }, [currentPage, currentLimit, execute]);

@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { transformErrorResponse } from '../utils/typeTransformers.js';
 
 /**
  * API 响应接口
@@ -8,6 +9,9 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   message?: string;
   error?: string;
+  // 新增字段以匹配后端错误响应
+  code?: string;
+  details?: unknown;
 }
 
 /**
@@ -66,12 +70,8 @@ class ApiClient {
         return response;
       },
       error => {
-        // 统一错误处理
-        const apiError: ApiError = {
-          code: error.response?.status || 'NETWORK_ERROR',
-          message: error.response?.data?.message || error.message || '请求失败',
-          details: error.response?.data?.details,
-        };
+        // 使用转换函数统一处理错误响应
+        const apiError = transformErrorResponse(error.response?.data || error);
 
         console.error('API Error:', apiError);
         return Promise.reject(apiError);
@@ -114,7 +114,10 @@ class ApiClient {
   /**
    * DELETE 请求
    */
-  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(
+    url: string,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
     const response = await this.client.delete<T>(url, config);
     return response.data;
   }

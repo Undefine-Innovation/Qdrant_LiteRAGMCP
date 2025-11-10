@@ -5,6 +5,12 @@ import {
   UploadDocumentResponse,
   PaginatedResponse,
 } from '../types/index.js';
+import {
+  transformDocument,
+  transformDocuments,
+  transformChunks,
+} from '../utils/typeTransformers.js';
+import { RetryHandler } from '../utils/errorHandler.js';
 
 /**
  * 文档相关API
@@ -16,14 +22,73 @@ export const documentsApi = {
   getDocuments: async (
     params?: PaginationQueryParams & { collectionId?: string },
   ): Promise<Document[] | PaginatedResponse<Document>> => {
-    return apiClient.get('/docs', { params });
+    const response = await RetryHandler.withRetry(
+      () => apiClient.get('/docs', { params }),
+      {
+        maxRetries: 2,
+        delay: 1000,
+        shouldRetry: error => {
+          const code = (error as { code?: string })?.code;
+          return (
+            code === 'NETWORK_ERROR' ||
+            code === 'INTERNAL_SERVER_ERROR' ||
+            code === 'SERVICE_UNAVAILABLE'
+          );
+        },
+      },
+    );
+
+    // 处理分页响应
+    if (response && typeof response === 'object' && !Array.isArray(response)) {
+      const responseObj = response as Record<string, unknown>;
+      if ('data' in responseObj) {
+        return {
+          data: transformDocuments((responseObj.data as unknown[]) || []),
+          pagination: ((responseObj.pagination as unknown) || {
+            page: 1,
+            limit: 20,
+            total: 0,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false,
+          }) as unknown as {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+          },
+        };
+      }
+    }
+
+    // 处理数组响应
+    return Array.isArray(response)
+      ? transformDocuments(response)
+      : transformDocuments([]);
   },
 
   /**
    * 获取单个文档
    */
   getDocument: async (id: string): Promise<Document> => {
-    return apiClient.get(`/docs/${id}`);
+    const response = await RetryHandler.withRetry(
+      () => apiClient.get(`/docs/${id}`),
+      {
+        maxRetries: 2,
+        delay: 1000,
+        shouldRetry: error => {
+          const code = (error as { code?: string })?.code;
+          return (
+            code === 'NETWORK_ERROR' ||
+            code === 'INTERNAL_SERVER_ERROR' ||
+            code === 'SERVICE_UNAVAILABLE'
+          );
+        },
+      },
+    );
+    return transformDocument(response as Record<string, unknown>);
   },
 
   /**
@@ -35,7 +100,22 @@ export const documentsApi = {
   ): Promise<UploadDocumentResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.upload(`/collections/${collectionId}/docs`, formData);
+    const response = await RetryHandler.withRetry(
+      () => apiClient.upload(`/collections/${collectionId}/docs`, formData),
+      {
+        maxRetries: 1,
+        delay: 2000,
+        shouldRetry: error => {
+          const code = (error as { code?: string })?.code;
+          return (
+            code === 'NETWORK_ERROR' ||
+            code === 'INTERNAL_SERVER_ERROR' ||
+            code === 'SERVICE_UNAVAILABLE'
+          );
+        },
+      },
+    );
+    return response as UploadDocumentResponse;
   },
 
   /**
@@ -44,28 +124,58 @@ export const documentsApi = {
   uploadDocument: async (file: File): Promise<UploadDocumentResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.upload('/upload', formData);
+    const response = await RetryHandler.withRetry(
+      () => apiClient.upload('/upload', formData),
+      {
+        maxRetries: 1,
+        delay: 2000,
+        shouldRetry: error => {
+          const code = (error as { code?: string })?.code;
+          return (
+            code === 'NETWORK_ERROR' ||
+            code === 'INTERNAL_SERVER_ERROR' ||
+            code === 'SERVICE_UNAVAILABLE'
+          );
+        },
+      },
+    );
+    return response as UploadDocumentResponse;
   },
 
   /**
    * 重新同步文档
    */
   resyncDocument: async (id: string): Promise<Document> => {
-    return apiClient.put(`/docs/${id}/resync`);
+    const response = await apiClient.put(`/docs/${id}/resync`);
+    return transformDocument(response as Record<string, unknown>);
   },
 
   /**
    * 删除文档
    */
   deleteDocument: async (id: string): Promise<void> => {
-    return apiClient.delete(`/docs/${id}`);
+    return RetryHandler.withRetry(() => apiClient.delete(`/docs/${id}`), {
+      maxRetries: 2,
+      delay: 1000,
+      shouldRetry: error => {
+        const code = (error as { code?: string })?.code;
+        return (
+          code === 'NETWORK_ERROR' ||
+          code === 'INTERNAL_SERVER_ERROR' ||
+          code === 'SERVICE_UNAVAILABLE'
+        );
+      },
+    });
   },
 
   /**
    * 获取文档的块列表
    */
   getDocumentChunks: async (id: string): Promise<Chunk[]> => {
-    return apiClient.get(`/docs/${id}/chunks`);
+    const response = await apiClient.get(`/docs/${id}/chunks`);
+    return Array.isArray(response)
+      ? transformChunks(response)
+      : transformChunks([]);
   },
 
   /**
@@ -75,7 +185,37 @@ export const documentsApi = {
     id: string,
     params?: PaginationQueryParams,
   ): Promise<Chunk[] | PaginatedResponse<Chunk>> => {
-    return apiClient.get(`/docs/${id}/chunks`, { params });
+    const response = await apiClient.get(`/docs/${id}/chunks`, { params });
+
+    // 处理分页响应
+    if (response && typeof response === 'object' && !Array.isArray(response)) {
+      const responseObj = response as Record<string, unknown>;
+      if ('data' in responseObj) {
+        return {
+          data: transformChunks((responseObj.data as unknown[]) || []),
+          pagination: ((responseObj.pagination as unknown) || {
+            page: 1,
+            limit: 20,
+            total: 0,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false,
+          }) as unknown as {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+          },
+        };
+      }
+    }
+
+    // 处理数组响应
+    return Array.isArray(response)
+      ? transformChunks(response)
+      : transformChunks([]);
   },
 
   /**
@@ -103,10 +243,10 @@ export const documentsApi = {
     mimeType: string;
     filename: string;
   }> => {
-    const response = await apiClient.get(`/docs/${id}/download`, {
+    const response = (await apiClient.get(`/docs/${id}/download`, {
       params,
       responseType: 'blob',
-    }) as any;
+    })) as { data: Blob; headers: Record<string, string> };
 
     // 从响应头获取文件名
     const contentDisposition = response.headers?.['content-disposition'] || '';
@@ -118,9 +258,10 @@ export const documentsApi = {
       : `document.${params?.format || 'original'}`;
 
     return {
-      content: response as Blob,
+      content: response.data,
       mimeType:
-        (response.headers?.['content-type'] as string) || 'application/octet-stream',
+        (response.headers?.['content-type'] as string) ||
+        'application/octet-stream',
       filename,
     };
   },

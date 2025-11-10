@@ -7,7 +7,9 @@ interface ScrapeStatsProps {
   refreshTrigger?: number;
 }
 
-export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) => {
+export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({
+  refreshTrigger,
+}) => {
   const [stats, setStats] = useState<ScrapeStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) 
   const loadStats = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await scrapeApiService.getScrapeStats();
       if (response.success) {
@@ -24,7 +26,9 @@ export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) 
         setError('Failed to load statistics');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load statistics');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load statistics',
+      );
     } finally {
       setLoading(false);
     }
@@ -66,9 +70,7 @@ export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) 
   if (!stats) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
-        <div className="text-center text-gray-500">
-          暂无统计数据
-        </div>
+        <div className="text-center text-gray-500">暂无统计数据</div>
       </div>
     );
   }
@@ -97,7 +99,7 @@ export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) 
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {statItems.map((item) => (
+        {statItems.map(item => (
           <div key={item.label} className="text-center">
             <div className={`text-2xl font-bold ${item.color}`}>
               {item.value}
@@ -118,10 +120,9 @@ export const ScrapeStatsCard: React.FC<ScrapeStatsProps> = ({ refreshTrigger }) 
           <div>
             <span className="text-gray-500">平均耗时:</span>
             <span className="ml-2 font-medium text-blue-600">
-              {stats.avgDuration > 0 
+              {stats.avgDuration > 0
                 ? `${(stats.avgDuration / 1000).toFixed(1)}s`
-                : '-'
-              }
+                : '-'}
             </span>
           </div>
         </div>

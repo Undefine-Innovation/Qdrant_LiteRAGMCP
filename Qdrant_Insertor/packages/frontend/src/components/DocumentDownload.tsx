@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { documentsApi } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
+import type { ApiError } from '../services/api-client';
 
 interface DocumentDownloadProps {
   documentId: string;
@@ -19,7 +20,7 @@ const DocumentDownload = ({
   className = '',
 }: DocumentDownloadProps) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | ApiError | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
 
   // 处理文档下载
@@ -102,7 +103,11 @@ const DocumentDownload = ({
 
       {error && (
         <div className="mb-4">
-          <ErrorMessage message={error} />
+          <ErrorMessage
+            error={error}
+            showCloseButton={false}
+            autoHide={false}
+          />
         </div>
       )}
 

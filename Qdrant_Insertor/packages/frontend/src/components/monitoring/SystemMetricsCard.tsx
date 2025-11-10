@@ -6,12 +6,15 @@ interface SystemMetricsCardProps {
   loading?: boolean;
 }
 
-export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({ metrics, loading }) => {
+export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({
+  metrics,
+  loading,
+}) => {
   const formatBytes = (bytes: number) => {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     if (bytes === 0) return '0 B';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const getUsageColor = (percentage: number) => {
@@ -21,18 +24,18 @@ export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({ metrics, l
     return 'bg-green-500';
   };
 
-  const ProgressBar: React.FC<{ percentage: number; label: string; value: string }> = ({ 
-    percentage, 
-    label, 
-    value 
-  }) => (
+  const ProgressBar: React.FC<{
+    percentage: number;
+    label: string;
+    value: string;
+  }> = ({ percentage, label, value }) => (
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
         <span className="text-gray-700 font-medium">{label}</span>
         <span className="text-gray-600">{value}</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
+        <div
           className={`h-2 rounded-full transition-all duration-300 ${getUsageColor(percentage)}`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         ></div>
@@ -61,9 +64,7 @@ export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({ metrics, l
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">系统指标</h3>
-        <div className="text-center text-gray-500">
-          无法获取系统指标数据
-        </div>
+        <div className="text-center text-gray-500">无法获取系统指标数据</div>
       </div>
     );
   }
@@ -71,7 +72,7 @@ export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({ metrics, l
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">系统指标</h3>
-      
+
       <div className="space-y-6">
         {/* CPU 使用率 */}
         <ProgressBar
@@ -99,15 +100,21 @@ export const SystemMetricsCard: React.FC<SystemMetricsCardProps> = ({ metrics, l
           <h4 className="text-sm font-medium text-gray-700 mb-3">数据库</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{metrics.database.connections}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {metrics.database.connections}
+              </div>
               <div className="text-xs text-gray-500">活跃连接</div>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{formatBytes(metrics.database.size)}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatBytes(metrics.database.size)}
+              </div>
               <div className="text-xs text-gray-500">数据库大小</div>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{metrics.database.queryTime}ms</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {metrics.database.queryTime}ms
+              </div>
               <div className="text-xs text-gray-500">平均查询时间</div>
             </div>
           </div>

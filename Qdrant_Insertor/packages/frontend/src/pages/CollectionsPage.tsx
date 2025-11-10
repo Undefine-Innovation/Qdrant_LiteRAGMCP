@@ -101,9 +101,18 @@ const CollectionsPage = () => {
   }, []);
 
   const collections = Array.isArray(collectionsState.data)
-    ? collectionsState.data as any[]
-    : (collectionsState.data as any)?.data || [];
-  const pagination = (collectionsState.data as any)?.pagination;
+    ? (collectionsState.data as unknown[])
+    : (collectionsState.data as { data?: unknown[] })?.data || [];
+  const pagination = (
+    collectionsState.data as {
+      pagination?: {
+        page: number;
+        totalPages: number;
+        total: number;
+        limit: number;
+      };
+    }
+  )?.pagination;
 
   // 调试日志
   console.log('CollectionsPage - collectionsState:', collectionsState);
@@ -126,13 +135,14 @@ const CollectionsPage = () => {
         <button
           onClick={() => setShowBatchDeleteModal(true)}
           className="btn btn-danger"
+          data-testid="batch-delete-collections-button"
         >
           批量删除集合
         </button>
       </div>
 
       <CollectionManager
-        collections={collections}
+        collections={collections as any}
         loading={collectionsState.loading}
         error={collectionsState.error}
         onRefresh={handleRefresh}
@@ -161,13 +171,15 @@ const CollectionsPage = () => {
         title="批量删除集合"
         size="xl"
       >
-        <BatchDelete
-          mode="collections"
-          onComplete={() => {
-            setShowBatchDeleteModal(false);
-            loadCollections();
-          }}
-        />
+        <div data-testid="batch-delete-modal">
+          <BatchDelete
+            mode="collections"
+            onComplete={() => {
+              setShowBatchDeleteModal(false);
+              loadCollections();
+            }}
+          />
+        </div>
       </Modal>
     </div>
   );

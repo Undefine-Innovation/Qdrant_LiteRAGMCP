@@ -8,6 +8,7 @@ import Pagination from './Pagination';
 import DocumentPreview from './DocumentPreview';
 import DocumentDownload from './DocumentDownload';
 import DocumentThumbnail from './DocumentThumbnail';
+import type { ApiError } from '../services/api-client';
 
 // 文档块接口（扩展后端Chunk类型）
 interface DocumentChunk {
@@ -41,7 +42,7 @@ const DocumentDetail = ({
 }: DocumentDetailProps) => {
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | ApiError | null>(null);
   const [activeTab, setActiveTab] = useState<
     'content' | 'chunks' | 'preview' | 'download'
   >('content');
@@ -50,42 +51,69 @@ const DocumentDetail = ({
   );
 
   // 使用分页Hook加载文档块
-  const {
-    state: chunksState,
-    loadPage: loadChunksPage,
-  } = usePaginatedApi(async (page: number, limit: number) => {
-    const response = await documentsApi.getDocumentChunksPaginated(documentId, {
-      page,
-      limit,
-      sort: 'chunkIndex',
-      order: 'asc',
-    });
+  const { state: chunksState, loadPage: loadChunksPage } = usePaginatedApi(
+    async (page: number, limit: number) => {
+      const response = await documentsApi.getDocumentChunksPaginated(
+        documentId,
+        {
+          page,
+          limit,
+          sort: 'chunkIndex',
+          order: 'asc',
+        },
+      );
 
-    // 处理块数据，将后端格式转换为前端格式
-    const responseData = Array.isArray(response) ? response : (response as any).data || [];
-    const chunksData = responseData.map((chunk: any) => ({
-      id: chunk.pointId || chunk.id,
-      pointId: chunk.pointId || chunk.id,
-      docId: chunk.docId,
-      content: chunk.content,
-      chunkIndex: chunk.chunkIndex || chunk.index,
-      index: chunk.chunkIndex || chunk.index,
-      tokenCount: Math.floor(chunk.content.length / 4), // 估算token数量
-    }));
+      // 处理块数据，将后端格式转换为前端格式
+      const responseData = Array.isArray(response)
+        ? response
+        : (response as { data?: unknown[] }).data || [];
+      const chunksData = responseData.map((chunk: unknown) => {
+        const chunkObj = chunk as {
+          pointId?: string;
+          id?: string;
+          docId?: string;
+          content?: string;
+          chunkIndex?: number;
+          index?: number;
+        };
+        return {
+          id: chunkObj.pointId || chunkObj.id || '',
+          pointId: chunkObj.pointId || chunkObj.id || '',
+          docId: chunkObj.docId || '',
+          content: chunkObj.content || '',
+          chunkIndex: chunkObj.chunkIndex || chunkObj.index || 0,
+          index: chunkObj.chunkIndex || chunkObj.index || 0,
+          tokenCount: Math.floor((chunkObj.content || '').length / 4), // 估算token数量
+        };
+      });
 
-    return {
-      data: chunksData,
-      total: (response as any).pagination?.total || 0,
-      page: (response as any).pagination?.page || 1,
-      limit: (response as any).pagination?.limit || 20,
-      totalPages: (response as any).pagination?.totalPages || 1,
-    };
-  });
+      const paginationInfo =
+        (
+          response as {
+            pagination?: {
+              total?: number;
+              page?: number;
+              limit?: number;
+              totalPages?: number;
+            };
+          }
+        ).pagination || {};
+
+      return {
+        data: chunksData,
+        total: paginationInfo.total || 0,
+        page: paginationInfo.page || 1,
+        limit: paginationInfo.limit || 20,
+        totalPages: paginationInfo.totalPages || 1,
+      };
+    },
+  );
 
   // 加载文档详情
   useEffect(() => {
     const loadDocumentDetail = async () => {
       try {
+        console.log('[DocumentDetail] Loading document:', documentId);
         setLoading(true);
         setError(null);
 
@@ -142,7 +170,7 @@ const DocumentDetail = ({
   if (error) {
     return (
       <div className="space-y-4">
-        <ErrorMessage message={error} />
+        <ErrorMessage error={error} showCloseButton={false} autoHide={false} />
         {onClose && (
           <button onClick={onClose} className="btn btn-secondary">
             返回
@@ -266,7 +294,11 @@ const DocumentDetail = ({
                 : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
             }`}
           >
-            文档块 ({(chunksState.data as any)?.total || (chunksState.data as any)?.length || 0})
+            文档块 (
+            {(chunksState.data as { total?: number })?.total ||
+              (chunksState.data as { length?: number })?.length ||
+              0}
+            )
           </button>
           <button
             onClick={() => setActiveTab('download')}
@@ -303,7 +335,8 @@ const DocumentDetail = ({
           />
         ) : (
           <div className="space-y-4">
-            {!(chunksState.data as any)?.data || (chunksState.data as any)?.data?.length === 0 ? (
+            {!(chunksState.data as { data?: unknown[] })?.data ||
+            (chunksState.data as { data?: unknown[] })?.data?.length === 0 ? (
               <div className="text-center py-8 text-secondary-500">
                 该文档尚未被分割成块
               </div>
@@ -315,47 +348,87 @@ const DocumentDetail = ({
                     文档块列表
                   </h3>
                   <div className="max-h-96 overflow-y-auto space-y-2">
-                    {(chunksState.data as any)?.data?.map((chunk: any) => (
-                      <div
-                        key={chunk.id}
-                        onClick={() => setSelectedChunk(chunk)}
-                        className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                          selectedChunk?.id === chunk.id
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-secondary-200 hover:bg-secondary-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-secondary-900">
-                            块 #{chunk.index + 1}
-                          </span>
-                          <span className="text-xs text-secondary-500">
-                            {chunk.tokenCount} tokens
-                          </span>
-                        </div>
-                        <p className="text-sm text-secondary-600 line-clamp-3">
-                          {chunk.content}
-                        </p>
-                      </div>
-                    ))}
+                    {(chunksState.data as { data?: unknown[] })?.data?.map(
+                      (chunk: unknown) => {
+                        const chunkObj = chunk as {
+                          id: string;
+                          index: number;
+                          content: string;
+                          tokenCount: number;
+                        };
+
+                        // 转换为DocumentChunk类型
+                        const documentChunk: DocumentChunk = {
+                          id: chunkObj.id,
+                          pointId: chunkObj.id,
+                          docId: document.docId,
+                          chunkIndex: chunkObj.index,
+                          content: chunkObj.content,
+                          titleChain: '',
+                          tokenCount: chunkObj.tokenCount,
+                          index: chunkObj.index,
+                        };
+
+                        return (
+                          <div
+                            key={chunkObj.id}
+                            onClick={() => setSelectedChunk(documentChunk)}
+                            className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                              selectedChunk?.id === chunkObj.id
+                                ? 'border-primary-500 bg-primary-50'
+                                : 'border-secondary-200 hover:bg-secondary-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-secondary-900">
+                                块 #{chunkObj.index + 1}
+                              </span>
+                              <span className="text-xs text-secondary-500">
+                                {chunkObj.tokenCount} tokens
+                              </span>
+                            </div>
+                            <p className="text-sm text-secondary-600 line-clamp-3">
+                              {chunkObj.content}
+                            </p>
+                          </div>
+                        );
+                      },
+                    )}
                   </div>
 
                   {/* 分页组件 */}
-                  {(chunksState.data as any) && (chunksState.data as any).totalPages > 1 && (
-                    <div className="mt-4">
-                      <Pagination
-                        currentPage={(chunksState.data as any).page}
-                        totalPages={(chunksState.data as any).totalPages}
-                        total={(chunksState.data as any).total}
-                        limit={(chunksState.data as any).limit}
-                        onPageChange={page =>
-                          loadChunksPage(page, (chunksState.data as any)?.limit || 20)
-                        }
-                        onLimitChange={limit => loadChunksPage(1, limit)}
-                        loading={chunksState.loading}
-                      />
-                    </div>
-                  )}
+                  {(chunksState.data as { totalPages?: number }) &&
+                    (chunksState.data as { totalPages: number }).totalPages >
+                      1 && (
+                      <div className="mt-4">
+                        <Pagination
+                          currentPage={
+                            (chunksState.data as { page?: number }).page || 1
+                          }
+                          totalPages={
+                            (chunksState.data as { totalPages: number })
+                              .totalPages
+                          }
+                          total={
+                            (chunksState.data as { total?: number }).total || 0
+                          }
+                          limit={
+                            (chunksState.data as { limit?: number }).limit || 20
+                          }
+                          onPageChange={page => {
+                            loadChunksPage(
+                              page,
+                              (chunksState.data as { limit?: number })?.limit ||
+                                20,
+                            );
+                          }}
+                          onLimitChange={limit => {
+                            loadChunksPage(1, limit);
+                          }}
+                          loading={chunksState.loading}
+                        />
+                      </div>
+                    )}
                 </div>
 
                 {/* 块详情 */}

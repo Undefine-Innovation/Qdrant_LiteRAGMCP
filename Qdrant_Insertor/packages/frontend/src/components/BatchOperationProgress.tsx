@@ -156,20 +156,28 @@ const BatchOperationProgressComponent: React.FC<
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700">详细信息</h4>
           <div className="bg-gray-50 rounded-md p-3 text-sm text-gray-600 max-h-32 overflow-y-auto">
-            {progress.details.map((detail, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    detail.success ? 'bg-green-500' : 'bg-red-500'
-                  }`}
-                />
-                <span
-                  className={detail.success ? 'text-green-700' : 'text-red-700'}
-                >
-                  {detail.message}
-                </span>
-              </div>
-            ))}
+            {progress.details.map((detail: unknown, index: number) => {
+              const detailObj = detail as {
+                success?: boolean;
+                message?: string;
+              };
+              return (
+                <div key={index} className="flex items-center space-x-2">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      detailObj.success ? 'bg-green-500' : 'bg-red-500'
+                    }`}
+                  />
+                  <span
+                    className={
+                      detailObj.success ? 'text-green-700' : 'text-red-700'
+                    }
+                  >
+                    {detailObj.message || '未知错误'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

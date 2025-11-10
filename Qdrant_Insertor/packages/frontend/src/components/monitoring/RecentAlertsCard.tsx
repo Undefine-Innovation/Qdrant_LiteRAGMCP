@@ -14,7 +14,10 @@ interface RecentAlertsCardProps {
   loading?: boolean;
 }
 
-export const RecentAlertsCard: React.FC<RecentAlertsCardProps> = ({ alerts, loading }) => {
+export const RecentAlertsCard: React.FC<RecentAlertsCardProps> = ({
+  alerts,
+  loading,
+}) => {
   const getSeverityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
       case 'critical':
@@ -46,7 +49,7 @@ export const RecentAlertsCard: React.FC<RecentAlertsCardProps> = ({ alerts, load
   const formatTime = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
-    
+
     if (diff < 60000) {
       return '刚刚';
     } else if (diff < 3600000) {
@@ -58,7 +61,7 @@ export const RecentAlertsCard: React.FC<RecentAlertsCardProps> = ({ alerts, load
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     }
   };
@@ -95,44 +98,63 @@ export const RecentAlertsCard: React.FC<RecentAlertsCardProps> = ({ alerts, load
       {alerts.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-gray-400 mb-2">
-            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="mx-auto h-12 w-12"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
           <div className="text-gray-500 text-sm">暂无告警信息</div>
         </div>
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {alerts.map((alert) => (
-            <div 
-              key={alert.id} 
+          {alerts.map(alert => (
+            <div
+              key={alert.id}
               className={`border rounded-lg p-3 ${getSeverityColor(alert.severity)}`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(alert.severity).replace('border-', 'border ')}`}>
-                    {alert.severity === 'critical' ? '严重' :
-                     alert.severity === 'high' ? '高' :
-                     alert.severity === 'medium' ? '中等' :
-                     alert.severity === 'low' ? '低' :
-                     alert.severity}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(alert.severity).replace('border-', 'border ')}`}
+                  >
+                    {alert.severity === 'critical'
+                      ? '严重'
+                      : alert.severity === 'high'
+                        ? '高'
+                        : alert.severity === 'medium'
+                          ? '中等'
+                          : alert.severity === 'low'
+                            ? '低'
+                            : alert.severity}
                   </span>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(alert.status)}`}>
-                    {alert.status === 'active' ? '活跃' :
-                     alert.status === 'resolved' ? '已解决' :
-                     alert.status === 'acknowledged' ? '已确认' :
-                     alert.status}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(alert.status)}`}
+                  >
+                    {alert.status === 'active'
+                      ? '活跃'
+                      : alert.status === 'resolved'
+                        ? '已解决'
+                        : alert.status === 'acknowledged'
+                          ? '已确认'
+                          : alert.status}
                   </span>
                 </div>
                 <span className="text-xs text-gray-500">
                   {formatTime(alert.triggeredAt)}
                 </span>
               </div>
-              
-              <div className="text-sm text-gray-800 mb-1">
-                {alert.message}
-              </div>
-              
+
+              <div className="text-sm text-gray-800 mb-1">{alert.message}</div>
+
               <div className="text-xs text-gray-500">
                 规则ID: {alert.ruleId}
               </div>

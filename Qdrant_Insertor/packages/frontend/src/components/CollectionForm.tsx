@@ -36,6 +36,30 @@ const CollectionForm = ({
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) {
       errors.name = '集合名称不能为空';
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.name)) {
+      errors.name = '集合名称只能包含字母、数字、下划线、连字符和点';
+    } else if (
+      [
+        'system',
+        'admin',
+        'root',
+        'default',
+        'public',
+        'private',
+        'api',
+        'config',
+        'settings',
+        'temp',
+        'tmp',
+        'test',
+        'dev',
+        'prod',
+        'staging',
+      ].includes(formData.name.toLowerCase())
+    ) {
+      errors.name = '这是一个保留的集合名称，不能使用';
+    } else if (formData.name.startsWith('.') || formData.name.endsWith('.')) {
+      errors.name = '集合名称不能以点开头或结尾';
     }
 
     if (Object.keys(errors).length > 0) {

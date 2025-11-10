@@ -203,36 +203,51 @@ const BatchOperationHistory: React.FC<BatchOperationHistoryProps> = ({
                 </div>
 
                 {/* 展开/收起按钮 */}
-                {(operation as any).details && (operation as any).details.length > 0 && (
-                  <button
-                    onClick={() => toggleExpanded(operation.id)}
-                    className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    {expandedItems.has(operation.id) ? '收起详情' : '查看详情'}
-                  </button>
-                )}
+                {(operation as unknown as { details?: unknown[] }).details &&
+                  (operation as unknown as { details: unknown[] }).details
+                    .length > 0 && (
+                    <button
+                      onClick={() => toggleExpanded(operation.id)}
+                      className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      {expandedItems.has(operation.id)
+                        ? '收起详情'
+                        : '查看详情'}
+                    </button>
+                  )}
 
                 {/* 详细信息 */}
-                {expandedItems.has(operation.id) && (operation as any).details && (
-                  <div className="bg-gray-50 rounded-md p-3 text-sm space-y-1 max-h-32 overflow-y-auto">
-                    {(operation as any).details.map((detail: any, index: number) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            detail.success ? 'bg-green-500' : 'bg-red-500'
-                          }`}
-                        />
-                        <span
-                          className={
-                            detail.success ? 'text-green-700' : 'text-red-700'
-                          }
+                {expandedItems.has(operation.id) &&
+                  (operation as unknown as { details: unknown[] }).details && (
+                    <div className="bg-gray-50 rounded-md p-3 text-sm space-y-1 max-h-32 overflow-y-auto">
+                      {(
+                        operation as unknown as { details: unknown[] }
+                      ).details.map((detail: unknown, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-2"
                         >
-                          {detail.message}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              (detail as { success?: boolean }).success
+                                ? 'bg-green-500'
+                                : 'bg-red-500'
+                            }`}
+                          />
+                          <span
+                            className={
+                              (detail as { success?: boolean }).success
+                                ? 'text-green-700'
+                                : 'text-red-700'
+                            }
+                          >
+                            {(detail as { message?: string }).message ||
+                              '未知错误'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
