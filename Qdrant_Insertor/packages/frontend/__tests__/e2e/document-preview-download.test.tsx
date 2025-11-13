@@ -12,11 +12,7 @@ import DocumentPreview from '../../src/components/DocumentPreview';
 import DocumentDownload from '../../src/components/DocumentDownload';
 import DocumentsPage from '../../src/pages/DocumentsPage';
 import { createMockDocumentsApi } from './mocks/api-mocks';
-import {
-  TestDataFactory,
-  ComponentTestHelpers,
-  AssertionHelpers,
-} from './utils/test-helpers';
+import { TestDataFactory, AssertionHelpers } from './utils/test-helpers';
 
 // 模拟API
 jest.mock('../../src/services/api', () => ({

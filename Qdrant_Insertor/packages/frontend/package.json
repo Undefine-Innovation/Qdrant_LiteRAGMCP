@@ -8,6 +8,7 @@
     "dev:preview": "vite preview",
     "build:compile": "npx tsc --noEmit && vite build",
     "build:check": "tsc --noEmit",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:check": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\"",

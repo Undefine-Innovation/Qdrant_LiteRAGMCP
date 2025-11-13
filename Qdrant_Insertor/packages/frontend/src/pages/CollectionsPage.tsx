@@ -3,6 +3,8 @@ import {
   CreateCollectionRequest,
   UpdateCollectionRequest,
   PaginationParams,
+  PaginationQueryParams,
+  Collection,
 } from '../types';
 import { useApi } from '../hooks/useApi';
 import { collectionsApi } from '../services/api';
@@ -26,7 +28,7 @@ const CollectionsPage = () => {
 
   // 获取集合列表
   const { state: collectionsState, execute: loadCollections } = useApi(
-    () => collectionsApi.getCollections(paginationParams as any),
+    () => collectionsApi.getCollections(paginationParams as PaginationQueryParams),
     {
       maxRetries: 3,
       retryDelay: 1000,
@@ -101,8 +103,8 @@ const CollectionsPage = () => {
   }, []);
 
   const collections = Array.isArray(collectionsState.data)
-    ? (collectionsState.data as unknown[])
-    : (collectionsState.data as { data?: unknown[] })?.data || [];
+    ? (collectionsState.data as Collection[])
+    : (collectionsState.data as { data?: Collection[] })?.data || [];
   const pagination = (
     collectionsState.data as {
       pagination?: {
@@ -142,7 +144,7 @@ const CollectionsPage = () => {
       </div>
 
       <CollectionManager
-        collections={collections as any}
+        collections={collections}
         loading={collectionsState.loading}
         error={collectionsState.error}
         onRefresh={handleRefresh}

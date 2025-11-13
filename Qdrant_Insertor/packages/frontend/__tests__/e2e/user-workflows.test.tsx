@@ -15,11 +15,7 @@ import {
   createMockSearchApi,
   createMockBatchApi,
 } from './mocks/api-mocks';
-import {
-  TestDataFactory,
-  ComponentTestHelpers,
-  AssertionHelpers,
-} from './utils/test-helpers';
+import { TestDataFactory, AssertionHelpers } from './utils/test-helpers';
 
 // 模拟API
 jest.mock('../../src/services/api', () => ({
@@ -81,7 +77,6 @@ describe('用户工作流测试', () => {
         collectionsApi,
         documentsApi,
         searchApi,
-        batchApi,
       } = require('../../src/services/api');
 
       // 初始集合列表
@@ -152,11 +147,8 @@ describe('用户工作流测试', () => {
         'collection-description-input',
       );
 
-      ComponentTestHelpers.simulateUserInput(nameInput, '工作流测试集合');
-      ComponentTestHelpers.simulateUserInput(
-        descriptionInput,
-        '用于测试完整工作流的集合',
-      );
+      nameInput.value = '工作流测试集合';
+      descriptionInput.value = '用于测试完整工作流的集合';
 
       // 提交表单
       const submitButton = screen.getByTestId('submit-form-button');
@@ -196,7 +188,9 @@ describe('用户工作流测试', () => {
         '这是一个用于测试完整工作流的文档内容',
       );
       const fileInput = screen.getByTestId('file-input') as HTMLInputElement;
-      const files = ComponentTestHelpers.createMockFileList([testFile]);
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(testFile);
+      const files = dataTransfer.files;
 
       Object.defineProperty(fileInput, 'files', {
         value: files,
@@ -226,7 +220,7 @@ describe('用户工作流测试', () => {
 
       // 7. 搜索文档
       const searchInput = screen.getByTestId('search-input');
-      ComponentTestHelpers.simulateUserInput(searchInput, '工作流测试');
+      searchInput.value = '工作流测试';
 
       const searchButton = screen.getByTestId('search-button');
       fireEvent.click(searchButton);
@@ -325,7 +319,6 @@ describe('用户工作流测试', () => {
       const {
         collectionsApi,
         documentsApi,
-        batchApi,
       } = require('../../src/services/api');
 
       collectionsApi.getCollections.mockResolvedValue({
@@ -397,7 +390,9 @@ describe('用户工作流测试', () => {
       ];
 
       const fileInput = screen.getByTestId('file-input') as HTMLInputElement;
-      const files = ComponentTestHelpers.createMockFileList(testFiles);
+      const dataTransfer = new DataTransfer();
+      testFiles.forEach(file => dataTransfer.items.add(file));
+      const files = dataTransfer.files;
 
       Object.defineProperty(fileInput, 'files', {
         value: files,
@@ -507,7 +502,7 @@ describe('用户工作流测试', () => {
 
       // 2. 执行搜索
       const searchInput = screen.getByTestId('search-input');
-      ComponentTestHelpers.simulateUserInput(searchInput, '测试搜索');
+      searchInput.value = '测试搜索';
 
       const searchButton = screen.getByTestId('search-button');
       fireEvent.click(searchButton);

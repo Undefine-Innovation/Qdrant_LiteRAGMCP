@@ -70,7 +70,13 @@ global.URL.revokeObjectURL = jest.fn();
 
 // 更可靠的 AbortController mock：返回一个可调用的 controller.abort()，并且 signal 能响应该事件
 class MockAbortController {
-  signal: any;
+  signal: {
+    aborted: boolean;
+    addEventListener: jest.Mock;
+    removeEventListener: jest.Mock;
+    dispatchEvent: jest.Mock;
+    abort: jest.Mock;
+  };
   constructor() {
     this.signal = {
       aborted: false,
@@ -82,21 +88,25 @@ class MockAbortController {
     };
   }
 
-  abort(reason?: any) {
+  abort(reason?: unknown) {
     try {
       this.signal.aborted = true;
       // dispatch an abort event if possible
       if (typeof this.signal.dispatchEvent === 'function') {
-        const ev = { type: 'abort', reason } as any;
+        const ev = { type: 'abort', reason } as {
+          type: string;
+          reason: unknown;
+        };
         this.signal.dispatchEvent(ev);
       }
-    } catch (e) {
+    } catch {
       // swallow in tests
     }
   }
 }
 
-global.AbortController = MockAbortController as any;
+global.AbortController =
+  MockAbortController as unknown as typeof AbortController;
 
 // 模拟DataTransfer
 global.DataTransfer = jest.fn().mockImplementation(() => ({
@@ -145,7 +155,7 @@ export const TestUtils = {
   /**
    * 模拟API响应
    */
-  mockApiResponse: (data: any, status: number = 200) => {
+  mockApiResponse: (data: unknown, status: number = 200) => {
     return Promise.resolve({
       ok: status >= 200 && status < 300,
       status,
@@ -247,7 +257,7 @@ try {
   jest.mock('@/stores/useAppStore', () => ({
     useAppStore: () => defaultStore,
   }));
-} catch (e) {
+} catch {
   // ignore when not running under jest
 }
 
@@ -258,7 +268,6 @@ try {
     configurable: true,
     get() {
       // require 相对于当前文件路径
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../../src/services/api');
       return mod && mod.documentsApi ? mod.documentsApi : {};
     },
@@ -267,7 +276,6 @@ try {
   Object.defineProperty(global, 'mockCollectionsApi', {
     configurable: true,
     get() {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../../src/services/api');
       return mod && mod.collectionsApi ? mod.collectionsApi : {};
     },
@@ -276,11 +284,10 @@ try {
   Object.defineProperty(global, 'mockBatchApi', {
     configurable: true,
     get() {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('../../src/services/api');
       return mod && mod.batchApi ? mod.batchApi : {};
     },
   });
-} catch (e) {
+} catch {
   // ignore in non-jest environments
 }

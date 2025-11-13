@@ -3,8 +3,8 @@
  * 扩展共享类型定义
  */
 
-// 重新导出所有共享类型
-export * from '../../../../shared/types/index';
+
+export * from '@shared/types/index';
 
 // 导出通用类型
 export * from './common';

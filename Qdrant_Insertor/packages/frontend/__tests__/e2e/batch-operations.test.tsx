@@ -4,7 +4,13 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import BatchDelete from '../../src/components/BatchDelete';
@@ -12,11 +18,7 @@ import BatchOperationStatus from '../../src/components/BatchOperationStatus';
 import DocumentsPage from '../../src/pages/DocumentsPage';
 import CollectionsPage from '../../src/pages/CollectionsPage';
 // 使用内联 jest.mock 避免导入时的初始化顺序问题
-import {
-  TestDataFactory,
-  ComponentTestHelpers,
-  AssertionHelpers,
-} from './utils/test-helpers';
+import { TestDataFactory, AssertionHelpers } from './utils/test-helpers';
 
 // 模拟API（内联创建 mock 函数以避免循环/初始化顺序问题）
 jest.mock('../../src/services/api', () => ({
@@ -122,12 +124,12 @@ describe('批量操作测试', () => {
       }));
 
       const { rerender } = render(
-        <BatchDelete 
+        <BatchDelete
           items={batchItems}
           selectedItems={selectedItems}
           onSelectionChange={mockOnSelectionChange}
-          onComplete={mockOnComplete} 
-        />
+          onComplete={mockOnComplete}
+        />,
       );
 
       // 等待文档列表加载
@@ -142,15 +144,15 @@ describe('批量操作测试', () => {
         // 模拟选择第一个和第二个文档
         const selectedDocIds = [mockDocuments[0].docId, mockDocuments[1].docId];
         selectedItems = selectedDocIds;
-        
+
         // 重新渲染组件以反映新的选择状态
         rerender(
-          <BatchDelete 
+          <BatchDelete
             items={batchItems}
             selectedItems={selectedItems}
             onSelectionChange={mockOnSelectionChange}
-            onComplete={mockOnComplete} 
-          />
+            onComplete={mockOnComplete}
+          />,
         );
       });
 
@@ -185,12 +187,12 @@ describe('批量操作测试', () => {
       }));
 
       const { rerender } = render(
-        <BatchDelete 
+        <BatchDelete
           items={batchItems}
           selectedItems={selectedItems}
           onSelectionChange={mockOnSelectionChange}
-          onComplete={mockOnComplete} 
-        />
+          onComplete={mockOnComplete}
+        />,
       );
 
       // 等待文档列表加载
@@ -205,15 +207,15 @@ describe('批量操作测试', () => {
         // 选择所有文档
         const allDocIds = mockDocuments.map(doc => doc.docId);
         selectedItems = allDocIds;
-        
+
         // 重新渲染组件以反映选择状态
         rerender(
-          <BatchDelete 
+          <BatchDelete
             items={batchItems}
             selectedItems={selectedItems}
             onSelectionChange={mockOnSelectionChange}
-            onComplete={mockOnComplete} 
-          />
+            onComplete={mockOnComplete}
+          />,
         );
       });
 
@@ -259,12 +261,12 @@ describe('批量操作测试', () => {
       }));
 
       const { rerender } = render(
-        <BatchDelete 
+        <BatchDelete
           items={batchItems}
           selectedItems={selectedItems}
           onSelectionChange={mockOnSelectionChange}
-          onComplete={mockOnComplete} 
-        />
+          onComplete={mockOnComplete}
+        />,
       );
 
       // 等待文档列表加载
@@ -278,15 +280,15 @@ describe('批量操作测试', () => {
       await act(async () => {
         const selectedDocIds = [mockDocuments[0].docId, mockDocuments[1].docId];
         selectedItems = selectedDocIds;
-        
+
         // 重新渲染组件以反映选择状态
         rerender(
-          <BatchDelete 
+          <BatchDelete
             items={batchItems}
             selectedItems={selectedItems}
             onSelectionChange={mockOnSelectionChange}
-            onComplete={mockOnComplete} 
-          />
+            onComplete={mockOnComplete}
+          />,
         );
       });
 
@@ -315,15 +317,23 @@ describe('批量操作测试', () => {
       });
 
       // 等待删除完成（检查进度达到100%）
-      await waitFor(() => {
-        const progressText = document.querySelector('[data-testid="batch-delete-component"]')?.textContent;
-        expect(progressText).toContain('100%');
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          const progressText = document.querySelector(
+            '[data-testid="batch-delete-component"]',
+          )?.textContent;
+          expect(progressText).toContain('100%');
+        },
+        { timeout: 5000 },
+      );
 
       // 验证完成回调被调用
-      await waitFor(() => {
-        expect(mockOnComplete).toHaveBeenCalled();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(mockOnComplete).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it('应该处理批量删除部分失败', async () => {
@@ -355,12 +365,12 @@ describe('批量操作测试', () => {
       }));
 
       const { rerender } = render(
-        <BatchDelete 
+        <BatchDelete
           items={batchItems}
           selectedItems={selectedItems}
           onSelectionChange={mockOnSelectionChange}
-          onComplete={mockOnComplete} 
-        />
+          onComplete={mockOnComplete}
+        />,
       );
 
       // 等待文档列表加载
@@ -374,15 +384,15 @@ describe('批量操作测试', () => {
       await act(async () => {
         const selectedDocIds = [mockDocuments[0].docId, mockDocuments[1].docId];
         selectedItems = selectedDocIds;
-        
+
         // 重新渲染组件以反映选择状态
         rerender(
-          <BatchDelete 
+          <BatchDelete
             items={batchItems}
             selectedItems={selectedItems}
             onSelectionChange={mockOnSelectionChange}
-            onComplete={mockOnComplete} 
-          />
+            onComplete={mockOnComplete}
+          />,
         );
       });
 

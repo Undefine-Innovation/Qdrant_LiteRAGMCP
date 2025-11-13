@@ -50,7 +50,9 @@ const BatchDelete = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   // 本地 items 与选择状态（当没有通过 props 提供 items 或 selectedItems 时使用）
   const [localItems, setLocalItems] = useState(items || []);
-  const [internalSelected, setInternalSelected] = useState<string[]>(selectedItems || []);
+  const [internalSelected, setInternalSelected] = useState<string[]>(
+    selectedItems || [],
+  );
 
   // 优化：使用 useCallback 封装数据加载逻辑，避免 act() 警告
   const loadItems = useCallback(async () => {
@@ -65,18 +67,31 @@ const BatchDelete = ({
           collectionId: string;
           name: string;
         }
-        const data = Array.isArray(resp) ? resp : (resp && (resp as CollectionsApiResponse).data ? (resp as CollectionsApiResponse).data : []);
-        return (data as CollectionItem[]).map((c: CollectionItem) => ({ id: c.collectionId, name: c.name }));
+        const data = Array.isArray(resp)
+          ? resp
+          : resp && (resp as CollectionsApiResponse).data
+            ? (resp as CollectionsApiResponse).data
+            : [];
+        return (data as CollectionItem[]).map((c: CollectionItem) => ({
+          id: c.collectionId,
+          name: c.name,
+        }));
       } else {
         const { documentsApi } = await import('../services/api');
         const resp = await documentsApi.getDocuments();
         interface DocumentsApiResponse {
           data?: Array<{ docId: string; name?: string; key: string }>;
         }
-        const data = Array.isArray(resp) ? resp : (resp && (resp as DocumentsApiResponse).data ? (resp as DocumentsApiResponse).data : []);
-        return (data as Array<{ docId: string; name?: string; key: string }>).map(doc => ({ 
-          id: doc.docId, 
-          name: doc.name || doc.key 
+        const data = Array.isArray(resp)
+          ? resp
+          : resp && (resp as DocumentsApiResponse).data
+            ? (resp as DocumentsApiResponse).data
+            : [];
+        return (
+          data as Array<{ docId: string; name?: string; key: string }>
+        ).map(doc => ({
+          id: doc.docId,
+          name: doc.name || doc.key,
         }));
       }
     } catch (err) {
@@ -126,7 +141,9 @@ const BatchDelete = ({
   // 将一个可写的 props 对象附加到根 DOM 元素上，方便老旧测试通过 `element.props.onComplete = ...` 设置回调
   useEffect(() => {
     try {
-      const el = document.querySelector('[data-testid="batch-delete-component"]') as HTMLElement & { props?: { onComplete?: () => void } };
+      const el = document.querySelector(
+        '[data-testid="batch-delete-component"]',
+      ) as HTMLElement & { props?: { onComplete?: () => void } };
       if (el) {
         el.props = el.props || {};
         // 保持 onComplete 的初始引用
@@ -139,25 +156,40 @@ const BatchDelete = ({
 
   // 兼容：同步 DOM 上复选框的 checked 状态到 internalSelected（某些测试环境下 onChange 可能没有正确触发组件受控更新）
   useEffect(() => {
-    const root = document.querySelector('[data-testid="batch-delete-component"]');
+    const root = document.querySelector(
+      '[data-testid="batch-delete-component"]',
+    );
     if (!root) return;
 
     const handler = (ev: Event) => {
       const target = ev.target as HTMLElement;
       if (!target) return;
       // 只在复选框点击时同步
-      if (target instanceof HTMLInputElement && target.dataset && String(target.dataset.testid).startsWith('delete-item-checkbox')) {
-        const inputs = Array.from(document.querySelectorAll('input[data-testid^="delete-item-checkbox-"]')) as HTMLInputElement[];
-        const checkedIds = inputs.filter(i => i.checked).map(i => {
-          const idMatch = i.getAttribute('data-testid')?.match(/delete-item-checkbox-(\d+)/);
-          // try to map index -> item id
-          if (idMatch) {
-            const idx = parseInt(idMatch[1], 10);
-            const itm = (localItems || [])[idx];
-            return itm?.id;
-          }
-          return null;
-        }).filter(Boolean) as string[];
+      if (
+        target instanceof HTMLInputElement &&
+        target.dataset &&
+        String(target.dataset.testid).startsWith('delete-item-checkbox')
+      ) {
+        const inputs = Array.from(
+          document.querySelectorAll(
+            'input[data-testid^="delete-item-checkbox-"]',
+          ),
+        ) as HTMLInputElement[];
+        const checkedIds = inputs
+          .filter(i => i.checked)
+          .map(i => {
+            const idMatch = i
+              .getAttribute('data-testid')
+              ?.match(/delete-item-checkbox-(\d+)/);
+            // try to map index -> item id
+            if (idMatch) {
+              const idx = parseInt(idMatch[1], 10);
+              const itm = (localItems || [])[idx];
+              return itm?.id;
+            }
+            return null;
+          })
+          .filter(Boolean) as string[];
         // ensure DOM input.checked properties reflect the derived checkedIds (force-sync)
         inputs.forEach((i, idx) => {
           const itm = (localItems || [])[idx];
@@ -194,13 +226,19 @@ const BatchDelete = ({
     [items, localItems, onSelectionChange],
   );
 
-  const effectiveSelectedCount = (selectedItems && selectedItems.length) ? selectedItems.length : internalSelected.length;
-  
+  const effectiveSelectedCount =
+    selectedItems && selectedItems.length
+      ? selectedItems.length
+      : internalSelected.length;
+
   // Render component
 
   // 处理批量删除
   const handleBatchDelete = useCallback(async () => {
-    const sel = (selectedItems && selectedItems.length > 0) ? selectedItems : internalSelected;
+    const sel =
+      selectedItems && selectedItems.length > 0
+        ? selectedItems
+        : internalSelected;
     if (!sel || sel.length === 0) {
       setError('请先选择要删除的项目');
       return;
@@ -220,7 +258,10 @@ const BatchDelete = ({
     });
 
     try {
-      let result: BatchDeleteDocsResponse | BatchDeleteCollectionsResponse | null = null;
+      let result:
+        | BatchDeleteDocsResponse
+        | BatchDeleteCollectionsResponse
+        | null = null;
       if (onBatchDelete) {
         result = await onBatchDelete(sel);
       } else {
@@ -233,10 +274,20 @@ const BatchDelete = ({
         }
       }
 
-      const total = result && typeof result.total === 'number' ? result.total : (Array.isArray(result && result.results) ? result.results.length : sel.length);
-  const resultsArr: BatchDeleteResult[] = Array.isArray(result?.results) ? result.results : [];
-  const successful = result && typeof result.successful === 'number' ? result.successful : resultsArr.filter(r => !r.error).length;
-  const failed = total - successful;
+      const total =
+        result && typeof result.total === 'number'
+          ? result.total
+          : Array.isArray(result && result.results)
+            ? result.results.length
+            : sel.length;
+      const resultsArr: BatchDeleteResult[] = Array.isArray(result?.results)
+        ? result.results
+        : [];
+      const successful =
+        result && typeof result.successful === 'number'
+          ? result.successful
+          : resultsArr.filter(r => !r.error).length;
+      const failed = total - successful;
 
       setDeleteProgress({
         total,
@@ -244,7 +295,12 @@ const BatchDelete = ({
         successful,
         failed,
         percentage: 100,
-        status: result && result.success ? 'completed' : (failed > 0 ? 'completed_with_errors' : 'completed'),
+        status:
+          result && result.success
+            ? 'completed'
+            : failed > 0
+              ? 'completed_with_errors'
+              : 'completed',
         results: result && result.results ? result.results : undefined,
       });
 
@@ -283,9 +339,15 @@ const BatchDelete = ({
   const typeText = getTypeText();
 
   return (
-    <div className={`w-full ${className}`} data-testid="batch-delete-component" data-testid-batch="batch-delete">
-  {/* also expose legacy test id "batch-delete" for tests that expect it */}
-  <div data-testid="batch-delete" style={{ display: 'none' }}>批量删除</div>
+    <div
+      className={`w-full ${className}`}
+      data-testid="batch-delete-component"
+      data-testid-batch="batch-delete"
+    >
+      {/* also expose legacy test id "batch-delete" for tests that expect it */}
+      <div data-testid="batch-delete" style={{ display: 'none' }}>
+        批量删除
+      </div>
       {/* 批量操作工具栏 */}
       <div className="bg-white border border-secondary-200 rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between">
@@ -297,12 +359,17 @@ const BatchDelete = ({
                 data-testid="select-all-checkbox"
                 className="form-checkbox h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded"
                 checked={
-                  (localItems.length > 0 && ((selectedItems && selectedItems.length === localItems.length) || (internalSelected && internalSelected.length === localItems.length)))
+                  localItems.length > 0 &&
+                  ((selectedItems &&
+                    selectedItems.length === localItems.length) ||
+                    (internalSelected &&
+                      internalSelected.length === localItems.length))
                 }
-                ref={(input) => {
+                ref={input => {
                   if (input) {
                     const selCount = effectiveSelectedCount;
-                    input.indeterminate = selCount > 0 && selCount < localItems.length;
+                    input.indeterminate =
+                      selCount > 0 && selCount < localItems.length;
                   }
                 }}
                 onChange={e => handleSelectAll(e.target.checked)}
@@ -314,7 +381,10 @@ const BatchDelete = ({
 
             {/* 选中数量显示 */}
             {effectiveSelectedCount > 0 && (
-              <span className="text-sm text-secondary-500" data-testid="selected-count">
+              <span
+                className="text-sm text-secondary-500"
+                data-testid="selected-count"
+              >
                 已选择 {effectiveSelectedCount} 个{typeText.plural}
               </span>
             )}
@@ -324,7 +394,7 @@ const BatchDelete = ({
           <button
             type="button"
             onClick={() => setShowConfirmDialog(true)}
-            disabled={(effectiveSelectedCount === 0) || isDeleting}
+            disabled={effectiveSelectedCount === 0 || isDeleting}
             className="btn btn-danger"
             data-testid="confirm-delete"
           >
@@ -335,34 +405,54 @@ const BatchDelete = ({
 
       {/* 列表渲染 - 测试依赖 */}
       {localItems && localItems.length > 0 && (
-        <div data-testid="delete-items-list" className="bg-white border border-secondary-200 rounded-lg p-4 mb-4">
+        <div
+          data-testid="delete-items-list"
+          className="bg-white border border-secondary-200 rounded-lg p-4 mb-4"
+        >
           {localItems.map((item, index) => {
             // 确保每个项都有唯一的 key
             const uniqueKey = item.id ? `item-${item.id}` : `item-${index}`;
-            const isSelected = (selectedItems && selectedItems.includes(item.id)) || internalSelected.includes(item.id);
-            
+            const isSelected =
+              (selectedItems && selectedItems.includes(item.id)) ||
+              internalSelected.includes(item.id);
+
             return (
-              <div key={uniqueKey} data-testid={`delete-item-${index}`} className="flex items-center justify-between p-2">
+              <div
+                key={uniqueKey}
+                data-testid={`delete-item-${index}`}
+                className="flex items-center justify-between p-2"
+              >
                 <label className="flex items-center">
                   <input
                     type="checkbox"
                     data-testid={`delete-item-checkbox-${index}`}
                     className="form-checkbox h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded"
                     checked={isSelected}
-                    onChange={(e) => {
-                      console.log('🔥 CHECKBOX CHANGE FIRED!', item.id, 'checked:', e.target.checked);
+                    onChange={e => {
+                      console.log(
+                        '🔥 CHECKBOX CHANGE FIRED!',
+                        item.id,
+                        'checked:',
+                        e.target.checked,
+                      );
                       const currentlySelected = [...internalSelected];
                       if (e.target.checked) {
                         currentlySelected.push(item.id);
                       } else {
                         const itemIndex = currentlySelected.indexOf(item.id);
-                        if (itemIndex !== -1) currentlySelected.splice(itemIndex, 1);
+                        if (itemIndex !== -1)
+                          currentlySelected.splice(itemIndex, 1);
                       }
-                      console.log('🔄 Setting internal selected:', currentlySelected);
+                      console.log(
+                        '🔄 Setting internal selected:',
+                        currentlySelected,
+                      );
                       setInternalSelected(currentlySelected);
                     }}
                   />
-                  <span className="ml-2 text-sm text-secondary-700">{getItemName(item)}</span>
+                  <span className="ml-2 text-sm text-secondary-700">
+                    {getItemName(item)}
+                  </span>
                 </label>
               </div>
             );
@@ -372,7 +462,10 @@ const BatchDelete = ({
 
       {/* 删除进度 */}
       {deleteProgress && (
-        <div className="bg-white border border-secondary-200 rounded-lg p-4 mb-4" data-testid="delete-results">
+        <div
+          className="bg-white border border-secondary-200 rounded-lg p-4 mb-4"
+          data-testid="delete-results"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-secondary-900">
               批量删除进度
@@ -471,7 +564,10 @@ const BatchDelete = ({
 
       {/* 确认删除对话框 */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" data-testid="delete-confirmation-dialog">
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          data-testid="delete-confirmation-dialog"
+        >
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3 text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -494,7 +590,8 @@ const BatchDelete = ({
               </h3>
               <div className="mt-2 px-7 py-3">
                 <p className="text-sm text-gray-500">
-                  您确定要删除选中的 {effectiveSelectedCount} 个{typeText.plural}
+                  您确定要删除选中的 {effectiveSelectedCount} 个
+                  {typeText.plural}
                   吗？
                   {type === 'collections' && (
                     <span className="block mt-2 text-red-600 font-medium">

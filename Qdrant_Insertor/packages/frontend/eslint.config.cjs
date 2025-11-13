@@ -31,6 +31,6 @@ module.exports = tseslint.config(
         },
     },
     {
-        ignores: ["**/dist", "**/.eslintrc.cjs"],
+        ignores: ["**/dist", "**/.eslintrc.cjs", "**/coverage", "**/coverage/**"],
     }
 );
