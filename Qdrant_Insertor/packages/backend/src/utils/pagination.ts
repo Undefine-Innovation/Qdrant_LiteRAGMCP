@@ -42,12 +42,16 @@ export function parsePaginationQuery(
  * @param {number} page - 当前页码
  * @param {number} limit - 每页数量
  * @param {number} total - 总记录数
+ * @param {string} [sort='created_at'] - 排序字段
+ * @param {'asc' | 'desc'} [order='desc'] - 排序方向
  * @returns {PaginationMeta} 分页元数据
  */
 export function calculatePaginationMeta(
   page: number,
   limit: number,
   total: number,
+  sort: string = 'created_at',
+  order: 'asc' | 'desc' = 'desc',
 ): PaginationMeta {
   const totalPages = Math.ceil(total / limit);
 
@@ -58,6 +62,8 @@ export function calculatePaginationMeta(
     totalPages,
     hasNext: page < totalPages,
     hasPrev: page > 1,
+    sort,
+    order,
   };
 }
 
@@ -73,8 +79,8 @@ export function createPaginatedResponse<T>(
   total: number,
   query: PaginationQuery,
 ): PaginatedResponse<T> {
-  const { page, limit } = parsePaginationQuery(query);
-  const pagination = calculatePaginationMeta(page, limit, total);
+  const { page, limit, sort, order } = parsePaginationQuery(query);
+  const pagination = calculatePaginationMeta(page, limit, total, sort, order);
 
   return {
     data,
