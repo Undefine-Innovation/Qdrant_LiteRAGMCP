@@ -24,10 +24,23 @@
     "build:compile": "npx tsc --build",
     "build:check": "tsc --noEmit",
     "clean:build": "tsc --build --clean",
-    "clean:dist": "rm -rf dist"
+    "clean:dist": "rm -rf dist",
+    "lint": "npx eslint \"**/*.ts\"",
+    "lint:check": "npx eslint \"**/*.ts\"",
+    "lint:fix": "npx eslint \"**/*.ts\" --fix",
+    "format": "npx prettier --check \"**/*.{ts,js,json}\"",
+    "format:check": "npx prettier --check \"**/*.{ts,js,json}\"",
+    "format:fix": "npx prettier --write \"**/*.{ts,js,json}\""
   },
   "devDependencies": {
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "@eslint/js": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-jsdoc": "^48.0.0",
+    "prettier": "^3.0.0",
+    "typescript-eslint": "^7.0.0"
   },
   "files": [
     "dist"

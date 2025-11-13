@@ -6,53 +6,53 @@
 // 基础类型定义
 
 // API相关类型定义
-export interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 export interface ApiError {
-    code: string;
-    message: string;
-    details?: any;
+  code: string;
+  message: string;
+  details?: unknown;
 }
 
 export interface PaginationParams {
-    page?: number;
-    limit?: number;
-    sort?: string;
-    order?: "asc" | "desc";
-    offset?: number;
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  offset?: number;
 }
 
 export interface PaginationMeta {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 export interface PaginatedResponse<T> {
-    data: T[];
-    pagination: PaginationMeta;
+  data: T[];
+  pagination: PaginationMeta;
 }
 
 // 系统状态相关类型
 export interface SystemStatus {
-    status: "healthy" | "degraded" | "down";
-    collections: number;
-    documents: number;
-    qdrantConnected: boolean;
-    lastSyncTime?: string;
+  status: 'healthy' | 'degraded' | 'down';
+  collections: number;
+  documents: number;
+  qdrantConnected: boolean;
+  lastSyncTime?: string;
 }
 
 // 上传进度相关类型
 export interface UploadProgress {
-    loaded: number;
-    total: number;
-    percentage: number;
+  loaded: number;
+  total: number;
+  percentage: number;
 }

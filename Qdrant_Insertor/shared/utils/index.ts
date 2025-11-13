@@ -9,7 +9,7 @@
  * @returns 格式化后的日期字符串
  */
 export function formatDate(date: Date): string {
-    return date.toISOString();
+  return date.toISOString();
 }
 
 /**
@@ -18,22 +18,22 @@ export function formatDate(date: Date): string {
  * @returns 格式化后的文件大小字符串
  */
 export function formatFileSize(bytes: number): string {
-    const units = ["B", "KB", "MB", "GB"];
-    const threshold = 1024;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const threshold = 1024;
 
-    if (bytes < threshold) {
-        return bytes + " B";
-    }
+  if (bytes < threshold) {
+    return bytes + ' B';
+  }
 
-    let i = 0;
-    let size = bytes;
+  let i = 0;
+  let size = bytes;
 
-    while (size >= threshold && i < units.length - 1) {
-        size /= threshold;
-        i++;
-    }
+  while (size >= threshold && i < units.length - 1) {
+    size /= threshold;
+    i++;
+  }
 
-    return `${Math.round(size * 100) / 100} ${units[i]}`;
+  return `${Math.round(size * 100) / 100} ${units[i]}`;
 }
 
 /**
@@ -42,8 +42,8 @@ export function formatFileSize(bytes: number): string {
  * @returns 是否为有效邮箱
  */
 export function isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 /**
@@ -52,13 +52,13 @@ export function isValidEmail(email: string): boolean {
  * @returns 随机ID字符串
  */
 export function generateId(length: number = 8): string {
-    const chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 /**
@@ -67,11 +67,11 @@ export function generateId(length: number = 8): string {
  * @returns 克隆后的对象
  */
 export function deepClone<T>(obj: T): T {
-    if (obj === null || typeof obj !== "object") {
-        return obj;
-    }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
 
-    return JSON.parse(JSON.stringify(obj));
+  return JSON.parse(JSON.stringify(obj));
 }
 
 /**
@@ -80,16 +80,16 @@ export function deepClone<T>(obj: T): T {
  * @param delay - 延迟时间（毫秒）
  * @returns 防抖后的函数
  */
-export function debounce(
-    func: (...args: any[]) => any,
-    delay: number,
-): (...args: any[]) => any {
-    let timeoutId: NodeJS.Timeout;
+export function debounce<T extends (...args: unknown[]) => unknown>(
+  func: T,
+  delay: number,
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout;
 
-    return (...args: any[]) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
-    };
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
 }
 
 /**
@@ -98,24 +98,24 @@ export function debounce(
  * @param delay - 延迟时间（毫秒）
  * @returns 节流后的函数
  */
-export function throttle(
-    func: (...args: any[]) => any,
-    delay: number,
-): (...args: any[]) => any {
-    let lastCallTime = 0;
-    let timeoutId: NodeJS.Timeout;
+export function throttle<T extends (...args: unknown[]) => unknown>(
+  func: T,
+  delay: number,
+): (...args: Parameters<T>) => void {
+  let lastCallTime = 0;
+  let timeoutId: NodeJS.Timeout;
 
-    return (...args: any[]) => {
-        const now = Date.now();
-        if (now - lastCallTime >= delay) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                func(...args);
-                lastCallTime = now;
-            }, delay);
-        } else {
-            func(...args);
-            lastCallTime = now;
-        }
-    };
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    if (now - lastCallTime >= delay) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+        lastCallTime = now;
+      }, delay);
+    } else {
+      func(...args);
+      lastCallTime = now;
+    }
+  };
 }
