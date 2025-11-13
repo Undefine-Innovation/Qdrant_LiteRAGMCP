@@ -3,7 +3,8 @@ import { z } from 'zod';
 /**
  * ID format validation message
  */
-const idFormatMessage = 'Only alphanumeric characters, ".", "_", ":", and "-" are allowed';
+const idFormatMessage =
+  'Only alphanumeric characters, ".", "_", ":", and "-" are allowed';
 
 /**
  * ID validation regex pattern
@@ -18,7 +19,9 @@ export const BatchUploadRequestSchema = z.object({
   collectionId: z
     .string()
     .optional()
-    .describe('Target collection ID (optional, uses default collection if not provided)'),
+    .describe(
+      'Target collection ID (optional, uses default collection if not provided)',
+    ),
 });
 
 /**
@@ -33,8 +36,14 @@ export const BatchUploadResponseSchema = z.object({
     .array(
       z.object({
         fileName: z.string().describe('File name'),
-        docId: z.string().optional().describe('Document ID returned on successful upload'),
-        collectionId: z.string().optional().describe('Collection ID of the collection'),
+        docId: z
+          .string()
+          .optional()
+          .describe('Document ID returned on successful upload'),
+        collectionId: z
+          .string()
+          .optional()
+          .describe('Collection ID of the collection'),
         error: z.string().optional().describe('Error message if upload failed'),
       }),
     )
@@ -47,18 +56,22 @@ export const BatchUploadResponseSchema = z.object({
  */
 /**
  * Document ID validation schema
+ * Accepts any string matching the ID format (alphanumeric, dots, underscores, colons, hyphens)
  */
 const DocIdSchema = z
   .string()
   .regex(idRegex, idFormatMessage)
-  .refine((val) => val.includes('doc-'), 'Invalid document ID format');
+  .min(1, 'Document ID cannot be empty');
 
 /**
  * Batch delete documents request schema
  * Validates `DELETE /docs/batch` request body
  */
 export const BatchDeleteDocsRequestSchema = z.object({
-  docIds: z.array(DocIdSchema).min(1).describe('List of document IDs to delete'),
+  docIds: z
+    .array(DocIdSchema)
+    .min(1)
+    .describe('List of document IDs to delete'),
 });
 
 /**
@@ -74,7 +87,10 @@ export const BatchDeleteDocsResponseSchema = z.object({
       z.object({
         docId: z.string().describe('Document ID'),
         success: z.boolean().describe('Whether deletion was successful'),
-        error: z.string().optional().describe('Error message if deletion failed'),
+        error: z
+          .string()
+          .optional()
+          .describe('Error message if deletion failed'),
       }),
     )
     .describe('Deletion result for each document'),
@@ -86,11 +102,7 @@ export const BatchDeleteDocsResponseSchema = z.object({
  */
 export const BatchDeleteCollectionsRequestSchema = z.object({
   collectionIds: z
-    .array(
-      z
-        .string()
-        .regex(idRegex, idFormatMessage),
-    )
+    .array(z.string().regex(idRegex, idFormatMessage))
     .min(1)
     .describe('List of collection IDs to delete'),
 });
@@ -108,7 +120,10 @@ export const BatchDeleteCollectionsResponseSchema = z.object({
       z.object({
         collectionId: z.string().describe('Collection ID'),
         success: z.boolean().describe('Whether deletion was successful'),
-        error: z.string().optional().describe('Error message if deletion failed'),
+        error: z
+          .string()
+          .optional()
+          .describe('Error message if deletion failed'),
       }),
     )
     .describe('Deletion result for each collection'),
@@ -129,7 +144,10 @@ export const BatchOperationProgressSchema = z.object({
   failed: z.number().describe('Number of failed items'),
   startTime: z.number().describe('Start timestamp'),
   endTime: z.number().optional().describe('End timestamp'),
-  estimatedTimeRemaining: z.number().optional().describe('Estimated remaining time (seconds)'),
+  estimatedTimeRemaining: z
+    .number()
+    .optional()
+    .describe('Estimated remaining time (seconds)'),
 });
 
 /**

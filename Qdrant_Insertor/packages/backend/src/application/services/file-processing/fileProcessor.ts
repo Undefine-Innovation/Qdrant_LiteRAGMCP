@@ -1,5 +1,5 @@
 import { DocumentChunk } from '@domain/entities/types.js';
-import { LoadedFile } from '@domain/services/loader.js';
+import { LoadedFile } from '@application/services/file-processing/index.js';
 
 /**
  * 文件处理器接口

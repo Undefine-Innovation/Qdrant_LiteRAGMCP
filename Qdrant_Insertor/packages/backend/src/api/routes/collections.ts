@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { CollectionId } from '@domain/entities/types.js';
-import { ICollectionService } from '@domain/repositories/ICollectionService.js';
+import { ICollectionService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import { LoggedRequest } from '@middleware/logging.js';
 import { LogTag } from '@logging/logger.js';
@@ -58,9 +58,7 @@ export function createCollectionRoutes(
       const sanitizeString = (str: string): string => {
         if (typeof str !== 'string') return str;
         // 简单的XSS防护 - 移除脚本标签
-        return str
-          .replace(/<script[^>]*>/gi, '')
-          .replace(/<\/script>/gi, '');
+        return str.replace(/<script[^>]*>/gi, '').replace(/<\/script>/gi, '');
       };
 
       /**
@@ -76,7 +74,9 @@ export function createCollectionRoutes(
         }
 
         const sanitized: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+        for (const [key, value] of Object.entries(
+          obj as Record<string, unknown>,
+        )) {
           if (typeof value === 'string') {
             sanitized[key] = sanitizeString(value);
           } else if (typeof value === 'object') {
@@ -133,7 +133,7 @@ export function createCollectionRoutes(
           apiLogger?.warn('请求体验证失败', undefined, {
             body: req.body,
           });
-          return res.status(400).json({
+          return res.status(422).json({
             error: {
               code: 'VALIDATION_ERROR',
               message: 'Invalid request body',
@@ -169,7 +169,7 @@ export function createCollectionRoutes(
 
         if (error instanceof Error) {
           if (error.message.includes('empty')) {
-            return res.status(400).json({
+            return res.status(422).json({
               error: {
                 code: 'VALIDATION_ERROR',
                 message: 'Collection name cannot be empty',
@@ -187,7 +187,7 @@ export function createCollectionRoutes(
         }
         res.status(500).json({
           error: {
-            code: 'INTERNAL_ERROR',
+            code: 'INTERNAL_SERVER_ERROR',
             message: 'Internal server error',
           },
         });
@@ -241,7 +241,7 @@ export function createCollectionRoutes(
     ) => {
       const validatedQuery = req.validated?.query;
       if (!validatedQuery) {
-        return res.status(400).json({
+        return res.status(422).json({
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid query parameters',
@@ -287,11 +287,11 @@ export function createCollectionRoutes(
   );
 
   /**
-   * @api {get} /collections/:collectionId 获取指定�?Collection
+   * @api {get} /collections/:collectionId 获取指定的 Collection
    * @apiGroup Collections
-   * @apiDescription 根据 Collection ID 获取单个 Collection�?
-   * @apiParam {string} collectionId - 要获取的 Collection 的唯一标识符�?
-   * @apiSuccess {Collection} collection - 找到�?Collection 对象�?
+   * @apiDescription 根据 Collection ID 获取单个 Collection
+   * @apiParam {string} collectionId - 要获取的 Collection 的唯一标识符
+   * @apiSuccess {Collection} collection - 找到的 Collection 对象
    * @apiSuccessExample {json} Success-Response:
    *     HTTP/1.1 200 OK
    *     {
@@ -299,7 +299,7 @@ export function createCollectionRoutes(
    *       "name": "My Collection",
    *       "description": "Description of my collection."
    *     }
-   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给�?ID �?Collection�?
+   * @apiError (404 Not Found) CollectionNotFound - 如果找不到具有给定 ID 的 Collection
    */
   router.get('/collections/:collectionId', async (req, res) => {
     try {
@@ -335,9 +335,32 @@ export function createCollectionRoutes(
 
       res.status(200).json(collection);
     } catch (error) {
+      // 检查是否为AppError类型的NotFoundError
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appError = error as AppErrorLike;
+        if (appError.code === 'NOT_FOUND' || appError.httpStatus === 404) {
+          return res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message: appError.message || 'Collection not found',
+            },
+          });
+        }
+      }
+
+      // 检查错误消息中是否包含not found
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message,
+          },
+        });
+      }
+
       res.status(500).json({
         error: {
-          code: 'INTERNAL_ERROR',
+          code: 'INTERNAL_SERVER_ERROR',
           message: 'Internal server error',
         },
       });
@@ -384,7 +407,7 @@ export function createCollectionRoutes(
       const body = validated?.body;
 
       if (!params || !body) {
-        return res.status(400).json({
+        return res.status(422).json({
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid request parameters',
@@ -393,13 +416,14 @@ export function createCollectionRoutes(
       }
 
       const { collectionId } = params as { collectionId: CollectionId };
-      const { name, description } = body;
+      const { name, description, status } = body;
 
       try {
         const updatedCollection = await collectionService.updateCollection(
           collectionId as CollectionId,
           name,
           description,
+          status,
         );
         res.status(200).json(updatedCollection);
       } catch (error) {
@@ -423,7 +447,7 @@ export function createCollectionRoutes(
         }
         res.status(500).json({
           error: {
-            code: 'INTERNAL_ERROR',
+            code: 'INTERNAL_SERVER_ERROR',
             message: 'Internal server error',
           },
         });
@@ -471,7 +495,7 @@ export function createCollectionRoutes(
       const body = validated?.body;
 
       if (!params || !body) {
-        return res.status(400).json({
+        return res.status(422).json({
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid request parameters',
@@ -480,7 +504,7 @@ export function createCollectionRoutes(
       }
 
       const { collectionId } = params as { collectionId: CollectionId };
-      const { name, description } = body;
+      const { name, description, status } = body;
 
       try {
         // 首先获取现有集合
@@ -494,6 +518,7 @@ export function createCollectionRoutes(
           collectionId as CollectionId,
           updatedName,
           updatedDescription,
+          status,
         );
         res.status(200).json(updatedCollection);
       } catch (error) {
@@ -517,7 +542,7 @@ export function createCollectionRoutes(
         }
         res.status(500).json({
           error: {
-            code: 'INTERNAL_ERROR',
+            code: 'INTERNAL_SERVER_ERROR',
             message: 'Internal server error',
           },
         });
@@ -587,17 +612,26 @@ export function createCollectionRoutes(
           duration: Date.now() - startTime,
         });
 
-        if (error instanceof Error && error.message.includes('not found')) {
-          return res.status(404).json({
+        // 检查是否是AppError且有httpStatus
+        if (isAppErrorLike(error)) {
+          const status = error.httpStatus || 500;
+          return res.status(status).json({
             error: {
-              code: 'NOT_FOUND',
-              message: error.message,
+              code: error.code || 'ERROR',
+              message: (error as Error).message || 'An error occurred',
             },
           });
         }
+
+        // 检查是否是普通的not found错误
+        if (error instanceof Error && error.message.includes('not found')) {
+          // 对于删除操作，如果资源不存在，返回204（幂等操作）
+          return res.status(204).end();
+        }
+
         res.status(500).json({
           error: {
-            code: 'INTERNAL_ERROR',
+            code: 'INTERNAL_SERVER_ERROR',
             message: 'Internal server error',
           },
         });
@@ -622,7 +656,8 @@ export function createCollectionRoutes(
 
       // 处理应用级错误：使用类型守卫判断并在使用 toJSON/httpStatus 前做类型校验
       if (isAppErrorLike(error)) {
-        const status = typeof error.httpStatus === 'number' ? error.httpStatus : 500;
+        const status =
+          typeof error.httpStatus === 'number' ? error.httpStatus : 500;
 
         // 如果实现了 toJSON，优先使用其返回值（可能为任意 JSON-able 类型）
         if (typeof error.toJSON === 'function') {
@@ -638,7 +673,8 @@ export function createCollectionRoutes(
         // 默认返回结构化错误对象
         const payload = {
           code: error.code ?? 'ERROR',
-          message: (error as Error).message ?? error.message ?? 'Internal error',
+          message:
+            (error as Error).message ?? error.message ?? 'Internal error',
         };
         return res.status(status).json(payload);
       }
@@ -647,7 +683,8 @@ export function createCollectionRoutes(
       if (
         typeof error === 'object' &&
         error !== null &&
-        (((error as Error).name === 'SyntaxError') || (error as Record<string, unknown>)['type'] === 'entity.parse.failed')
+        ((error as Error).name === 'SyntaxError' ||
+          (error as Record<string, unknown>)['type'] === 'entity.parse.failed')
       ) {
         return res.status(400).json({
           error: {
@@ -658,7 +695,11 @@ export function createCollectionRoutes(
       }
 
       // 处理请求体过大错误
-      if (typeof error === 'object' && error !== null && (error as Record<string, unknown>)['type'] === 'entity.too.large') {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as Record<string, unknown>)['type'] === 'entity.too.large'
+      ) {
         return res.status(413).json({
           error: {
             code: 'PAYLOAD_TOO_LARGE',
@@ -670,7 +711,7 @@ export function createCollectionRoutes(
       // 默认错误处理
       res.status(500).json({
         error: {
-          code: 'INTERNAL_ERROR',
+          code: 'INTERNAL_SERVER_ERROR',
           message: 'Internal server error',
         },
       });

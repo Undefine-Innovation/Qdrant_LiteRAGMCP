@@ -73,9 +73,7 @@ export class CollectionName extends BaseValueObject<string> {
 
     // 检查长度
     if (name.length < CollectionName.MIN_NAME_LENGTH) {
-      throw new Error(
-        `Collection name must be at least ${CollectionName.MIN_NAME_LENGTH} character long`,
-      );
+      throw new Error('Collection name cannot be empty');
     }
 
     if (name.length > CollectionName.MAX_NAME_LENGTH) {

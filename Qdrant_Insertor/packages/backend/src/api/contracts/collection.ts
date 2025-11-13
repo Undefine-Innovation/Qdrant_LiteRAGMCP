@@ -41,6 +41,10 @@ export const UpdateCollectionSchema = z.object({
     .max(1000, 'Description too long')
     .optional()
     .describe('集合的新描述'),
+  status: z
+    .enum(['active', 'inactive', 'archived'])
+    .optional()
+    .describe('集合的新状态'),
 });
 
 /**

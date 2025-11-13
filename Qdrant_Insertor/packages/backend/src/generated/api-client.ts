@@ -18,7 +18,7 @@ class APIClient {
       body?: unknown;
       params?: Record<string, string>;
       headers?: Record<string, string>;
-    } = {}
+    } = {},
   ): Promise<T> {
     const url = new URL(path, this.baseURL);
 
@@ -39,14 +39,18 @@ class APIClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
 
     return response.json();
   }
 
   // Collections API
-  async createCollection(body: paths['/api/collections']['post']['requestBody']['content']['application/json']) {
+  async createCollection(
+    body: paths['/api/collections']['post']['requestBody']['content']['application/json'],
+  ) {
     return this.request('post', '/api/collections', { body });
   }
 
@@ -55,19 +59,26 @@ class APIClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${this.baseURL}/api/collections/${collectionId}/docs`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      `${this.baseURL}/api/collections/${collectionId}/docs`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Upload failed: ${response.status} ${response.statusText}`,
+      );
     }
 
     return response.json();
   }
 
-  async listDocuments(params?: paths['/api/docs']['get']['parameters']['query']) {
+  async listDocuments(
+    params?: paths['/api/docs']['get']['parameters']['query'],
+  ) {
     return this.request('get', '/api/docs', { params });
   }
 

@@ -115,8 +115,7 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
    */
   async updateStatusBatch(ids: string[], isActive: boolean): Promise<number> {
     try {
-      const result = await this.repository
-        .createQueryBuilder()
+      const result = await this.repository!.createQueryBuilder()
         .update(AlertRules)
         .set({ is_active: isActive })
         .whereInIds(ids)

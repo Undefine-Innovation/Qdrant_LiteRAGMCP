@@ -24,7 +24,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
    */
   async findLatest(limit: number = 10): Promise<SystemHealth[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         order: {
           created_at: 'DESC',
         },
@@ -46,7 +46,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
     status: 'healthy' | 'degraded' | 'unhealthy',
   ): Promise<SystemHealth[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           status,
         },
@@ -64,7 +64,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
    */
   async getAll(): Promise<SystemHealth[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         order: {
           created_at: 'DESC',
         },
@@ -83,7 +83,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
    */
   async getByComponent(component: string): Promise<SystemHealth | null> {
     try {
-      const result = await this.repository.findOne({
+      const result = await this.repository!.findOne({
         where: {
           component,
         },
@@ -107,7 +107,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
     components?: Record<string, SystemHealth>;
   }> {
     try {
-      const healthList = await this.repository.find({
+      const healthList = await this.repository!.find({
         order: {
           created_at: 'DESC',
         },
@@ -148,7 +148,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
    */
   async getUnhealthyComponents(): Promise<SystemHealth[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           status: 'unhealthy',
         },
@@ -168,7 +168,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
   async cleanup(olderThanDays: number): Promise<number> {
     try {
       const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
-      const result = await this.repository.delete({
+      const result = await this.repository!.delete({
         created_at: LessThan(cutoffTime),
       });
 
@@ -192,7 +192,7 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
       }
 
       // 查找是否存在相同component的记录
-      const existing = await this.repository.findOne({
+      const existing = await this.repository!.findOne({
         where: {
           component: data.component,
         } as FindOptionsWhere<SystemHealth>,
@@ -205,17 +205,17 @@ export class SystemHealthRepository extends BaseRepository<SystemHealth> {
         // 更新现有记录
         Object.assign(existing, data);
         existing.created_at = Date.now(); // 更新时间戳
-        const result = await this.repository.save(existing);
+        const result = await this.repository!.save(existing);
         this.logger.debug('更新健康状态成功', { component: data.component });
         return result;
       } else {
         // 创建新记录
-        const entity = this.repository.create({
+        const entity = this.repository!.create({
           ...data,
           created_at: Date.now(),
           id: undefined, // 让数据库生成ID
         });
-        const result = await this.repository.save(entity);
+        const result = await this.repository!.save(entity);
         this.logger.debug('创建健康状态成功', { component: data.component });
         return result;
       }

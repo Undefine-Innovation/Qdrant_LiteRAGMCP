@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { CollectionId } from '@domain/entities/types.js';
-import { ISearchService } from '@domain/repositories/ISearchService.js';
+import { ISearchService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import {
   SearchQuerySchema,
@@ -59,8 +59,9 @@ export function createSearchRoutes(
    *       }
    *     }
    */
+  // GET /search - 支持查询参数
   router.get(
-    '/search',
+    '/',
     validate({ query: SearchQuerySchema }),
     async (
       req: ValidatedRequest<unknown, z.infer<typeof SearchQuerySchema>>,
@@ -87,15 +88,8 @@ export function createSearchRoutes(
       logger?.info(
         `[API] /search request: q="${query}", collectionId="${normalizedCollectionId}", limit=${limit ?? 10}`,
       );
-      if (!normalizedCollectionId) {
-        // For non-paginated /search: collectionId is required by the contract
-        return res.status(400).json({
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'collectionId is required',
-          },
-        });
-      }
+      // collectionId is now optional in the schema, so we don't require it here
+      // The validation will handle missing collectionId if needed
 
       const results = await searchService.search(
         query,
@@ -109,6 +103,62 @@ export function createSearchRoutes(
       } else {
         logger?.info(
           `[API] /search results: count=${results.length}, q="${query}", collectionId="${collectionId}"`,
+        );
+      }
+      // 修改响应格式以匹配前端期望的 {results, total, query} 格式
+      const response = {
+        results: results || [],
+        total: results ? results.length : 0,
+        query: query,
+      };
+      res.status(200).json(response);
+    },
+  );
+
+  // POST /search - 支持请求体
+  router.post(
+    '/',
+    validate({ body: SearchQuerySchema }),
+    async (
+      req: ValidatedRequest<z.infer<typeof SearchQuerySchema>, unknown>,
+      res,
+    ) => {
+      const validatedBody = req.validated!.body;
+      if (!validatedBody) {
+        // This should not happen with validation middleware, but TypeScript needs it
+        return res.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid request body',
+          },
+        });
+      }
+      const { q: query, collectionId, limit } = validatedBody;
+      // Normalize collectionId: frontend may send a literal string 'undefined' or 'null'
+      const normalizedCollectionId =
+        collectionId === undefined ||
+        collectionId === 'undefined' ||
+        collectionId === 'null'
+          ? undefined
+          : (collectionId as string);
+      logger?.info(
+        `[API] /search POST request: q="${query}", collectionId="${normalizedCollectionId}", limit=${limit ?? 10}`,
+      );
+      // collectionId is now optional in the schema, so we don't require it here
+      // The validation will handle missing collectionId if needed
+
+      const results = await searchService.search(
+        query,
+        normalizedCollectionId as CollectionId,
+        { limit },
+      );
+      if (!results || results.length === 0) {
+        logger?.warn(
+          `[API] /search POST no results: q="${query}", collectionId="${collectionId}"`,
+        );
+      } else {
+        logger?.info(
+          `[API] /search POST results: count=${results.length}, q="${query}", collectionId="${collectionId}"`,
         );
       }
       // 修改响应格式以匹配前端期望的 {results, total, query} 格式
@@ -158,7 +208,7 @@ export function createSearchRoutes(
    *     }
    */
   router.get(
-    '/search/paginated',
+    '/paginated',
     validate({ query: SearchPaginatedQuerySchema }),
     async (
       req: ValidatedRequest<

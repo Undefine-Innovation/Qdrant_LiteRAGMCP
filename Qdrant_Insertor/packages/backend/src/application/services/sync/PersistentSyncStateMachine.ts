@@ -1,7 +1,7 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
-import { IEmbeddingProvider } from '@domain/entities/embedding.js';
-import { ISplitter } from '@domain/services/splitter.js';
+import { IEmbeddingProvider } from '@domain/interfaces/embedding.js';
+import { ISplitter } from '@domain/interfaces/splitter.js';
 import { Logger } from '@logging/logger.js';
 import { DocId } from '@domain/entities/types.js';
 import { SyncJobStatus } from '@domain/sync/types.js';

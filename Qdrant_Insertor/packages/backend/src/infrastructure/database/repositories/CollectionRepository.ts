@@ -30,7 +30,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async findByName(name: string): Promise<Collection | null> {
     try {
-      const result = await this.repository.findOne({
+      const result = await this.repository!.findOne({
         where: {
           name,
           deleted: false,
@@ -47,6 +47,16 @@ export class CollectionRepository extends BaseRepository<Collection> {
   }
 
   /**
+   * 根据collectionId查找集合（覆盖BaseRepository的findById）
+   * Collection实体使用collectionId字段作为业务标识符，而非id字段
+   * @param collectionId 集合ID（业务标识符）
+   * @returns 找到的集合或null
+   */
+  async findById(collectionId: string): Promise<Collection | null> {
+    return this.findByCollectionId(collectionId as CollectionId);
+  }
+
+  /**
    * 根据集合ID查找集合
    * @param collectionId 集合ID
    * @returns 找到的集合或null
@@ -55,7 +65,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
     collectionId: CollectionId,
   ): Promise<Collection | null> {
     try {
-      const result = await this.repository.findOne({
+      const result = await this.repository!.findOne({
         where: {
           collectionId,
           deleted: false,
@@ -77,7 +87,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async findAllActive(): Promise<Collection[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           deleted: false,
           status: 'active',
@@ -131,7 +141,10 @@ export class CollectionRepository extends BaseRepository<Collection> {
    * @param limit 每页数量
    * @returns 分页结果
    */
-  async findPaginated(page: number, limit: number): Promise<PaginatedResult<Collection>> {
+  async findPaginated(
+    page: number,
+    limit: number,
+  ): Promise<PaginatedResult<Collection>> {
     const paginationOptions: PaginationOptions = { page, limit };
     return await this.findWithPagination(paginationOptions);
   }
@@ -149,14 +162,16 @@ export class CollectionRepository extends BaseRepository<Collection> {
     >,
   ): Promise<Collection | null> {
     try {
-      const result = await this.update(id, data);
-      if (result) {
-        this.logger.debug(`更新集合成功`, {
-          id,
-          updatedFields: Object.keys(data),
-        });
-      }
-      return result;
+      // Type casting needed: CollectionId is a Brand type but update expects Record<string, unknown>
+      await this.update(id as unknown as Record<string, unknown>, data);
+      this.logger.debug(`更新集合成功`, {
+        id,
+        updatedFields: Object.keys(data),
+      });
+
+      // Always fetch the updated entity to ensure we have the latest data
+      const updated = await this.findByCollectionId(id);
+      return updated;
     } catch (error) {
       this.logger.error(`更新集合失败`, {
         id,
@@ -184,7 +199,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
         whereCondition.id = Not(excludeId);
       }
 
-      const count = await this.repository.count({ where: whereCondition });
+      const count = await this.repository!.count({ where: whereCondition });
       return count > 0;
     } catch (error) {
       this.logger.error(`检查集合名称存在性失败`, {
@@ -208,7 +223,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
         whereCondition.status = status;
       }
 
-      return await this.repository.count({ where: whereCondition });
+      return await this.repository!.count({ where: whereCondition });
     } catch (error) {
       this.logger.error(`获取集合总数失败`, {
         status,
@@ -454,7 +469,12 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async updateDocumentCount(id: CollectionId, count: number): Promise<boolean> {
     try {
-      const result = await this.update(id, { documentCount: count });
+      const result = await this.update(
+        id as unknown as Record<string, unknown>,
+        {
+          documentCount: count,
+        },
+      );
       if (result) {
         this.logger.debug(`更新集合文档数量成功`, { id, count });
       }
@@ -477,7 +497,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async updateChunkCount(id: CollectionId, count: number): Promise<boolean> {
     try {
-      const result = await this.update(id, { chunkCount: count });
+      const result = await this.update({ id } as Record<string, unknown>, {
+        chunkCount: count,
+      });
       if (result) {
         this.logger.debug(`更新集合块数量成功`, { id, count });
       }
@@ -499,7 +521,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async updateLastSyncTime(id: CollectionId): Promise<boolean> {
     try {
-      const result = await this.update(id, { lastSyncAt: Date.now() });
+      const result = await this.update({ id } as Record<string, unknown>, {
+        lastSyncAt: Date.now(),
+      });
       if (result) {
         this.logger.debug(`更新集合最后同步时间成功`, { id });
       }
@@ -507,6 +531,44 @@ export class CollectionRepository extends BaseRepository<Collection> {
     } catch (error) {
       this.logger.error(`更新集合最后同步时间失败`, {
         id,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 查找系统集合
+   * @returns 系统集合数组
+   */
+  async findSystemCollections(): Promise<Collection[]> {
+    try {
+      const collections = await this.findBy({
+        isSystemCollection: true,
+      } as unknown as FindOptionsWhere<Collection>);
+      this.logger.debug(`查找系统集合成功`, { count: collections.length });
+      return collections;
+    } catch (error) {
+      this.logger.error(`查找系统集合失败`, {
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 查找非系统集合
+   * @returns 非系统集合数组
+   */
+  async findNonSystemCollections(): Promise<Collection[]> {
+    try {
+      const collections = await this.findBy({
+        isSystemCollection: false,
+      } as unknown as FindOptionsWhere<Collection>);
+      this.logger.debug(`查找非系统集合成功`, { count: collections.length });
+      return collections;
+    } catch (error) {
+      this.logger.error(`查找非系统集合失败`, {
         error: (error as Error).message,
       });
       throw error;

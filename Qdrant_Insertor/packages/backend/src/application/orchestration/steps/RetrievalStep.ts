@@ -21,7 +21,9 @@ import { DocId, CollectionId, PointId } from '@domain/entities/types.js';
  * RetrievalStep 实现
  * 执行混合检索（向量 + 关键词）
  */
-export class RetrievalStep implements Step<RetrievalStepInput, RetrievalStepOutput> {
+export class RetrievalStep
+  implements Step<RetrievalStepInput, RetrievalStepOutput>
+{
   readonly name = 'RetrievalStep';
 
   /**
@@ -107,20 +109,35 @@ export class RetrievalStep implements Step<RetrievalStepInput, RetrievalStepOutp
 
       if (input.fusionKey && vectorResults.length > 0) {
         const fusionStrategy = this.strategyRegistry.getFusion(input.fusionKey);
-        finalResults = await fusionStrategy.fuse([keywordResults, vectorResults]);
+        finalResults = await fusionStrategy.fuse([
+          keywordResults,
+          vectorResults,
+        ]);
         this.logger.debug(
           `[${this.name}] 融合后结果: ${finalResults.length} 条`,
         );
       }
 
       // 转换为输出格式
-      const results = (finalResults as Array<{pointId: string; content: string; title?: string; docId: string; chunkIndex: number; collectionId?: string; titleChain?: string; relevanceScore?: number}>).map((result) => ({
+      const results = (
+        finalResults as Array<{
+          pointId: string;
+          content: string;
+          title?: string;
+          docId: string;
+          chunkIndex: number;
+          collectionId?: string;
+          titleChain?: string;
+          relevanceScore?: number;
+        }>
+      ).map((result) => ({
         pointId: result.pointId as PointId,
         content: result.content,
         title: result.title,
         docId: result.docId as DocId,
         chunkIndex: result.chunkIndex,
-        collectionId: (result.collectionId || input.collectionId) as CollectionId,
+        collectionId: (result.collectionId ||
+          input.collectionId) as CollectionId,
         titleChain: result.titleChain,
         score: result.relevanceScore || 0,
       }));
@@ -153,13 +170,10 @@ export class RetrievalStep implements Step<RetrievalStepInput, RetrievalStepOutp
     context: StepContext<RetrievalStepInput, RetrievalStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        query: context.input?.query,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      query: context.input?.query,
+      duration: context.duration,
+    });
   }
 }

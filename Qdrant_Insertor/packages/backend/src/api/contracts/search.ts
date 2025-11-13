@@ -7,12 +7,12 @@ import { RetrievalResultType } from '@domain/entities/types.js';
  */
 export const SearchQuerySchema = z.object({
   q: z.string().min(1).describe('要执行的搜索查询文本'),
-  collectionId: z.string().min(1).describe('要在其中执行搜索的集合的 ID'),
+  collectionId: z.string().optional().describe('要在其中执行搜索的集合的 ID'),
   limit: z
-    .string()
+    .union([z.string(), z.number()])
     .optional()
     .default('10')
-    .transform(Number)
+    .transform((val) => (typeof val === 'string' ? Number(val) : val))
     .refine((n) => n > 0 && n <= 100, {
       message: 'Limit 必须在1 到100 之间',
     })
@@ -26,15 +26,21 @@ export const SearchPaginatedQuerySchema = z.object({
   q: z.string().min(1).describe('要执行的搜索查询文本'),
   collectionId: z.string().optional().describe('要在其中执行搜索的集合的 ID'),
   page: z
-    .string()
+    .union([z.string(), z.number()])
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1))
+    .transform((val) => {
+      if (val === undefined || val === null) return 1;
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
     .refine((val) => val >= 1, { message: '页码必须大于0' })
     .describe('页码，从1开始，默认为1'),
   limit: z
-    .string()
+    .union([z.string(), z.number()])
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .transform((val) => {
+      if (val === undefined || val === null) return 20;
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
     .refine((val) => val >= 1 && val <= 100, {
       message: '每页数量必须在1-100之间',
     })

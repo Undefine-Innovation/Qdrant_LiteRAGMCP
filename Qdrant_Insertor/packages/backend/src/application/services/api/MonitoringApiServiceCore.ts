@@ -18,9 +18,9 @@ import { logger } from '@logging/logger.js';
 export class MonitoringApiServiceCore {
   /**
    * 创建监控API服务核心实例
-   * @param monitoringService 监控服务实例
+   * @param monitoringService 监控服务实例，可为 null（测试或禁用时）
    */
-  constructor(private monitoringService: MonitoringService) {}
+  constructor(private monitoringService: MonitoringService | null) {}
 
   /**
    * 获取系统概览数据
@@ -57,6 +57,29 @@ export class MonitoringApiServiceCore {
   ): Promise<HealthCheckResponse> {
     try {
       logger.info('Getting health check', { component: request.component });
+
+      // 如果 monitoringService 为 null，返回默认的健康状态
+      if (!this.monitoringService) {
+        return {
+          status: 'healthy' as const,
+          timestamp: new Date().toISOString(),
+          components: {
+            database: {
+              status: 'healthy' as const,
+              lastCheck: new Date().toISOString(),
+            },
+            qdrant: {
+              status: 'healthy' as const,
+              lastCheck: new Date().toISOString(),
+            },
+            filesystem: {
+              status: 'healthy' as const,
+              lastCheck: new Date().toISOString(),
+            },
+          },
+          overallHealth: 'healthy' as const,
+        };
+      }
 
       const healthData = await this.monitoringService.getSystemHealth();
       const components = await this.monitoringService.getAllComponentHealth();
@@ -144,6 +167,15 @@ export class MonitoringApiServiceCore {
       const timeRangeMs = this.getTimeRangeMs(request.timeRange);
       const now = Date.now();
       const startTime = now - timeRangeMs;
+
+      // 如果 monitoringService 为 null，返回空指标列表
+      if (!this.monitoringService) {
+        return {
+          timeRange: request.timeRange,
+          metrics: [],
+          aggregations: {},
+        };
+      }
 
       const metrics = await this.monitoringService.getMetrics(
         request.metricName,

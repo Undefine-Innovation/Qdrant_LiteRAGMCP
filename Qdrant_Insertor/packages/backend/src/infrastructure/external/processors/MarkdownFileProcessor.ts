@@ -1,12 +1,12 @@
 import { Logger } from '@logging/logger.js';
 import { BaseFileProcessor } from '@infrastructure/external/BaseFileProcessor.js';
-import { LoadedFile } from '@domain/services/loader.js';
+import { LoadedFile } from '@application/services/file-processing/index.js';
 import { DocumentChunk } from '@domain/entities/types.js';
 import {
   FileMetadata,
   FileProcessorOptions,
   FileProcessorResult,
-} from '@domain/services/fileProcessor.js';
+} from '@infrastructure/external/index.js';
 
 /**
  * Markdown文件处理器

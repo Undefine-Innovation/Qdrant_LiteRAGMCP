@@ -84,7 +84,8 @@ export class QueryCacheManager {
     try {
       const cacheKey = this.buildCacheKey(key);
       const result = await this.cache.get(cacheKey);
-      if (result !== null) this.logger?.debug('查询缓存命中', { key: cacheKey });
+      if (result !== null)
+        this.logger?.debug('查询缓存命中', { key: cacheKey });
       else this.logger?.debug('查询缓存未命中', { key: cacheKey });
       return result as T | null;
     } catch (error) {
@@ -165,7 +166,10 @@ export class QueryCacheManager {
     try {
       const paramString = JSON.stringify(params, Object.keys(params).sort());
       const combinedKey = `${baseKey}:${paramString}`;
-      if (this.config.maxKeyLength && combinedKey.length > this.config.maxKeyLength) {
+      if (
+        this.config.maxKeyLength &&
+        combinedKey.length > this.config.maxKeyLength
+      ) {
         return `${baseKey}:${this.hashString(paramString)}`;
       }
       return combinedKey;
@@ -242,7 +246,10 @@ export function QueryCache(
   options: {
     ttl?: number;
     key?: string;
-    condition?: (this: { queryCacheManager?: QueryCacheManager }, ...args: unknown[]) => boolean;
+    condition?: (
+      this: { queryCacheManager?: QueryCacheManager },
+      ...args: unknown[]
+    ) => boolean;
     invalidateOn?: string[];
   } = {},
 ) {
@@ -253,14 +260,26 @@ export function QueryCache(
    * @param descriptor - 属性描述符
    * @returns 修改后的属性描述符
    */
-  return function (target: unknown, propertyName: string, descriptor: PropertyDescriptor) {
-    const method = descriptor.value as (...args: unknown[]) => unknown | Promise<unknown>;
+  return function (
+    target: unknown,
+    propertyName: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const method = descriptor.value as (
+      ...args: unknown[]
+    ) => unknown | Promise<unknown>;
 
-    descriptor.value = async function thisWithCache(this: { queryCacheManager?: QueryCacheManager }, ...args: unknown[]) {
+    descriptor.value = async function thisWithCache(
+      this: { queryCacheManager?: QueryCacheManager },
+      ...args: unknown[]
+    ) {
       // 条件判断（若未通过则直接调用原方法）
       if (typeof options.condition === 'function') {
         try {
-          const cond = options.condition as (this: { queryCacheManager?: QueryCacheManager }, ...a: unknown[]) => boolean;
+          const cond = options.condition as (
+            this: { queryCacheManager?: QueryCacheManager },
+            ...a: unknown[]
+          ) => boolean;
           if (!cond.apply(this, args)) {
             return await Promise.resolve(method.apply(this, args));
           }
@@ -274,10 +293,17 @@ export function QueryCache(
       if (!cacheManager) return await Promise.resolve(method.apply(this, args));
 
       const operationName = propertyName;
-      if (!cacheManager.isCacheableOperation(operationName)) return await Promise.resolve(method.apply(this, args));
+      if (!cacheManager.isCacheableOperation(operationName))
+        return await Promise.resolve(method.apply(this, args));
 
-      const targetName = (target as { constructor?: { name?: string } })?.constructor?.name ?? 'Unknown';
-      const cacheKey = options.key ?? cacheManager.generateCacheKey(`${targetName}.${operationName}`, { args });
+      const targetName =
+        (target as { constructor?: { name?: string } })?.constructor?.name ??
+        'Unknown';
+      const cacheKey =
+        options.key ??
+        cacheManager.generateCacheKey(`${targetName}.${operationName}`, {
+          args,
+        });
 
       const cachedResult = await cacheManager.get(cacheKey);
       if (cachedResult !== null) return cachedResult;
@@ -303,7 +329,9 @@ export function QueryCache(
  * @param keys - 要失效的缓存键数组或生成键的函数
  * @returns 装饰器工厂函数，返回一个属性描述符修改器
  */
-export function CacheInvalidation(keys: string[] | ((...args: unknown[]) => string[])) {
+export function CacheInvalidation(
+  keys: string[] | ((...args: unknown[]) => string[]),
+) {
   /**
    * 缓存失效装饰器函数
    * @param target - 目标对象
@@ -311,17 +339,29 @@ export function CacheInvalidation(keys: string[] | ((...args: unknown[]) => stri
    * @param descriptor - 属性描述符
    * @returns 修改后的属性描述符
    */
-  return function (target: unknown, propertyName: string, descriptor: PropertyDescriptor) {
-    const method = descriptor.value as (...args: unknown[]) => unknown | Promise<unknown>;
+  return function (
+    target: unknown,
+    propertyName: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const method = descriptor.value as (
+      ...args: unknown[]
+    ) => unknown | Promise<unknown>;
 
-    descriptor.value = async function thisWithInvalidation(this: { queryCacheManager?: QueryCacheManager }, ...args: unknown[]) {
+    descriptor.value = async function thisWithInvalidation(
+      this: { queryCacheManager?: QueryCacheManager },
+      ...args: unknown[]
+    ) {
       const result = await Promise.resolve(method.apply(this, args));
 
       const cacheManager = this.queryCacheManager;
       if (!cacheManager) return result;
 
       try {
-        const keysToInvalidate = typeof keys === 'function' ? (keys as (...a: unknown[]) => string[]).apply(this, args) : keys;
+        const keysToInvalidate =
+          typeof keys === 'function'
+            ? (keys as (...a: unknown[]) => string[]).apply(this, args)
+            : keys;
         for (const key of keysToInvalidate) {
           try {
             await cacheManager.delete(key);

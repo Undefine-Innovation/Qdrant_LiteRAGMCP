@@ -1,7 +1,7 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
-import { IEmbeddingProvider } from '@domain/entities/embedding.js';
-import { ISplitter } from '@domain/services/splitter.js';
+import { IEmbeddingProvider } from '@domain/interfaces/embedding.js';
+import { ISplitter } from '@domain/interfaces/splitter.js';
 import { Logger } from '@logging/logger.js';
 import {
   DocId,
@@ -106,9 +106,26 @@ export class SyncStateMachine {
       return;
     }
 
-    const chunks: DocumentChunk[] = this.splitter.split(doc.content as string, {
+    const rawChunks = (await this.splitter.split(doc.content as string, {
       name: doc.name ?? '',
+    })) as unknown[];
+
+    const chunkTexts: string[] = rawChunks.map((item) => {
+      if (typeof item === 'string') {
+        return item;
+      } else if (item && typeof item === 'object' && 'content' in item) {
+        const chunkItem = item as { content: unknown };
+        return typeof chunkItem.content === 'string' ? chunkItem.content : String(chunkItem.content);
+      } else {
+        return String(item);
+      }
     });
+
+    // 转换为 DocumentChunk 格式
+    const chunks: DocumentChunk[] = chunkTexts.map((content, index) => ({
+      content,
+      index,
+    }));
 
     try {
       this.logger.info(
@@ -123,10 +140,9 @@ export class SyncStateMachine {
         error: (error as Error).message,
         stack: (error as Error).stack,
         chunksCount: chunks.length,
-        firstChunk: chunks[0]
+        firstChunk: chunkTexts[0]
           ? {
-              content: chunks[0].content.substring(0, 100),
-              titleChain: chunks[0].titleChain,
+              content: chunkTexts[0].substring(0, 100),
             }
           : null,
       });
@@ -152,7 +168,7 @@ export class SyncStateMachine {
     );
 
     const contents = chunkMetasWithContent.map((cm) => cm.content);
-    const embeddings = await this.embeddingProvider.generate(contents);
+    const embeddings = await this.embeddingProvider.generateBatch(contents);
 
     if (embeddings.length !== chunkMetasWithContent.length) {
       throw new Error('嵌入数量与分块数量不匹配');

@@ -8,7 +8,7 @@ import {
   PreviewContent,
   DownloadContent,
   ThumbnailSize,
-} from '@domain/repositories/IFileProcessingService.js';
+} from '@application/services/index.js';
 import { FileFormatDetector } from './FileFormatDetector.js';
 import { ThumbnailGenerator } from './ThumbnailGenerator.js';
 import { ContentConverter } from './ContentConverter.js';

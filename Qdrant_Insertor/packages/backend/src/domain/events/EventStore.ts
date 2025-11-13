@@ -6,6 +6,7 @@ import {
 import { Logger } from '../../infrastructure/logging/logger.js';
 import { DataSource, FindOptionsWhere } from 'typeorm';
 import { CollectionId, DocId, PointId } from '../entities/types.js';
+import { Event } from '../../infrastructure/database/entities/Event.js';
 
 /**
  * 事件存储实体
@@ -233,7 +234,7 @@ export class DatabaseEventStore implements IEventStore {
       await queryRunner.startTransaction();
 
       const entity = this.mapEventToEntity(event);
-      await queryRunner.manager.save('Event', entity);
+      await queryRunner.manager.save(Event, entity);
 
       await queryRunner.commitTransaction();
 
@@ -271,7 +272,7 @@ export class DatabaseEventStore implements IEventStore {
       await queryRunner.startTransaction();
 
       const entities = events.map((event) => this.mapEventToEntity(event));
-      await queryRunner.manager.save('Event', entities);
+      await queryRunner.manager.save(Event, entities);
 
       await queryRunner.commitTransaction();
 
@@ -324,19 +325,89 @@ export class DatabaseEventStore implements IEventStore {
         };
       }
 
-      const entities = await this.dataSource.manager.find('Event', {
-        where: whereConditions as unknown as FindOptionsWhere<EventStorageEntity>,
+      const entities = await this.dataSource.manager.find(Event, {
+        where: whereConditions as unknown as FindOptionsWhere<Event>,
         order: { version: 'ASC' },
       });
 
-      return entities.map((entity) =>
-        this.mapEntityToEvent(entity as unknown as EventStorageEntity),
-      );
+      return entities.map((entity) => this.mapEntityToEvent(entity));
     } catch (error) {
       this.logger.error('Failed to get events by aggregate', {
         aggregateId,
         fromVersion,
         toVersion,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 根据聚合ID获取事件（别名方法，用于向后兼容）
+   * @param aggregateId 聚合ID
+   * @param fromVersion 起始版本
+   * @param toVersion 结束版本
+   * @returns 事件数组
+   */
+  async getEventsByAggregateId(
+    aggregateId: string,
+    fromVersion?: number,
+    toVersion?: number,
+  ): Promise<IDomainEvent[]> {
+    return this.getEventsByAggregate(aggregateId, fromVersion, toVersion);
+  }
+
+  /**
+   * 获取未处理的事件
+   * @param limit 限制数量
+   * @returns 事件数组
+   */
+  async getUnprocessedEvents(limit?: number): Promise<IDomainEvent[]> {
+    try {
+      const findOptions: Record<string, unknown> = {
+        where: { processedAt: null },
+        order: { occurredOn: 'ASC' },
+      };
+
+      if (limit !== undefined) {
+        findOptions.take = limit;
+      }
+
+      const entities = await this.dataSource.manager.find(
+        Event,
+        findOptions as Record<string, unknown>,
+      );
+
+      return entities.map((entity) => this.mapEntityToEvent(entity));
+    } catch (error) {
+      this.logger.error('Failed to get unprocessed events', {
+        limit,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 标记事件为已处理
+   * @param eventId 事件ID
+   * @returns Promise
+   */
+  async markEventAsProcessed(eventId: string): Promise<void> {
+    try {
+      await this.dataSource.manager.update(
+        Event,
+        { eventId },
+        {
+          processedAt: Date.now(),
+          processingStatus: 'completed',
+        },
+      );
+
+      this.logger.debug('Event marked as processed', { eventId });
+    } catch (error) {
+      this.logger.error('Failed to mark event as processed', {
+        eventId,
         error: (error as Error).message,
       });
       throw error;
@@ -388,13 +459,11 @@ export class DatabaseEventStore implements IEventStore {
       }
 
       const entities = await this.dataSource.manager.find(
-        'Event',
+        Event,
         findOptions as Record<string, unknown>,
       );
 
-      return entities.map((entity) =>
-        this.mapEntityToEvent(entity as EventStorageEntity),
-      );
+      return entities.map((entity) => this.mapEntityToEvent(entity));
     } catch (error) {
       this.logger.error('Failed to get events by type', {
         eventType,
@@ -457,9 +526,9 @@ export class DatabaseEventStore implements IEventStore {
       }
 
       const entities = (await this.dataSource.manager.find(
-        'Event',
+        Event,
         findOptions as Record<string, unknown>,
-      )) as EventStorageEntity[];
+      )) as Event[];
 
       return entities.map((entity) => this.mapEntityToEvent(entity));
     } catch (error) {
@@ -480,7 +549,7 @@ export class DatabaseEventStore implements IEventStore {
    */
   async getEventCount(): Promise<number> {
     try {
-      return await this.dataSource.manager.count('Event');
+      return await this.dataSource.manager.count(Event);
     } catch (error) {
       this.logger.error('Failed to get event count', {
         error: (error as Error).message,
@@ -501,7 +570,7 @@ export class DatabaseEventStore implements IEventStore {
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
-      const result = await queryRunner.manager.delete('Event', {
+      const result = await queryRunner.manager.delete(Event, {
         occurredOn: { $lt: beforeTime },
       });
 
@@ -536,14 +605,14 @@ export class DatabaseEventStore implements IEventStore {
       // 获取已处理的事件数
       const successfulCount = await this.dataSource.manager
         .createQueryBuilder()
-        .from('Event', 'e')
+        .from(Event, 'e')
         .where('e.processedAt IS NOT NULL')
         .getCount();
 
       // 获取失败的事件数（5分钟内未处理的）
       const failedCount = await this.dataSource.manager
         .createQueryBuilder()
-        .from('Event', 'e')
+        .from(Event, 'e')
         .where('e.processedAt IS NULL')
         .andWhere('e.occurredOn < :threshold', {
           threshold: Date.now() - 300000,
@@ -567,33 +636,39 @@ export class DatabaseEventStore implements IEventStore {
   }
 
   /**
-   * 将领域事件映射为存储实体
+   * 将领域事件映射为Event实体
    * @param event 领域事件
-   * @returns 存储实体
+   * @returns Event实体
    */
-  private mapEventToEntity(event: IDomainEvent): EventStorageEntity {
+  private mapEventToEntity(event: IDomainEvent): Partial<Event> {
+    const now = event.occurredOn || Date.now();
     return {
       id: event.eventId,
-      eventId: event.eventId, // eventId应该与领域事件的eventId保持一致
+      eventId: event.eventId,
       eventType: event.eventType,
       aggregateId: event.aggregateId,
       aggregateType: this.getAggregateType(event.aggregateId),
-      occurredOn: event.occurredOn,
+      occurredOn: now,
       version: event.version,
       metadata: event.metadata ? JSON.stringify(event.metadata) : undefined,
       eventData: event.serialize(),
-      createdAt: new Date(event.occurredOn),
-      updatedAt: new Date(event.occurredOn),
+      created_at: now,
+      updated_at: now,
     };
   }
 
   /**
-   * 将存储实体映射为领域事件
-   * @param entity 存储实体
+   * 将Event实体或EventStorageEntity映射为领域事件
+   * @param entity Event实体或EventStorageEntity
    * @returns 领域事件
    */
-  private mapEntityToEvent(entity: EventStorageEntity): IDomainEvent {
-    const eventData = JSON.parse(entity.eventData);
+  private mapEntityToEvent(entity: Event | EventStorageEntity): IDomainEvent {
+    const parsedData = JSON.parse(entity.eventData);
+
+    // 兼容两种数据格式:
+    // 1. { data: { ... } } - 新格式，data 字段包含实际数据
+    // 2. { ... } - 旧格式，所有字段都在顶层
+    const eventData = parsedData.data || parsedData;
 
     // 这里需要根据事件类型创建相应的事件实例
     // 简化实现，实际应该使用工厂模式
@@ -604,7 +679,7 @@ export class DatabaseEventStore implements IEventStore {
       occurredOn: entity.occurredOn,
       version: entity.version,
       metadata: entity.metadata ? JSON.parse(entity.metadata) : undefined,
-      getData: () => eventData.data || {},
+      getData: () => eventData,
       serialize: () => entity.eventData,
     } as IDomainEvent;
   }

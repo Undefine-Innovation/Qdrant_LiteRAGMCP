@@ -8,17 +8,19 @@ import {
   PreviewContent,
   DownloadContent,
   ThumbnailSize,
-} from '@domain/repositories/IFileProcessingService.js';
-import { IFileProcessorRegistry } from '@domain/services/fileProcessor.js';
+} from '@application/services/index.js';
+import {
+  IFileProcessorRegistry,
+  LoadedFile,
+} from '@infrastructure/external/index.js';
 import { DocId, Doc } from '@domain/entities/types.js';
-import { FileMetadata } from '@domain/services/fileProcessor.js';
+import { FileMetadata } from '@infrastructure/external/index.js';
 import {
   FileFormatDetector,
   FormatDetectionResult,
 } from '@infrastructure/external/FileFormatDetector.js';
 import path from 'path';
-import { LoadedFile } from '@domain/services/loader.js';
-import { IFileLoader } from '@domain/services/loader.js';
+import { IFileLoader } from '@application/services/file-processing/index.js';
 
 /**
  * 增强的文件处理服务
@@ -89,7 +91,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     const loadedFile = await this.getLoadedFile(doc);
 
     // 获取适合的处理器
-    const processor = this.processorRegistry.getProcessor(loadedFile);
+    const processor =
+      this.processorRegistry.getProcessorForFile?.(loadedFile) ||
+      this.processorRegistry.getProcessor(
+        loadedFile.mimeType,
+        this.extractExtension(loadedFile.fileName),
+      );
     if (!processor) {
       // 如果没有处理器，使用默认预览
       return this.generateDefaultPreview(loadedFile, format);
@@ -97,13 +104,13 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
 
     try {
       // 使用处理器生成预览
-      const previewContent = await processor.generatePreview(
+      const previewContent = await processor.generatePreview?.(
         loadedFile,
         format,
       );
 
       return {
-        content: previewContent,
+        content: previewContent || (await this.generateDefaultPreview(loadedFile, format)).content,
         mimeType: this.getMimeTypeForFormat(format),
         format,
       };
@@ -141,7 +148,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     }
 
     // 获取适合的处理器
-    const processor = this.processorRegistry.getProcessor(loadedFile);
+    const processor =
+      this.processorRegistry.getProcessorForFile?.(loadedFile) ||
+      this.processorRegistry.getProcessor(
+        loadedFile.mimeType,
+        this.extractExtension(loadedFile.fileName),
+      );
     if (!processor) {
       // 如果没有处理器，返回文本格式
       return {
@@ -153,13 +165,13 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
 
     try {
       // 使用处理器生成内容
-      const content = await processor.generatePreview(
+      const content = await processor.generatePreview?.(
         loadedFile,
         format === 'html' ? 'html' : 'text',
       );
 
       return {
-        content,
+        content: content || loadedFile.content,
         mimeType: this.getMimeTypeForFormat(
           format === 'txt' ? 'text' : (format as 'html' | 'text' | 'json'),
         ),
@@ -196,7 +208,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     const loadedFile = await this.getLoadedFile(doc);
 
     // 获取适合的处理器
-    const processor = this.processorRegistry.getProcessor(loadedFile);
+    const processor =
+      this.processorRegistry.getProcessorForFile?.(loadedFile) ||
+      this.processorRegistry.getProcessor(
+        loadedFile.mimeType,
+        this.extractExtension(loadedFile.fileName),
+      );
     if (!processor) {
       // 如果没有处理器，生成默认缩略图
       return this.generateDefaultThumbnail(loadedFile, size);
@@ -204,7 +221,10 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
 
     try {
       // 使用处理器生成缩略图
-      const thumbnailData = await processor.generateThumbnail(loadedFile, size);
+      const thumbnailData = await processor.generateThumbnail?.(
+        loadedFile,
+        size,
+      );
 
       // 如果返回的是Base64数据，保存为文件
       if (
@@ -264,7 +284,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     const loadedFile = await this.getLoadedFile(doc);
 
     // 获取适合的处理器
-    const processor = this.processorRegistry.getProcessor(loadedFile);
+    const processor =
+      this.processorRegistry.getProcessorForFile?.(loadedFile) ||
+      this.processorRegistry.getProcessor(
+        loadedFile.mimeType,
+        this.extractExtension(loadedFile.fileName),
+      );
     if (!processor) {
       throw new Error(`无法找到适合处理文件 ${doc.name} 的处理器`);
     }
@@ -274,9 +299,13 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       const result = await processor.process(loadedFile, options);
 
       return {
-        text: result.text,
-        chunks: result.chunks,
-        metadata: result.metadata,
+        text: result.text || '',
+        chunks: result.chunks || [],
+        metadata: result.metadata || {
+          fileName: doc.name || 'unknown',
+          mimeType: loadedFile.mimeType,
+          size: loadedFile.size || 0,
+        },
       };
     } catch (error) {
       this.logger.error(`文件处理失败: ${doc.name}`, { error });
@@ -380,6 +409,7 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
           content: content.content,
           fileName: doc.name || 'unknown',
           mimeType: doc.mime || content.mimeType || 'application/octet-stream',
+          size: content.content.length,
         };
       } catch (error) {
         this.logger.error(`从文件系统读取文件失败: ${doc.key}`, { error });
@@ -402,6 +432,7 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
         content: contentStr,
         fileName: doc.name || 'unknown',
         mimeType: doc.mime || 'text/plain',
+        size: contentStr.length,
       };
     }
 
@@ -410,6 +441,7 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       content: '',
       fileName: doc.name || 'unknown',
       mimeType: doc.mime || 'application/octet-stream',
+      size: 0,
     };
   }
 

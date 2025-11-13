@@ -6,7 +6,10 @@ import {
   PaginationQuery,
   PointId,
 } from '@domain/entities/types.js';
-import { IDocumentService } from '@domain/repositories/IDocumentService.js';
+import {
+  IDocumentService,
+  DocumentChunkView,
+} from '@application/services/index.js';
 import { IDocumentAggregateRepository } from '@domain/repositories/index.js';
 import { ImportService } from '../batch/ImportService.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
@@ -15,7 +18,6 @@ import { Logger, EnhancedLogger, LogTag } from '@logging/logger.js';
 import { IEventPublisher } from '@domain/events/index.js';
 import { DocumentAggregate } from '@domain/aggregates/index.js';
 import { Chunk } from '@domain/entities/Chunk.js';
-import { DocumentChunkView } from '@domain/repositories/IDocumentService.js';
 import { FILE_CONSTANTS } from '@domain/constants/FileConstants.js';
 
 /**
@@ -60,7 +62,9 @@ export class DocumentService implements IDocumentService {
         page,
         limit: DEFAULT_PAGE_SIZE,
       });
-      documents.push(...pageResult.data.map((aggregate) => this.mapDoc(aggregate)));
+      documents.push(
+        ...pageResult.data.map((aggregate) => this.mapDoc(aggregate)),
+      );
       hasNext = pageResult.pagination.hasNext;
       page += 1;
     }
@@ -78,10 +82,11 @@ export class DocumentService implements IDocumentService {
     query: PaginationQuery,
     collectionId?: CollectionId,
   ): Promise<PaginatedResponse<Doc>> {
+    // Map API field names to database field names
     const normalizedQuery: PaginationQuery = {
       page: query.page ?? 1,
-      limit: query.limit ?? DEFAULT_PAGE_SIZE,
-      sort: query.sort,
+      limit: query.limit ?? 20,
+      sort: query.sort === 'size' ? 'size_bytes' : query.sort, // Map 'size' to 'size_bytes' for database
       order: query.order,
     };
 
@@ -124,9 +129,7 @@ export class DocumentService implements IDocumentService {
    */
   async getDocumentChunks(docId: DocId): Promise<DocumentChunkView[]> {
     const aggregate = await this.getAggregateOrThrow(docId);
-    return aggregate
-      .getSortedChunks()
-      .map((chunk) => this.mapChunk(chunk));
+    return aggregate.getSortedChunks().map((chunk) => this.mapChunk(chunk));
   }
 
   /**
@@ -140,7 +143,9 @@ export class DocumentService implements IDocumentService {
     query: PaginationQuery,
   ): Promise<PaginatedResponse<DocumentChunkView>> {
     const aggregate = await this.getAggregateOrThrow(docId);
-    const chunks = aggregate.getSortedChunks().map((chunk) => this.mapChunk(chunk));
+    const chunks = aggregate
+      .getSortedChunks()
+      .map((chunk) => this.mapChunk(chunk));
     return this.paginate(chunks, query);
   }
 
@@ -148,9 +153,19 @@ export class DocumentService implements IDocumentService {
    * Deletes document
    * @param docId - Document ID to delete
    * @returns Promise resolving when deletion is complete
+   * @throws AppError with NOT_FOUND if document doesn't exist
    */
   async deleteDocument(docId: DocId): Promise<void> {
-    const aggregate = await this.getAggregateOrThrow(docId);
+    // First check if document exists
+    const aggregate = await this.documentRepository.findById(docId);
+
+    // If document doesn't exist, throw NOT_FOUND error
+    if (!aggregate) {
+      throw AppError.createNotFoundError(
+        `Document with ID ${docId as string} not found`,
+      );
+    }
+
     const doc = this.mapDoc(aggregate);
     const documentLogger = this.enhancedLogger?.withTag(LogTag.DOCUMENT);
 
@@ -165,23 +180,63 @@ export class DocumentService implements IDocumentService {
       chunkCount: pointIds.length,
     });
 
-    documentLogger?.info('��ʼɾ���ĵ�', undefined, {
+    documentLogger?.info('开始删除文档', undefined, {
       docId,
       collectionId: doc.collectionId,
       chunkCount: pointIds.length,
     });
 
+    // Delete from Qdrant (best effort - don't fail if points don't exist)
     if (pointIds.length > 0) {
-      await this.qdrantRepo.deletePoints(doc.collectionId, pointIds);
+      try {
+        await this.qdrantRepo.deletePoints(doc.collectionId, pointIds);
+      } catch (error) {
+        // Log but don't fail if Qdrant delete fails (points might not exist)
+        this.logger.warn(
+          '[DeleteAudit] Qdrant points deletion failed, continuing',
+          {
+            docId,
+            collectionId: doc.collectionId,
+            error: (error as Error).message,
+          },
+        );
+      }
     }
 
-    const deleted = await this.documentRepository.delete(docId);
-    if (!deleted) {
-      throw AppError.createInternalServerError(
-        `Failed to delete document ${docId} from repository`,
-      );
+    // Delete from database
+    try {
+      const deleted = await this.documentRepository.delete(docId);
+      if (!deleted) {
+        // Document might have been deleted concurrently - check again
+        const stillExists = await this.documentRepository.findById(docId);
+        if (!stillExists) {
+          this.logger.info(
+            '[DeleteAudit] Document already deleted (race condition)',
+            {
+              docId,
+            },
+          );
+          return; // Successfully deleted (by another request)
+        }
+        throw AppError.createInternalServerError(
+          `Failed to delete document ${docId} from repository`,
+        );
+      }
+    } catch (error) {
+      // If deletion fails because document was already deleted (race condition), log and return
+      if (error instanceof Error && error.message.includes('not found')) {
+        this.logger.info(
+          '[DeleteAudit] Document already deleted (race condition)',
+          {
+            docId,
+          },
+        );
+        return;
+      }
+      throw error;
     }
 
+    // Publish domain events
     await this.eventPublisher.publishBatch(aggregate.getDomainEvents());
     aggregate.clearDomainEvents();
 
@@ -190,7 +245,7 @@ export class DocumentService implements IDocumentService {
       collectionId: doc.collectionId,
     });
 
-    documentLogger?.info('�ĵ�ɾ�����', undefined, {
+    documentLogger?.info('文档删除成功', undefined, {
       docId,
       collectionId: doc.collectionId,
     });

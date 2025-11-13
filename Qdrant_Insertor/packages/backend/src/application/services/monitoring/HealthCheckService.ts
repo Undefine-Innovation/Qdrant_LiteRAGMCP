@@ -7,12 +7,19 @@ import {
 } from '@infrastructure/sqlite/dao/index.js';
 import { SyncJobStatus } from '@domain/sync/types.js';
 import { PersistentSyncStateMachine } from '../sync/index.js';
+import {
+  IHealthCheckService,
+  ComponentHealth,
+  SystemHealthStatus,
+} from '@domain/repositories/IHealthCheckService.js';
+import { SystemHealth } from '@infrastructure/database/entities/SystemHealth.js';
+import { DataSource } from 'typeorm';
 
 /**
  * 健康检查服务
  * 负责执行系统健康检查
  */
-export class HealthCheckService {
+export class HealthCheckService implements IHealthCheckService {
   /**
    * 创建健康检查服务实例
    * @param sqliteRepo SQLite 仓库实例
@@ -23,6 +30,7 @@ export class HealthCheckService {
     private readonly sqliteRepo: ISQLiteRepo,
     private readonly syncStateMachine: PersistentSyncStateMachine,
     private readonly logger: Logger,
+    private readonly dataSource?: DataSource,
   ) {}
 
   /**
@@ -323,20 +331,185 @@ export class HealthCheckService {
     tags?: Record<string, string | number>,
   ): Promise<void> {
     try {
-      const metric: SystemMetric = {
-        id: '', // 将在创建时生成
-        metricName,
-        metricValue: value,
-        metricUnit: unit,
-        tags,
+      const metric = {
+        metric_name: metricName,
+        metric_value: value,
+        metric_unit: unit,
+        tags: tags ? JSON.stringify(tags) : undefined,
         timestamp: Date.now(),
-        createdAt: Date.now(),
       };
 
       await this.sqliteRepo.systemMetrics.create(metric);
     } catch (error) {
       this.logger.error(`记录指标失败: ${metricName}`, { error });
       // 不抛出异常，以避免健康检查因指标记录失败而中断
+    }
+  }
+
+  /**
+   * 获取系统整体健康状态
+   * @returns 系统健康状态
+   */
+  public async getSystemHealth(): Promise<SystemHealthStatus> {
+    try {
+      // 获取所有组件健康状态
+      let componentHealthRecords: SystemHealth[];
+
+      // 检查是否有直接数据源访问（测试环境）
+      if (this.dataSource) {
+        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
+        componentHealthRecords = await systemHealthRepository.find();
+      } else {
+        componentHealthRecords = await this.sqliteRepo.systemHealth.getAll();
+      }
+
+      // 转换为返回格式
+      const components = componentHealthRecords.map((record: SystemHealth) => ({
+        component: record.component || 'unknown',
+        status: record.status,
+        message: record.errorMessage || (record as { message?: string }).message,
+        lastCheck: new Date(record.lastCheck),
+        responseTimeMs: record.responseTimeMs,
+        details: record.details
+          ? typeof record.details === 'string'
+            ? JSON.parse(record.details as string)
+            : record.details
+          : undefined,
+      }));
+
+      // 计算整体健康状态
+      let overall: HealthStatus = HealthStatusValues.HEALTHY;
+      const statuses = components.map(
+        (c: { status: HealthStatus | string }) => c.status as HealthStatus,
+      );
+
+      if (statuses.includes(HealthStatusValues.UNHEALTHY)) {
+        overall = HealthStatusValues.UNHEALTHY;
+      } else if (statuses.includes(HealthStatusValues.DEGRADED)) {
+        overall = HealthStatusValues.DEGRADED;
+      }
+
+      return {
+        overall,
+        components,
+      };
+    } catch (error) {
+      this.logger.error('获取系统健康状态失败', { error });
+      return {
+        overall: HealthStatusValues.UNHEALTHY,
+        components: [],
+      };
+    }
+  }
+
+  /**
+   * 更新组件健康状态
+   * @param component 组件名称
+   * @param status 健康状态更新
+   */
+  public async updateComponentHealth(
+    component: string,
+    status: {
+      status: HealthStatus;
+      message?: string;
+      details?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    try {
+      // 检查是否有直接数据源访问（测试环境）
+      if (this.dataSource) {
+        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
+
+        // 查找现有记录
+        const existingRecord = await systemHealthRepository.findOne({
+          where: { component },
+        });
+
+        if (existingRecord) {
+          // 更新现有记录
+          existingRecord.status = status.status;
+          existingRecord.lastCheck = Date.now();
+          existingRecord.errorMessage = status.message;
+          existingRecord.details = status.details
+            ? JSON.stringify(status.details)
+            : undefined;
+          await systemHealthRepository.save(existingRecord);
+        } else {
+          // 创建新记录
+          const newRecord = new SystemHealth();
+          newRecord.component = component;
+          newRecord.status = status.status;
+          newRecord.lastCheck = Date.now();
+          newRecord.errorMessage = status.message;
+          newRecord.details = status.details
+            ? JSON.stringify(status.details)
+            : undefined;
+          await systemHealthRepository.save(newRecord);
+        }
+      } else {
+        // 使用原始方法
+        await this.sqliteRepo.systemHealth.upsert({
+          component,
+          status: status.status,
+          lastCheck: Date.now(),
+          errorMessage: status.message,
+          details: status.details,
+        });
+      }
+
+      this.logger.debug(`组件健康状态已更新: ${component}`, { status });
+    } catch (error) {
+      this.logger.error(`更新组件健康状态失败: ${component}`, { error });
+      throw error;
+    }
+  }
+
+  /**
+   * 检查特定组件健康状态
+   * @param component 组件名称
+   * @returns 组件健康状态
+   */
+  public async checkComponent(
+    component: string,
+  ): Promise<ComponentHealth | null> {
+    try {
+      // 检查是否有直接数据源访问（测试环境）
+      let healthRecord: SystemHealth | null;
+
+      if (this.dataSource) {
+        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
+        healthRecord = await systemHealthRepository.findOne({
+          where: { component },
+        });
+      } else {
+        healthRecord =
+          await this.sqliteRepo.systemHealth.getByComponent(component);
+      }
+
+      if (!healthRecord) {
+        return {
+          component,
+          status: 'unknown' as HealthStatus,
+          message: 'Component not found',
+          lastCheck: new Date(),
+        };
+      }
+
+      return {
+        component: healthRecord.component || component,
+        status: healthRecord.status,
+        message: healthRecord.errorMessage,
+        lastCheck: new Date(healthRecord.lastCheck),
+        responseTimeMs: healthRecord.responseTimeMs,
+        details: healthRecord.details
+          ? typeof healthRecord.details === 'string'
+            ? JSON.parse(healthRecord.details)
+            : healthRecord.details
+          : undefined,
+      };
+    } catch (error) {
+      this.logger.error(`检查组件健康状态失败: ${component}`, { error });
+      return null;
     }
   }
 

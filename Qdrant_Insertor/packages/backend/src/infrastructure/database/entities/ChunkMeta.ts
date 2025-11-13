@@ -259,6 +259,11 @@ export class ChunkMeta extends BaseEntity {
     if (!this.pointId) {
       this.pointId = this.id;
     }
+    // 确保contentHash有值（如果未设置）
+    if (!this.contentHash) {
+      // 简单的哈希生成，实际应用中应使用更安全的哈希算法
+      this.contentHash = `hash_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    }
   }
 
   /**

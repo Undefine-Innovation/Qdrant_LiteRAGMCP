@@ -4,9 +4,9 @@ import {
   FileProcessorOptions,
   FileProcessorResult,
   FileMetadata,
-} from '@domain/services/fileProcessor.js';
-import { LoadedFile } from '@domain/services/loader.js';
-import { DocumentChunk } from '@domain/entities/types.js';
+  LoadedFile,
+  DocumentChunk,
+} from '@infrastructure/external/index.js';
 
 /**
  * 文件处理器抽象基类

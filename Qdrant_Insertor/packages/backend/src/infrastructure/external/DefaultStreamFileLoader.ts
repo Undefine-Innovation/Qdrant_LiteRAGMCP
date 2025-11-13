@@ -3,7 +3,10 @@
  * 从 Buffer 或 Stream 加载文件内容
  */
 
-import { IStreamFileLoader, StreamLoadedFile } from '@domain/services/stream-loader.js';
+import {
+  IStreamFileLoader,
+  StreamLoadedFile,
+} from '@application/services/file-processing/index.js';
 import { Logger } from '@logging/logger.js';
 
 /**

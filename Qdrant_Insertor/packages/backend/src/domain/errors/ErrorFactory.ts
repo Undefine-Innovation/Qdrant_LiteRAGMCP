@@ -1,5 +1,8 @@
 import { ErrorCode, AppError } from '@api/contracts/error.js';
-import { TransactionError, TransactionErrorType } from '@infrastructure/transactions/TransactionErrorHandler.js';
+import {
+  TransactionError,
+  TransactionErrorType,
+} from '@infrastructure/transactions/TransactionErrorHandler.js';
 import { ErrorCategory } from '@domain/sync/retry.js';
 
 /**
@@ -54,7 +57,7 @@ export class ErrorFactory {
     return new AppError(
       ErrorCode.VALIDATION_ERROR,
       message,
-      400,
+      422,
       this.mergeDetails(details, context),
     );
   }
@@ -134,7 +137,7 @@ export class ErrorFactory {
     cause?: Error,
   ): AppError {
     const mergedDetails = this.mergeDetails(details, context);
-    
+
     // 如果有原始错误，添加到详情中
     if (cause) {
       mergedDetails.originalError = {
@@ -145,7 +148,7 @@ export class ErrorFactory {
     }
 
     return new AppError(
-      ErrorCode.INTERNAL_SERVER_ERROR,
+      ErrorCode.INTERNAL_ERROR, // 使用INTERNAL_ERROR以匹配测试期望
       message,
       500,
       mergedDetails,
@@ -287,6 +290,32 @@ export class ErrorFactory {
   }
 
   /**
+   * 创建请求体过大错误
+   * @param resource 资源类型（如'query', 'payload'等）
+   * @param size 实际大小
+   * @param maxSize 最大允许大小
+   * @param context 错误上下文
+   * @returns AppError实例
+   */
+  static createPayloadTooLargeError(
+    resource: string = 'Request payload',
+    size?: number,
+    maxSize?: number,
+    context?: ErrorContext,
+  ): AppError {
+    const message = maxSize
+      ? `${resource} exceeds maximum limit of ${maxSize} characters.`
+      : `${resource} exceeds maximum limit.`;
+
+    return new AppError(
+      ErrorCode.PAYLOAD_TOO_LARGE,
+      message,
+      413,
+      this.mergeDetails({ resource, size, maxSize }, context),
+    );
+  }
+
+  /**
    * 创建不支持的文件类型错误
    * @param filename 文件名
    * @param fileType 文件类型
@@ -356,19 +385,23 @@ export class ErrorFactory {
     // 根据事务错误类型映射到相应的ErrorCode
     const errorCodeMap: Record<TransactionErrorType, ErrorCode> = {
       [TransactionErrorType.TRANSACTION_NOT_FOUND]: ErrorCode.NOT_FOUND,
-      [TransactionErrorType.QUERY_RUNNER_NOT_FOUND]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.INVALID_TRANSACTION_STATE]: ErrorCode.VALIDATION_ERROR,
-      [TransactionErrorType.OPERATION_EXECUTION_FAILED]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.SAVEPOINT_ERROR]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.NESTED_TRANSACTION_ERROR]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.COMMIT_FAILED]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.ROLLBACK_FAILED]: ErrorCode.INTERNAL_SERVER_ERROR,
-      [TransactionErrorType.DATABASE_CONNECTION_ERROR]: ErrorCode.SERVICE_UNAVAILABLE,
+      [TransactionErrorType.QUERY_RUNNER_NOT_FOUND]: ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.INVALID_TRANSACTION_STATE]:
+        ErrorCode.VALIDATION_ERROR,
+      [TransactionErrorType.OPERATION_EXECUTION_FAILED]:
+        ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.SAVEPOINT_ERROR]: ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.NESTED_TRANSACTION_ERROR]: ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.COMMIT_FAILED]: ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.ROLLBACK_FAILED]: ErrorCode.INTERNAL_ERROR,
+      [TransactionErrorType.DATABASE_CONNECTION_ERROR]:
+        ErrorCode.SERVICE_UNAVAILABLE,
       [TransactionErrorType.TIMEOUT_ERROR]: ErrorCode.SERVICE_UNAVAILABLE,
       [TransactionErrorType.CONSTRAINT_VIOLATION]: ErrorCode.VALIDATION_ERROR,
     };
 
-    const errorCode = errorCodeMap[transactionError.type] || ErrorCode.INTERNAL_SERVER_ERROR;
+    const errorCode =
+      errorCodeMap[transactionError.type] || ErrorCode.INTERNAL_ERROR;
     const httpStatus = this.getHttpStatusForErrorCode(errorCode);
 
     return new AppError(
@@ -415,17 +448,19 @@ export class ErrorFactory {
       [ErrorCategory.EMBEDDING_RATE_LIMIT]: ErrorCode.SERVICE_UNAVAILABLE,
       [ErrorCategory.EMBEDDING_QUOTA_EXCEEDED]: ErrorCode.SERVICE_UNAVAILABLE,
       [ErrorCategory.EMBEDDING_INVALID_INPUT]: ErrorCode.VALIDATION_ERROR,
-      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]: ErrorCode.SERVICE_UNAVAILABLE,
+      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]:
+        ErrorCode.SERVICE_UNAVAILABLE,
       [ErrorCategory.DOCUMENT_NOT_FOUND]: ErrorCode.NOT_FOUND,
       [ErrorCategory.DOCUMENT_CORRUPTED]: ErrorCode.DOCUMENT_PROCESSING_FAILED,
       [ErrorCategory.DOCUMENT_TOO_LARGE]: ErrorCode.FILE_TOO_LARGE,
       [ErrorCategory.DOCUMENT_EMPTY]: ErrorCode.VALIDATION_ERROR,
       [ErrorCategory.MEMORY_INSUFFICIENT]: ErrorCode.SERVICE_UNAVAILABLE,
       [ErrorCategory.DISK_SPACE_INSUFFICIENT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.UNKNOWN]: ErrorCode.INTERNAL_SERVER_ERROR,
+      [ErrorCategory.UNKNOWN]: ErrorCode.INTERNAL_ERROR,
     };
 
-    const errorCode = categoryToErrorCodeMap[category] || ErrorCode.INTERNAL_SERVER_ERROR;
+    const errorCode =
+      categoryToErrorCodeMap[category] || ErrorCode.INTERNAL_ERROR;
     const httpStatus = this.getHttpStatusForErrorCode(errorCode);
     const errorMessage = message || this.getDefaultMessageForCategory(category);
 
@@ -467,11 +502,12 @@ export class ErrorFactory {
    */
   private static getHttpStatusForErrorCode(errorCode: ErrorCode): number {
     const statusMap: Record<ErrorCode, number> = {
-      [ErrorCode.VALIDATION_ERROR]: 400,
+      [ErrorCode.VALIDATION_ERROR]: 422,
       [ErrorCode.NOT_FOUND]: 404,
       [ErrorCode.UNAUTHORIZED]: 401,
       [ErrorCode.FORBIDDEN]: 403,
-      [ErrorCode.INTERNAL_SERVER_ERROR]: 500,
+      [ErrorCode.INTERNAL_ERROR]: 500,
+      [ErrorCode.INTERNAL_SERVER_ERROR]: 500, // 保留向后兼容
       [ErrorCode.SERVICE_UNAVAILABLE]: 503,
       [ErrorCode.FILE_UPLOAD_FAILED]: 400,
       [ErrorCode.DOCUMENT_PROCESSING_FAILED]: 500,
@@ -479,6 +515,7 @@ export class ErrorFactory {
       [ErrorCode.INVALID_INPUT]: 400,
       [ErrorCode.FILE_TOO_LARGE]: 413,
       [ErrorCode.UNSUPPORTED_FILE_TYPE]: 422,
+      [ErrorCode.PAYLOAD_TOO_LARGE]: 413,
     };
 
     return statusMap[errorCode] || 500;
@@ -500,10 +537,14 @@ export class ErrorFactory {
       [ErrorCategory.QDRANT_CONNECTION]: 'Vector database connection error.',
       [ErrorCategory.QDRANT_CAPACITY]: 'Vector database capacity exceeded.',
       [ErrorCategory.QDRANT_INVALID_VECTOR]: 'Invalid vector data.',
-      [ErrorCategory.EMBEDDING_RATE_LIMIT]: 'Embedding service rate limit exceeded.',
-      [ErrorCategory.EMBEDDING_QUOTA_EXCEEDED]: 'Embedding service quota exceeded.',
-      [ErrorCategory.EMBEDDING_INVALID_INPUT]: 'Invalid input for embedding service.',
-      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]: 'Embedding service unavailable.',
+      [ErrorCategory.EMBEDDING_RATE_LIMIT]:
+        'Embedding service rate limit exceeded.',
+      [ErrorCategory.EMBEDDING_QUOTA_EXCEEDED]:
+        'Embedding service quota exceeded.',
+      [ErrorCategory.EMBEDDING_INVALID_INPUT]:
+        'Invalid input for embedding service.',
+      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]:
+        'Embedding service unavailable.',
       [ErrorCategory.DOCUMENT_NOT_FOUND]: 'Document not found.',
       [ErrorCategory.DOCUMENT_CORRUPTED]: 'Document corrupted or invalid.',
       [ErrorCategory.DOCUMENT_TOO_LARGE]: 'Document size exceeds limit.',

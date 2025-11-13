@@ -20,23 +20,22 @@ import { SearchService } from './application/services/core/index.js';
 import { GraphService } from './application/services/core/index.js';
 import { CollectionService } from './application/services/core/index.js';
 import { DocumentService } from './application/services/core/index.js';
-import { FileProcessingService } from './application/services/file-processing/index.js';
 import { MonitoringApiService } from './application/services/api/index.js';
+import { IMonitoringService } from './application/services/index.js';
+import { IMonitoringApiService } from './domain/repositories/IMonitoringApiService.js';
 import { BatchService } from './application/services/batch/index.js';
 import { StateMachineService } from './application/services/state-machine/index.js';
 import { AutoGCService } from './application/services/system/index.js';
-import { ISearchService } from './domain/repositories/ISearchService.js';
-import { IGraphService } from './domain/entities/graph.js';
-import { ICollectionService } from './domain/repositories/ICollectionService.js';
-import { IDocumentService } from './domain/repositories/IDocumentService.js';
-import { IFileProcessingService } from './domain/repositories/IFileProcessingService.js';
-import { IBatchService } from './domain/repositories/IBatchService.js';
-import { IImportService } from './domain/repositories/IImportService.js';
-import { IStateMachineService } from './domain/repositories/IStateMachineService.js';
-import { IMonitoringApiService } from './domain/repositories/IMonitoringApiService.js';
-import { IAutoGCService } from './domain/repositories/IAutoGCService.js';
-import { IScrapeService } from './domain/entities/scrape.js';
-import { ITransactionManager } from './domain/repositories/ITransactionManager.js';
+import { ISearchService } from './application/services/index.js';
+import { IGraphService } from './domain/entities/index.js';
+import { ICollectionService } from './application/services/index.js';
+import { IDocumentService } from './application/services/index.js';
+import { IFileProcessingService } from './application/services/index.js';
+import { IBatchService } from './application/services/index.js';
+import { IImportService } from './application/services/index.js';
+import { IAutoGCService } from './application/services/index.js';
+import { IScrapeService } from './domain/entities/index.js';
+import { ITransactionManager } from './domain/repositories/index.js';
 
 // 新增领域服务接口导入
 import {
@@ -48,21 +47,21 @@ import {
 import { EventSystemService } from './domain/services/index.js';
 
 // 新增用例接口导入
-import type { IImportAndIndexUseCase } from './domain/use-cases/index.js';
+import type { IImportAndIndexUseCase } from './application/use-cases/index.js';
 
 /**
  * 应用程序服务接口
  * @description 迁移到Domain层接口，遵循依赖倒置原则
  */
 export interface AppServices {
-  importService: IImportService;
+  importService: import('./application/services/index.js').IImportService;
   searchService: ISearchService;
   graphService: IGraphService;
   collectionService: ICollectionService;
   documentService: IDocumentService;
   fileProcessingService: IFileProcessingService;
   batchService: IBatchService;
-  stateMachineService: IStateMachineService; // ✅ 已实现接口
+  stateMachineService: StateMachineService; // ✅ 已实现接口
   monitoringApiService?:
     | IMonitoringApiService
     | MonitoringApiService
@@ -173,8 +172,25 @@ export function createApp(
     app.use('/api', dbConnectionCheck);
   }
 
-  // 创建API路由
-  const apiRouter = createApiRouter(services);
+  // 创建API路由 - 只传递 ApiServices 需要的属性
+  const apiServices: ApiServices = {
+    importService: services.importService,
+    searchService: services.searchService,
+    graphService: services.graphService,
+    collectionService: services.collectionService,
+    documentService: services.documentService,
+    fileProcessingService: services.fileProcessingService,
+    batchService: services.batchService,
+    scrapeService: services.scrapeService,
+    importAndIndexUseCase: services.importAndIndexUseCase,
+    logger: services.logger,
+    stateMachineService: services.stateMachineService ? {
+      getEngine: () => services.stateMachineService.getEngine()
+    } : undefined,
+    monitoringApiService: services.monitoringApiService,
+    typeormRepo: services.typeormRepo as unknown as Record<string, unknown>,
+  };
+  const apiRouter = createApiRouter(apiServices);
 
   // 挂载路由
   app.use('/api', apiRouter);

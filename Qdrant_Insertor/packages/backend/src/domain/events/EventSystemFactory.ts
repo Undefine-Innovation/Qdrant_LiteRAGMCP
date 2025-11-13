@@ -351,14 +351,17 @@ export class EventSystemFactory {
   /**
    * 创建测试环境的事件系统（最小配置）
    * @param logger 日志记录器
+   * @param dataSource 可选的数据源（用于数据库事件存储）
    * @returns 事件系统组件
    */
   static createTestEventSystem(
     logger: Logger,
+    dataSource?: DataSource,
   ): ReturnType<typeof EventSystemFactory.createEventSystem> {
     return this.createEventSystem(
       {
-        enableEventStore: false,
+        enableEventStore: dataSource !== undefined,
+        eventStoreType: dataSource ? 'database' : 'memory',
         enableTransactionalPublishing: false,
         enableAuditLogging: false,
         enableEventStatistics: false,
@@ -368,7 +371,7 @@ export class EventSystemFactory {
           timeout: 100,
         },
       },
-      { logger },
+      { logger, dataSource },
     );
   }
 }

@@ -1,7 +1,7 @@
 import { DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { AppError } from '@api/contracts/error.js';
-import { FileFormatInfo } from '@domain/repositories/IFileProcessingService.js';
+import { FileFormatInfo } from '@application/services/index.js';
 import path from 'path';
 import { lookup } from 'mime-types';
 

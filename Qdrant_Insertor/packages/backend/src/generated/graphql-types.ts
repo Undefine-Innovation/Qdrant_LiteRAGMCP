@@ -3,20 +3,33 @@ import { GraphQLClient } from 'graphql-request';
 // import { RequestOptions } from 'graphql-request'; // 暂时注释掉未使用的导入
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type Exact<T extends { [key: string]: unknown }> = {
+  [K in keyof T]: T[K];
+};
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]?: Maybe<T[SubKey]>;
+};
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]: Maybe<T[SubKey]>;
+};
+export type MakeEmpty<
+  T extends { [key: string]: unknown },
+  K extends keyof T,
+> = { [_ in K]?: never };
+export type Incremental<T> =
+  | T
+  | {
+      [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never;
+    };
 // type GraphQLClientRequestHeaders = RequestOptions['requestHeaders']; // 暂时注释掉未使用的类型
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string; }
-  String: { input: string; output: string; }
-  Boolean: { input: boolean; output: boolean; }
-  Int: { input: number; output: number; }
-  Float: { input: number; output: number; }
-  Upload: { input: File; output: File; }
+  ID: { input: string; output: string };
+  String: { input: string; output: string };
+  Boolean: { input: boolean; output: boolean };
+  Int: { input: number; output: number };
+  Float: { input: number; output: number };
+  Upload: { input: File; output: File };
 };
 
 export type Collection = {
@@ -62,21 +75,17 @@ export type Mutation = {
   uploadDocumentToCollection: DocumentResponse;
 };
 
-
 export type MutationCreateCollectionArgs = {
   input: CollectionCreate;
 };
-
 
 export type MutationDeleteDocumentArgs = {
   docId: Scalars['ID']['input'];
 };
 
-
 export type MutationResyncDocumentArgs = {
   docId: Scalars['ID']['input'];
 };
-
 
 export type MutationUploadDocumentToCollectionArgs = {
   collectionId: Scalars['ID']['input'];
@@ -98,16 +107,13 @@ export type Query = {
   documents?: Maybe<DocumentPagination>;
 };
 
-
 export type QueryCollectionArgs = {
   collectionId: Scalars['ID']['input'];
 };
 
-
 export type QueryDocumentArgs = {
   docId: Scalars['ID']['input'];
 };
-
 
 export type QueryDocumentsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -116,8 +122,6 @@ export type QueryDocumentsArgs = {
   sort?: InputMaybe<Scalars['String']['input']>;
 };
 
-
-
 /**
  * SDK函数包装器类型
  * @template T - 返回值类型
@@ -125,9 +129,8 @@ export type QueryDocumentsArgs = {
  * @returns Promise包装的结果
  */
 export type SdkFunctionWrapper = <T>(
-  action: (requestHeaders?: Record<string, string>) => Promise<T>
+  action: (requestHeaders?: Record<string, string>) => Promise<T>,
 ) => Promise<T>;
-
 
 /**
  * 默认的SDK函数包装器
@@ -142,11 +145,12 @@ const defaultWrapper: SdkFunctionWrapper = (action) => action();
  * @param withWrapper - 函数包装器，默认使用defaultWrapper
  * @returns SDK对象
  */
-export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
+export function getSdk(
+  client: GraphQLClient,
+  withWrapper: SdkFunctionWrapper = defaultWrapper,
+) {
   // 使用withWrapper参数避免未使用变量警告
   void withWrapper;
-  return {
-
-  };
+  return {};
 }
 export type Sdk = ReturnType<typeof getSdk>;

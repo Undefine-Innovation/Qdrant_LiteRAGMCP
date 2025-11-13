@@ -1,5 +1,6 @@
-import { ISplitter } from '@domain/services/splitter.js';
+import { ISplitter } from '@application/services/file-processing/index.js';
 import { DocumentChunk, SplitOptions } from '@domain/entities/types.js';
+import { SplitterOptions } from '@domain/interfaces/splitter.js';
 
 /**
  * 标题事件类型
@@ -108,6 +109,11 @@ export class MarkdownSplitter implements ISplitter {
     private readonly options: SplitOptions = { strategy: 'markdown_headings' },
   ) {}
 
+  /** 返回默认选项，兼容策略注册要求 */
+  public getDefaultOptions(): Record<string, unknown> {
+    return { strategy: this.options.strategy };
+  }
+
   /**
    * 将给定的 Markdown 内容分割成文档块数组
    * Splits the given Markdown content into an array of document chunks.
@@ -118,13 +124,13 @@ export class MarkdownSplitter implements ISplitter {
    * @param options.name - 文档名称
    * @returns 文档块数组
    */
-  split(
+  async split(
     content: string,
     options?: {
       docPath?: string;
       name?: string; // 允许 name 为 string | undefined
     },
-  ): DocumentChunk[] {
+  ): Promise<unknown[]> {
     const docPath = options?.docPath;
     const chunks: DocumentChunk[] = [];
     const at = buildTitleTracker(content);
@@ -163,5 +169,19 @@ export class MarkdownSplitter implements ISplitter {
       chunks.push({ content: content.trim(), titleChain });
     }
     return chunks;
+  }
+
+  /**
+   * 兼容域层的 splitText 接口，返回字符串数组
+   */
+  public async splitText(
+    text: string,
+    options?: SplitterOptions,
+  ): Promise<string[]> {
+    const out = (await this.split(text, {
+      docPath: options?.name,
+      name: options?.name,
+    })) as DocumentChunk[];
+    return out.map((c) => (typeof c === 'string' ? c : c.content));
   }
 }

@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from "express";
-import { AppError, ErrorCode } from "@api/contracts/error.js";
-import { logger } from "@logging/logger.js";
-import { ErrorFactory, ErrorContext } from "@domain/errors/ErrorFactory.js";
-import { globalErrorMapper } from "@infrastructure/errors/ErrorMapper.js";
+import { Request, Response, NextFunction } from 'express';
+import { AppError, ErrorCode } from '@api/contracts/error.js';
+import { logger } from '@logging/logger.js';
+import { ErrorFactory, ErrorContext } from '@domain/errors/ErrorFactory.js';
+import { globalErrorMapper } from '@infrastructure/errors/ErrorMapper.js';
 
 /**
  * 判断是否为 JSON 解析错误
@@ -10,17 +10,17 @@ import { globalErrorMapper } from "@infrastructure/errors/ErrorMapper.js";
  * @returns 如果是JSON解析错误则返回true，否则返回false
  */
 function isJsonParseError(
-  error: unknown
+  error: unknown,
 ): error is SyntaxError & { type?: string; status?: number } {
-  if (!error || typeof error !== "object") {
+  if (!error || typeof error !== 'object') {
     return false;
   }
 
   const parseError = error as SyntaxError & { type?: string; status?: number };
   return (
     parseError instanceof SyntaxError &&
-    (parseError.type === "entity.parse.failed" ||
-      parseError.message.includes("Unexpected token"))
+    (parseError.type === 'entity.parse.failed' ||
+      parseError.message.includes('Unexpected token'))
   );
 }
 
@@ -30,9 +30,9 @@ function isJsonParseError(
  * @returns 如果是请求体过大错误则返回true，否则返回false
  */
 function isPayloadTooLargeError(
-  error: unknown
+  error: unknown,
 ): error is { type?: string; status?: number; message?: string } {
-  if (!error || typeof error !== "object") {
+  if (!error || typeof error !== 'object') {
     return false;
   }
 
@@ -42,10 +42,10 @@ function isPayloadTooLargeError(
     message?: string;
   };
   return (
-    payloadError.type === "entity.too.large" ||
+    payloadError.type === 'entity.too.large' ||
     payloadError.status === 413 ||
-    (typeof payloadError.message === "string" &&
-      payloadError.message.toLowerCase().includes("too large"))
+    (typeof payloadError.message === 'string' &&
+      payloadError.message.toLowerCase().includes('too large'))
   );
 }
 
@@ -63,7 +63,7 @@ export const errorHandler = (
   err: Error | unknown,
   req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): Response => {
   // 创建错误上下文
   const errorContext: ErrorContext = {
@@ -79,22 +79,23 @@ export const errorHandler = (
   const mappedError = globalErrorMapper.map(error, errorContext);
   // 检查JSON解析错误
   if (isJsonParseError(error)) {
-    logger.warn("Invalid JSON payload received", {
+    logger.warn('Invalid JSON payload received', {
       path: req.path,
       method: req.method,
       message: error.message,
     });
     const validationError = ErrorFactory.createValidationError(
-      "Invalid JSON payload",
+      'Invalid JSON payload',
       { originalError: error.message },
       errorContext,
     );
-    return res.status(validationError.httpStatus).json(validationError.toJSON());
+    // JSON解析错误应该返回400而不是422
+    return res.status(400).json(validationError.toJSON());
   }
 
   // 检查请求体过大错误
   if (isPayloadTooLargeError(error)) {
-    logger.warn("Request payload too large", {
+    logger.warn('Request payload too large', {
       path: req.path,
       method: req.method,
     });
@@ -104,7 +105,9 @@ export const errorHandler = (
       undefined,
       errorContext,
     );
-    return res.status(fileTooLargeError.httpStatus).json(fileTooLargeError.toJSON());
+    return res
+      .status(fileTooLargeError.httpStatus)
+      .json(fileTooLargeError.toJSON());
   }
 
   // 记录错误日志

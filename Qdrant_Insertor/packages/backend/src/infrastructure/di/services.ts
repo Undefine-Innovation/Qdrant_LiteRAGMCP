@@ -23,8 +23,8 @@ import { MarkdownSplitter } from '@infrastructure/external/MarkdownSplitter.js';
 import { LocalFileLoader } from '@infrastructure/external/LocalFileLoader.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { IEmbeddingProvider } from '@domain/entities/embedding.js';
-import { ISplitter } from '@domain/services/splitter.js';
-import { IFileLoader } from '@domain/services/loader.js';
+import { ISplitter } from '@application/services/file-processing/index.js';
+import { IFileLoader } from '@application/services/file-processing/index.js';
 import { ImportService } from '@application/services/batch/index.js';
 import { SearchService } from '@application/services/core/index.js';
 import { GraphService } from '@application/services/core/index.js';
@@ -39,12 +39,12 @@ import { AlertService } from '@application/services/alerting/index.js';
 import { MonitoringApiService } from '@application/services/api/index.js';
 import { BatchService } from '@application/services/batch/index.js';
 import { StateMachineService } from '@application/services/state-machine/index.js';
-import { ISearchService } from '@domain/repositories/ISearchService.js';
-import { IGraphService } from '@domain/entities/graph.js';
-import { ICollectionService } from '@domain/repositories/ICollectionService.js';
-import { IDocumentService } from '@domain/repositories/IDocumentService.js';
-import { IFileProcessingService } from '@domain/repositories/IFileProcessingService.js';
-import { IBatchService } from '@domain/repositories/IBatchService.js';
+import { ISearchService } from '@application/services/index.js';
+import { IGraphService } from '@domain/entities/index.js';
+import { ICollectionService } from '@application/services/index.js';
+import { IDocumentService } from '@application/services/index.js';
+import { IFileProcessingService } from '@application/services/index.js';
+import { IBatchService } from '@application/services/index.js';
 import { AppServices } from '../../app.js';
 import { IScrapeService } from '@domain/entities/scrape.js';
 import { ScrapeService } from '@application/services/scraping/index.js';
@@ -75,7 +75,7 @@ import {
 
 // 新增用例导入
 import { ImportAndIndexUseCase } from '@application/use-cases/index.js';
-import type { IImportAndIndexUseCase } from '@domain/use-cases/index.js';
+import type { IImportAndIndexUseCase } from '@application/use-cases/index.js';
 
 // Orchestration 管线导入
 import { Pipeline } from '@application/orchestration/core/Pipeline.js';
@@ -168,10 +168,11 @@ export async function initializeInfrastructure(
 
   // 使用增强日志记录数据库初始化过程
   const dbLogger = enhancedLogger?.withTag(LogTag.DATABASE) || logger;
-  
+
   // 检查是否为测试环境且数据源已初始化（避免重复初始化）
-  const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID;
-  
+  const isTestEnvironment =
+    process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID;
+
   dbLogger.info('TypeORM DataSource状态', {
     isInitialized: typeormDataSource.isInitialized,
     isTestEnvironment,
@@ -265,12 +266,11 @@ export async function initializeInfrastructure(
     process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID;
 
   // 初始化事件系统，在测试环境使用轻量配置
-  let eventSystemService =
-    EventSystemServiceFactory.createProductionService(
-      logger,
-      typeormDataSource,
-      transactionManager,
-    );
+  let eventSystemService = EventSystemServiceFactory.createProductionService(
+    logger,
+    typeormDataSource,
+    transactionManager,
+  );
 
   if (isTestEnv) {
     logger.info('测试环境下使用轻量级事件系统配置');
@@ -287,7 +287,6 @@ export async function initializeInfrastructure(
     logger.error('事件系统初始化失败', { error });
     throw error;
   }
-
 
   // 从事件系统服务获取事件发布器
   const eventPublisher = eventSystemService.getEventPublisher();
@@ -486,9 +485,13 @@ export async function initializeServices(
     }
   }
   // 创建监控API服务
-  const monitoringApiService: MonitoringApiService | undefined = monitoringService
-    ? new MonitoringApiService(monitoringService, alertService)
-    : undefined;
+  // 即使 monitoringService 为 null，我们也应该创建 MonitoringApiService
+  // 以便监控 API 路由可以被注册
+  const monitoringApiService: MonitoringApiService | undefined =
+    new MonitoringApiService(
+      monitoringService as unknown as MonitoringService,
+      alertService,
+    );
 
   // 创建批量操作服务
   const batchService: IBatchService = new BatchService(
@@ -501,28 +504,45 @@ export async function initializeServices(
 
   // 初始化管线编排系统
   const streamFileLoader = new DefaultStreamFileLoader(logger);
-  
+
   const strategyRegistry = new StrategyRegistry(logger);
   // 使用默认键注册核心策略（分块和嵌入）
   strategyRegistry.registerSplitter('default', splitter);
   strategyRegistry.registerEmbedding('default', embeddingProvider);
-  
+
   // 创建管线步骤
   const importStep = new ImportStep(streamFileLoader, logger);
   const splitStep = new SplitStep(strategyRegistry, logger);
   const embedStep = new EmbedStep(strategyRegistry, logger);
   const indexStep = new IndexStep(dbRepo, qdrantRepo, logger);
-  const retrievalStep = new RetrievalStep(strategyRegistry, embeddingProvider, logger);
+  const retrievalStep = new RetrievalStep(
+    strategyRegistry,
+    embeddingProvider,
+    logger,
+  );
   const rerankStep = new RerankStep(strategyRegistry, logger);
 
   logger.info('Orchestration 管线步骤已初始化', {
     stepsCount: 6,
-    steps: ['ImportStep', 'SplitStep', 'EmbedStep', 'IndexStep', 'RetrievalStep', 'RerankStep'],
+    steps: [
+      'ImportStep',
+      'SplitStep',
+      'EmbedStep',
+      'IndexStep',
+      'RetrievalStep',
+      'RerankStep',
+    ],
   });
 
   // 创建用例层
   const importAndIndexUseCase: IImportAndIndexUseCase =
-    new ImportAndIndexUseCase(importStep, splitStep, embedStep, indexStep, logger);
+    new ImportAndIndexUseCase(
+      importStep,
+      splitStep,
+      embedStep,
+      indexStep,
+      logger,
+    );
 
   logger.info('应用服务已初始化');
 
@@ -547,7 +567,11 @@ export async function initializeServices(
     logger,
     enhancedLogger: infraEnhancedLogger || enhancedLogger, // 添加增强日志器到返回值
     stateMachineService,
-    monitoringApiService,
+    // Cast MonitoringApiService to IMonitoringService for the public AppServices shape.
+    // The concrete MonitoringApiService implements API endpoints and composes the
+    // underlying MonitoringService and AlertService. For DI compatibility we
+    // expose it as the application-facing monitoring interface via a safe cast.
+    monitoringApiService: monitoringApiService,
     autoGCService,
     typeormRepo, // 添加TypeORM Repository到返回值
     transactionManager, // 添加事务管理器到返回值
@@ -584,4 +608,3 @@ export function initializeMonitoringServices(
     monitoringApiService,
   };
 }
-

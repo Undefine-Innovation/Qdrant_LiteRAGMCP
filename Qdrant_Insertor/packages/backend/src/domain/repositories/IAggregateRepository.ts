@@ -105,6 +105,17 @@ export interface ICollectionAggregateRepository {
    * @returns 已完成文档数量
    */
   getCompletedDocumentCount(id: CollectionId): Promise<number>;
+
+  /**
+   * 更新集合的部分字段
+   * @param id 集合ID
+   * @param data 更新数据（包括status等字段）
+   * @returns 更新后的集合聚合或null
+   */
+  updateCollection(
+    id: CollectionId,
+    data: { status?: 'active' | 'inactive' | 'archived' },
+  ): Promise<CollectionAggregate | null>;
 }
 
 /**

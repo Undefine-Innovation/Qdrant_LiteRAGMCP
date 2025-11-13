@@ -1,4 +1,8 @@
-import { IImportAndIndexUseCase, ImportAndIndexInput } from '@domain/use-cases/IImportAndIndexUseCase.js';
+import {
+  IImportAndIndexUseCase,
+  ImportAndIndexInput,
+  ImportAndIndexOutput,
+} from '@domain/interfaces/use-cases/index.js';
 import { Doc, CollectionId } from '@domain/entities/types.js';
 import { Logger } from '@logging/logger.js';
 import { Pipeline } from '../orchestration/core/Pipeline.js';
@@ -59,13 +63,16 @@ export class ImportAndIndexUseCase implements IImportAndIndexUseCase {
    *
    * @throws {AppError} 如果管线执行失败
    */
-  async execute(input: ImportAndIndexInput): Promise<Doc> {
-    const { file, collectionId } = input;
+  async execute(input: ImportAndIndexInput): Promise<ImportAndIndexOutput> {
+    const { content, title, collectionId, fileName, mimeType, metadata } =
+      input;
+    const startTime = Date.now();
 
     this.logger.debug('开始执行导入并索引用例', {
-      fileName: file.originalname,
+      title,
       collectionId,
-      fileSize: file.size,
+      fileName,
+      mimeType,
     });
 
     try {
@@ -78,12 +85,12 @@ export class ImportAndIndexUseCase implements IImportAndIndexUseCase {
 
       // 准备 ImportStep 输入
       const importInput: ImportStepInput = {
-        fileBuffer: file.buffer,
-        fileName: file.originalname,
-        mimeType: file.mimetype,
+        fileBuffer: Buffer.from(content),
+        fileName: fileName || title,
+        mimeType: mimeType || 'text/plain',
         collectionId: collectionId,
-        docKey: file.originalname,
-        docName: file.originalname,
+        docKey: fileName || title,
+        docName: title,
       };
 
       // 执行管线
@@ -95,31 +102,41 @@ export class ImportAndIndexUseCase implements IImportAndIndexUseCase {
         );
       }
 
-  // 提取最终结果（IndexStep 输出）
-  const indexOutput = result.output as IndexStepOutput;
+      // 提取最终结果（IndexStep 输出）
+      const indexOutput = result.output as IndexStepOutput;
 
       // 转换为 Doc 格式返回
       const doc: Doc = {
         id: indexOutput.docId,
         collectionId: indexOutput.collectionId,
-        key: file.originalname,
-        name: file.originalname,
-        size_bytes: file.size,
-        mime: file.mimetype,
-        status: indexOutput.status === 'success' ? SyncJobStatus.SYNCED : SyncJobStatus.FAILED,
+        key: fileName || title,
+        name: title,
+        size_bytes: Buffer.byteLength(content),
+        mime: mimeType || 'text/plain',
+        status:
+          indexOutput.status === 'success'
+            ? SyncJobStatus.SYNCED
+            : SyncJobStatus.FAILED,
       };
+
+      const processingTime = Date.now() - startTime;
 
       this.logger.debug('导入并索引用例执行成功', {
         docId: doc.id,
         collectionId: doc.collectionId,
         status: indexOutput.status,
+        processingTime,
       });
 
-      return doc;
+      return {
+        doc,
+        chunkCount: indexOutput.indexedChunkCount || 0,
+        processingTime,
+      };
     } catch (error) {
       this.logger.error('导入并索引用例执行失败', {
         error,
-        fileName: file.originalname,
+        title,
         collectionId,
       });
       throw error;

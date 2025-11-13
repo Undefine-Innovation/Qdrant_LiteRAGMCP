@@ -45,12 +45,14 @@ export interface ICollectionService {
    * @param collectionId - 集合ID
    * @param name - 新的集合名称（可选）
    * @param description - 新的集合描述（可选）
+   * @param status - 新的集合状态（可选）
    * @returns 更新后的集合对象
    */
   updateCollection(
     collectionId: CollectionId,
     name?: string,
     description?: string,
+    status?: 'active' | 'inactive' | 'archived',
   ): Promise<Collection>;
 
   /**

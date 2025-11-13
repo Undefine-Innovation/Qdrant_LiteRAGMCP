@@ -3,8 +3,8 @@ import { BaseFileProcessor } from '@infrastructure/external/BaseFileProcessor.js
 import {
   FileProcessorOptions,
   FileMetadata,
-} from '@domain/services/fileProcessor.js';
-import { LoadedFile } from '@domain/services/loader.js';
+} from '@infrastructure/external/index.js';
+import { LoadedFile } from '@application/services/file-processing/index.js';
 import { DocumentChunk } from '@domain/entities/types.js';
 
 /**

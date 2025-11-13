@@ -15,4 +15,8 @@ export type * from './graphql-types.ts';
 export type * from './statechart-types.ts';
 
 // 重新导出常用类型
-export type { SyncJobState, SyncJobEvent, SyncJobStateMachine } from './statechart-types.ts';
+export type {
+  SyncJobState,
+  SyncJobEvent,
+  SyncJobStateMachine,
+} from './statechart-types.ts';

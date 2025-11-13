@@ -172,7 +172,8 @@ export class SyncJobManager {
     }
 
     const avgDuration = 0; // duration not tracked in domain SyncJob
-    const successRate = allJobs.length > 0 ? successfulJobs / allJobs.length : 0;
+    const successRate =
+      allJobs.length > 0 ? successfulJobs / allJobs.length : 0;
 
     return {
       total: allJobs.length,

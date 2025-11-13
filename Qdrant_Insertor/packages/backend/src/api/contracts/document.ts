@@ -38,7 +38,15 @@ export const ListDocsQuerySchema = z.object({
     })
     .describe('每页数量，默认为20，最大值为100'),
   sort: z
-    .enum(['id', 'docId', 'name', 'created_at', 'updated_at', 'size_bytes'])
+    .enum([
+      'id',
+      'docId',
+      'name',
+      'created_at',
+      'updated_at',
+      'size_bytes',
+      'size',
+    ])
     .optional()
     .default('created_at')
     .describe('排序字段，默认为created_at'),

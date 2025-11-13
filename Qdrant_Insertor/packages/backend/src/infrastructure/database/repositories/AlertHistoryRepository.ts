@@ -163,8 +163,7 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
       if (ids.length === 0) {
         return 0;
       }
-      const result = await this.repository
-        .createQueryBuilder()
+      const result = await this.repository!.createQueryBuilder()
         .update(AlertHistory)
         .set({ status })
         .whereInIds(ids)
@@ -212,8 +211,7 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
   async cleanupResolvedAlerts(daysOld: number = 30): Promise<number> {
     try {
       const beforeTime = Date.now() - daysOld * 24 * 60 * 60 * 1000;
-      const result = await this.repository
-        .createQueryBuilder()
+      const result = await this.repository!.createQueryBuilder()
         .delete()
         .from(AlertHistory)
         .where('status = :status AND triggered_at < :beforeTime', {

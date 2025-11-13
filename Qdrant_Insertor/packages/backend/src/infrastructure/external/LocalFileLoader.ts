@@ -1,4 +1,7 @@
-import { IFileLoader, LoadedFile } from '@domain/services/loader.js';
+import {
+  IFileLoader,
+  LoadedFile,
+} from '@application/services/file-processing/index.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { lookup } from 'mime-types';

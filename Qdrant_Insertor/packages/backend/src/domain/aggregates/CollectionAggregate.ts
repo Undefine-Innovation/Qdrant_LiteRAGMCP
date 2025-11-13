@@ -128,6 +128,20 @@ export class CollectionAggregate extends AggregateRoot {
   }
 
   /**
+   * 更新集合名称
+   * @param name 新的名称
+   */
+  public updateName(name: string): void {
+    const oldName = this._collection.name;
+    this._collection.updateName(name);
+
+    // 添加领域事件
+    this.addDomainEvent(
+      new CollectionUpdatedEvent(this._collection.id, name, undefined),
+    );
+  }
+
+  /**
    * 添加文档到集合
    * @param docId 文档ID
    * @param docKey 文档键值

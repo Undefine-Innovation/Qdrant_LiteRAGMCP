@@ -268,9 +268,7 @@ export const RetrievalStepOutputSchema = z.object({
 /** RetrievalStep 输出类型 */
 export type RetrievalStepOutput = z.infer<typeof RetrievalStepOutputSchema> & {
   results: Array<
-    z.infer<
-      typeof RetrievalStepOutputSchema
-    >['results'][number] & {
+    z.infer<typeof RetrievalStepOutputSchema>['results'][number] & {
       docId: DocId;
       collectionId: CollectionId;
     }
@@ -304,9 +302,7 @@ export const RerankStepInputSchema = z.object({
 /** RerankStep 输入类型 */
 export type RerankStepInput = z.infer<typeof RerankStepInputSchema> & {
   results: Array<
-    z.infer<
-      typeof RerankStepInputSchema
-    >['results'][number] & {
+    z.infer<typeof RerankStepInputSchema>['results'][number] & {
       docId: DocId;
       collectionId: CollectionId;
     }
@@ -336,9 +332,7 @@ export const RerankStepOutputSchema = z.object({
 /** RerankStep 输出类型 */
 export type RerankStepOutput = z.infer<typeof RerankStepOutputSchema> & {
   results: Array<
-    z.infer<
-      typeof RerankStepOutputSchema
-    >['results'][number] & {
+    z.infer<typeof RerankStepOutputSchema>['results'][number] & {
       docId: DocId;
       collectionId: CollectionId;
     }

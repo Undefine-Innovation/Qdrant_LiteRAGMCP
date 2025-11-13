@@ -67,19 +67,19 @@ export function createTypeORMConfig(
     logging: isDevelopment && !isTest, // 开发环境启用日志
     // 直接导入实体类而不是使用字符串路径，避免循环依赖问题
     entities: [
-  BaseEntity,
-  Collection,
-  Doc,
-  ChunkMeta,
-  Chunk,
-  ChunkFullText,
-  // SyncJobEntity removed (DB-backed sync jobs disabled)
-  SystemMetrics,
-  AlertRules,
-  AlertHistory,
-  SystemHealth,
-  ScrapeResults,
-  Event,
+      BaseEntity,
+      Collection,
+      Doc,
+      ChunkMeta,
+      Chunk,
+      ChunkFullText,
+      // SyncJobEntity removed (DB-backed sync jobs disabled)
+      SystemMetrics,
+      AlertRules,
+      AlertHistory,
+      SystemHealth,
+      ScrapeResults,
+      Event,
     ],
     migrations: [
       // 迁移已禁用，使用 synchronize: true 自动创建/更新表结构
@@ -112,12 +112,10 @@ export function createTypeORMConfig(
       ...baseConfig,
       type: 'sqlite',
       database: config.db.path,
-      // 在测试环境中启用外键检查以确保约束正常工作
-      extra: isTest
-        ? {
-            pragma: ['foreign_keys = ON'],
-          }
-        : undefined,
+      // 在所有环境中启用外键检查以确保约束和级联正常工作
+      extra: {
+        pragma: ['foreign_keys = ON'],
+      },
     } as DataSourceOptions;
   }
 }

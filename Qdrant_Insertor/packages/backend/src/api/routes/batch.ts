@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { IBatchService } from '@domain/repositories/IBatchService.js';
+import { IBatchService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import {
   BatchUploadRequestSchema,
@@ -16,7 +16,10 @@ import {
 } from '@api/contracts/batch.js';
 import { AppError } from '@api/contracts/error.js';
 import { DocId, CollectionId } from '@domain/entities/types.js';
-import { FILE_CONSTANTS, FILE_SIZE_LIMITS } from '@domain/constants/FileConstants.js';
+import {
+  FILE_CONSTANTS,
+  FILE_SIZE_LIMITS,
+} from '@domain/constants/FileConstants.js';
 
 /**
  * Maximum number of files allowed in batch upload
@@ -53,7 +56,10 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
     upload.array('files', MAX_FILES)(req, res, (error) => {
       if (error) {
         if (error instanceof multer.MulterError) {
-          if (error.code === 'LIMIT_FILE_SIZE' || error.code === 'LIMIT_FILE_COUNT') {
+          if (
+            error.code === 'LIMIT_FILE_SIZE' ||
+            error.code === 'LIMIT_FILE_COUNT'
+          ) {
             return res.status(413).json({
               error: {
                 code: 'PAYLOAD_TOO_LARGE',
@@ -240,6 +246,15 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
         );
       }
 
+      // 验证docId格式
+      if (docIds && docIds.length > 0) {
+        for (const docId of docIds) {
+          if (!docId || typeof docId !== 'string' || docId.trim() === '') {
+            return sendValidationError(res, 'Invalid document ID format');
+          }
+        }
+      }
+
       try {
         const result = await batchService.batchDeleteDocuments(
           (docIds || []) as DocId[],
@@ -250,14 +265,27 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
         res.status(200).json(validatedResponse);
       } catch (error) {
         if (error instanceof AppError) {
-          throw error;
+          return res.status(error.httpStatus || 500).json({
+            error: {
+              code: error.code || 'INTERNAL_ERROR',
+              message: error.message,
+            },
+          });
         }
         if (error instanceof Error) {
-          throw AppError.createInternalServerError(
-            `Batch delete documents failed: ${error.message}`,
-          );
+          return res.status(500).json({
+            error: {
+              code: 'INTERNAL_ERROR',
+              message: `Batch delete documents failed: ${error.message}`,
+            },
+          });
         }
-        throw error;
+        res.status(500).json({
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Internal server error',
+          },
+        });
       }
     },
   );
@@ -342,52 +370,56 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
    */
 
   router.get(
-
     '/batch/progress/:operationId',
 
     validate({ params: BatchOperationQuerySchema }),
 
     async (
-
       req: ValidatedRequest<
-
         unknown,
-
         unknown,
-
         z.infer<typeof BatchOperationQuerySchema>
-
       >,
 
       res,
-
     ) => {
-
       const { operationId } = req.validated?.params || { operationId: '' };
 
+      try {
+        const progress =
+          await batchService.getBatchOperationProgress(operationId);
 
+        if (!progress) {
+          return res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Operation not found or expired',
+            },
+          });
+        }
 
-      const progress = await batchService.getBatchOperationProgress(operationId);
+        const validatedResponse = BatchOperationProgressSchema.parse(progress);
 
+        res.status(200).json(validatedResponse);
+      } catch (error) {
+        if (error instanceof AppError) {
+          return res.status(error.httpStatus || 500).json({
+            error: {
+              code: error.code || 'INTERNAL_ERROR',
+              message: error.message,
+            },
+          });
+        }
 
-
-      if (!progress) {
-
-        throw AppError.createNotFoundError('Operation not found or expired');
-
+        res.status(500).json({
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Internal server error',
+          },
+        });
       }
-
-
-
-      const validatedResponse = BatchOperationProgressSchema.parse(progress);
-
-      res.status(200).json(validatedResponse);
-
     },
-
   );
-
-
 
   /**
 
@@ -400,62 +432,52 @@ export function createBatchRoutes(batchService: IBatchService): express.Router {
    */
 
   router.get(
-
     '/batch/list',
 
     validate({ query: BatchOperationListQuerySchema }),
 
     async (
-
       req: ValidatedRequest<
-
         unknown,
-
         z.infer<typeof BatchOperationListQuerySchema>
-
       >,
 
       res,
-
     ) => {
-
       try {
-
         const status = req.validated?.query?.status;
 
         const tasks = await batchService.getBatchOperationList(status);
 
         res.status(200).json(tasks);
-
       } catch (error) {
-
         if (error instanceof AppError) {
-
-          throw error;
-
+          return res.status(error.httpStatus || 500).json({
+            error: {
+              code: error.code || 'INTERNAL_ERROR',
+              message: error.message,
+            },
+          });
         }
 
         if (error instanceof Error) {
-
-          throw AppError.createInternalServerError(
-
-            'Failed to get batch operation list: ' + error.message,
-
-          );
-
+          return res.status(500).json({
+            error: {
+              code: 'INTERNAL_ERROR',
+              message: 'Failed to get batch operation list: ' + error.message,
+            },
+          });
         }
 
-        throw error;
-
+        res.status(500).json({
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Internal server error',
+          },
+        });
       }
-
     },
-
   );
 
-
-
   return router;
-
 }
-

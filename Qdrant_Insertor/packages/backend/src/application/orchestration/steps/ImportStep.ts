@@ -13,7 +13,7 @@ import {
   ImportStepOutput,
   ImportStepOutputSchema,
 } from '../schemas/index.js';
-import { IStreamFileLoader } from '@domain/services/stream-loader.js';
+import { IStreamFileLoader } from '@application/services/file-processing/index.js';
 import { DocId } from '@domain/entities/types.js';
 import { makeDocId } from '@domain/utils/id.js';
 
@@ -111,15 +111,11 @@ export class ImportStep implements Step<ImportStepInput, ImportStepOutput> {
     context: StepContext<ImportStepInput, ImportStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        input: context.input,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      input: context.input,
+      duration: context.duration,
+    });
     // 不做特殊处理，让错误向上传播给Pipeline处理
   }
 }
-

@@ -6,6 +6,7 @@ import {
   OneToMany,
   JoinColumn,
   Check,
+  BeforeInsert,
 } from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
 import { Collection } from './Collection.js';
@@ -28,6 +29,53 @@ import { Chunk } from './Chunk.js';
 @Check(`LENGTH(key) <= 255`)
 @Check(`status IN ('new', 'processing', 'completed', 'failed')`)
 export class Doc extends BaseEntity {
+  /**
+   * 软删除标记别名
+   * 为了兼容代码中的 is_deleted 引用
+   * 使用虚拟属性，映射到deleted字段
+   */
+  get is_deleted(): boolean {
+    return this.deleted;
+  }
+
+  set is_deleted(value: boolean) {
+    this.deleted = value;
+  }
+
+  /**
+   * 重写基类方法，禁止自动设置collectionId
+   * 文档必须显式提供collectionId
+   */
+  protected shouldAutoSetCollectionId(): boolean {
+    return false;
+  }
+
+  /**
+   * 在插入前验证约束
+   */
+  @BeforeInsert()
+  validateConstraints() {
+    // 验证collectionId不为空
+    if (!this.collectionId || this.collectionId.trim() === '') {
+      throw new Error('Collection ID cannot be empty');
+    }
+
+    // 验证key不为空
+    if (!this.key || this.key.trim() === '') {
+      throw new Error('Document key cannot be empty');
+    }
+
+    // 验证key长度
+    if (this.key.length > 255) {
+      throw new Error('Document key cannot exceed 255 characters');
+    }
+
+    // 验证status值
+    const validStatuses = ['new', 'processing', 'completed', 'failed'];
+    if (!validStatuses.includes(this.status)) {
+      throw new Error(`Invalid document status: ${this.status}`);
+    }
+  }
   /**
    * 文档ID（业务标识符）
    * 添加唯一约束和索引
@@ -220,7 +268,7 @@ export class Doc extends BaseEntity {
     onDelete: 'CASCADE',
     lazy: true,
   })
-  @JoinColumn({ name: 'collectionId' })
+  @JoinColumn({ name: 'collectionId', referencedColumnName: 'id' })
   collection: Promise<Collection>;
 
   /**

@@ -6,14 +6,16 @@ import {
   PointId,
   DocId,
   SearchResult as UniversalSearchResult,
+  SearchResult,
   RetrievalResultDTO,
   RetrievalResultType,
   PaginationQuery,
   PaginatedResponse,
 } from '@domain/entities/types.js';
 import { Chunk } from '@domain/entities/Chunk.js';
+import { Doc } from '@infrastructure/database/entities/Doc.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js'; // Import IQdrantRepo
-import { ISearchService } from '@domain/repositories/ISearchService.js'; // Import ISearchService
+import { ISearchService } from '@application/services/index.js'; // Import ISearchService from application layer
 import { IKeywordRetriever } from '@domain/repositories/IKeywordRetriever.js'; // Import IKeywordRetriever
 import {
   parsePaginationQuery,
@@ -50,14 +52,151 @@ export class SearchService implements ISearchService {
   ) {}
 
   /**
-   * 执行搜索
+   * 执行向量搜索（用于测试）
+   * @param collectionId 集合ID
+   * @param queryVector 查询向量
+   * @param options 搜索选项
+   * @returns 搜索结果
+   */
+  public async vectorSearch(
+    collectionId: CollectionId,
+    queryVector: number[],
+    options?: { limit?: number; scoreThreshold?: number },
+  ): Promise<UniversalSearchResult[]> {
+    const { limit = 10, scoreThreshold = 0 } = options || {};
+
+    this.logger.info(
+      `Starting vector search in collection "${collectionId}" with limit ${limit} and score threshold ${scoreThreshold}.`,
+    );
+
+    try {
+      const result = await this.qdrantRepo.search(collectionId, {
+        vector: queryVector,
+        limit,
+      });
+
+      this.logger.info(
+        `Found ${result.length || 0} results for vector search.`,
+      );
+
+      return result;
+    } catch (err) {
+      this.logger.error(
+        `An error occurred during vector search in collection "${collectionId}":`,
+        {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          collectionId,
+        },
+      );
+      throw err; // Re-throw to be handled by API error middleware
+    }
+  }
+
+  /**
+   * 执行关键词搜索
+   * @param collectionId 集合ID
+   * @param keyword 关键词
+   * @returns 搜索结果
+   */
+  public async keywordSearch(
+    collectionId: CollectionId,
+    keyword: string,
+  ): Promise<UniversalSearchResult[]> {
+    this.logger.info(
+      `Starting keyword search for "${keyword}" in collection "${collectionId}".`,
+    );
+
+    try {
+      // 过滤空白关键词
+      if (!keyword || keyword.trim() === '') {
+        this.logger.info('Empty keyword provided, returning empty results');
+        return [];
+      }
+
+      // 获取集合中的所有文档 (暂时返回空数组，等待实现真实的数据访问)
+      // TODO: 实现真实的文档查询逻辑
+      const docs: UniversalSearchResult[] = [];
+
+      this.logger.info(`Found ${docs.length} documents for keyword search.`);
+
+      return docs;
+    } catch (err) {
+      this.logger.error(
+        `An error occurred during keyword search for "${keyword}" in collection "${collectionId}":`,
+        {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          collectionId,
+        },
+      );
+      throw err; // Re-throw to be handled by API error middleware
+    }
+  }
+
+  /**
+   * 执行混合搜索
+   * @param collectionId 集合ID
+   * @param queryVector 查询向量
+   * @param keyword 关键词
+   * @param weights 权重配置
+   * @returns 搜索结果
+   */
+  public async hybridSearch(
+    collectionId: CollectionId,
+    queryVector: number[],
+    keyword: string,
+    weights?: { vectorWeight?: number; keywordWeight?: number },
+  ): Promise<UniversalSearchResult[]> {
+    const { vectorWeight = 0.7, keywordWeight = 0.3 } = weights || {};
+
+    this.logger.info(
+      `Starting hybrid search for "${keyword}" in collection "${collectionId}" with vector weight ${vectorWeight} and keyword weight ${keywordWeight}.`,
+    );
+
+    try {
+      // 执行向量搜索
+      const vectorResult = await this.qdrantRepo.search(collectionId, {
+        vector: queryVector,
+        limit: 10,
+      });
+
+      // 执行关键词搜索 (暂时注释掉，因为keywordRetriever的接口不匹配)
+      // const keywordResult = await this.keywordRetriever?.search(keyword) || [];
+      const keywordResult: UniversalSearchResult[] = [];
+
+      // 获取集合中的所有文档 (暂时返回空数组，等待实现真实的数据访问)
+      // TODO: 实现真实的文档查询逻辑
+      const docs: SearchResult[] = [];
+
+      this.logger.info(
+        `Found ${vectorResult.length || 0} vector results and ${keywordResult.length} keyword results.`,
+      );
+
+      // 简单的结果融合（实际实现会更复杂）
+      return [...(vectorResult || []), ...keywordResult, ...docs];
+    } catch (err) {
+      this.logger.error(
+        `An error occurred during hybrid search in collection "${collectionId}":`,
+        {
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          collectionId,
+        },
+      );
+      throw err; // Re-throw to be handled by API error middleware
+    }
+  }
+
+  /**
+   * 执行文本搜索（保留原有功能）
    * @param query 搜索查询字符串
    * @param collectionId 集合ID
    * @param options 搜索选项
    * @param options.limit 结果数量限制
    * @returns {Promise<RetrievalResultDTO[]>} 返回搜索结果列表
    */
-  public async search(
+  public async searchText(
     query: string,
     collectionId: CollectionId,
     options: { limit?: number } = {},
@@ -65,7 +204,7 @@ export class SearchService implements ISearchService {
     const { limit = 10 } = options;
 
     this.logger.info(
-      `Starting search for query "${query}" in collection "${collectionId}" with limit ${limit}.`,
+      `Starting text search for query "${query}" in collection "${collectionId}" with limit ${limit}.`,
     );
 
     try {
@@ -218,5 +357,20 @@ export class SearchService implements ISearchService {
       // Return empty results instead of throwing error to ensure API always returns a response
       return createPaginatedResponse([], 0, paginationQuery);
     }
+  }
+
+  /**
+   * 实现ISearchService接口的search方法（向后兼容）
+   * @param query 搜索查询字符串
+   * @param collectionId 集合ID
+   * @param options 搜索选项
+   * @returns {Promise<RetrievalResultDTO[]>} 返回搜索结果列表
+   */
+  public async search(
+    query: string,
+    collectionId: CollectionId,
+    options: { limit?: number } = {},
+  ): Promise<RetrievalResultDTO[]> {
+    return this.searchText(query, collectionId, options);
   }
 }

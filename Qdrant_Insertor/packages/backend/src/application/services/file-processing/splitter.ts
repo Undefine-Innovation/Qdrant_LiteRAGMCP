@@ -1,4 +1,5 @@
 import { DocumentChunk } from '@domain/entities/types.js';
+import { SplitterOptions } from '@domain/interfaces/splitter.js';
 
 /**
  * 定义文档分割器的接口�?
@@ -14,5 +15,15 @@ export interface ISplitter {
    * @param options 用于配置分割行为的可选参数�? Optional parameters to configure the splitting behavior.
    * @returns 文档块数组�? An array of document chunks.
    */
-  split(content: string, options?: Record<string, unknown>): DocumentChunk[];
+  split(content: string, options?: Record<string, unknown>): Promise<unknown[]>;
+
+  /**
+   * 返回默认的分割选项（用于兼容 domain 层的期望）
+   */
+  getDefaultOptions(): Record<string, unknown>;
+
+  /**
+   * 异步文本分割（兼容 domain 层 async 接口）
+   */
+  splitText(text: string, options?: SplitterOptions): Promise<string[]>;
 }

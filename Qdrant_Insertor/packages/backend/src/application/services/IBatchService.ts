@@ -1,4 +1,4 @@
-import { CollectionId, DocId } from '@domain/entities/types.js';
+import { CollectionId, DocId, PointId } from '@domain/entities/types.js';
 import { StateMachineTask } from '@domain/state-machine/types.js';
 import { Express } from 'express';
 
@@ -112,6 +112,12 @@ export interface IBatchService {
   ): Promise<BatchDeleteCollectionsResponse>;
 
   /**
+   * 批量删除块（通过 pointId）
+   * @param chunkPointIds - 要删除的 chunk pointId 列表
+   */
+  batchDeleteChunks(chunkPointIds: PointId[]): Promise<BatchDeleteDocsResponse>;
+
+  /**
    * 获取批量操作进度
    * @param operationId - 操作ID
    * @returns 批量操作进度
@@ -125,9 +131,7 @@ export interface IBatchService {
    * @param operationId - 操作ID
    * @returns 批量操作进度
    */
-  getBatchProgress(
-    operationId: string,
-  ): Promise<BatchOperationProgress | null>;
+  getBatchProgress(operationId: string): Promise<BatchOperationProgress | null>;
 
   /**
    * 创建批量操作进度跟踪

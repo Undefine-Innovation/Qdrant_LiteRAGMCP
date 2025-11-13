@@ -2,10 +2,10 @@ import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { CollectionId, DocId } from '@domain/entities/types.js';
-import { IImportService } from '@domain/repositories/IImportService.js';
-import { ICollectionService } from '@domain/repositories/ICollectionService.js';
-import { IDocumentService } from '@domain/repositories/IDocumentService.js';
-import type { IImportAndIndexUseCase } from '@domain/use-cases/index.js';
+import { IImportService } from '@application/services/index.js';
+import { ICollectionService } from '@application/services/index.js';
+import { IDocumentService } from '@application/services/index.js';
+import type { IImportAndIndexUseCase } from '@application/use-cases/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import { LoggedRequest } from '@middleware/logging.js';
 import { LogTag } from '@logging/logger.js';
@@ -15,7 +15,10 @@ import {
   ListDocsQuerySchema,
 } from '@api/contracts/document.js';
 import { AppError } from '@api/contracts/error.js';
-import { FILE_SIZE_LIMITS, SUPPORTED_MIME_TYPES } from '@domain/constants/FileConstants.js';
+import {
+  FILE_SIZE_LIMITS,
+  SUPPORTED_MIME_TYPES,
+} from '@domain/constants/FileConstants.js';
 
 /**
  * 创建文档相关的API路由
@@ -97,6 +100,22 @@ export function createDocumentRoutes(
 
       const { collectionId } = req.validated.params;
 
+      // 验证集合是否存在
+      const collection = await collectionService.getCollectionById(
+        collectionId as CollectionId,
+      );
+      if (!collection) {
+        apiLogger?.warn('集合不存在', undefined, {
+          collectionId,
+        });
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: `Collection with ID ${collectionId} not found`,
+          },
+        });
+      }
+
       apiLogger?.info('开始上传文档', undefined, {
         collectionId,
         fileName: req.file.originalname,
@@ -117,10 +136,11 @@ export function createDocumentRoutes(
       }
 
       // 检查文件类型
-  const allowedMimeTypes = SUPPORTED_MIME_TYPES;
-  const fileMime = req.file.mimetype as typeof SUPPORTED_MIME_TYPES[number];
+      const allowedMimeTypes = SUPPORTED_MIME_TYPES;
+      const fileMime = req.file
+        .mimetype as (typeof SUPPORTED_MIME_TYPES)[number];
 
-  if (!allowedMimeTypes.includes(fileMime)) {
+      if (!allowedMimeTypes.includes(fileMime)) {
         apiLogger?.warn('不支持的文件类型', undefined, {
           fileName: req.file.originalname,
           mimeType: req.file.mimetype,
@@ -131,11 +151,31 @@ export function createDocumentRoutes(
         );
       }
 
-      // 使用用例层执行导入和索引流程
-      const doc = await importAndIndexUseCase.execute({
-        file: req.file,
+      // 使用用例层执行导入和索引流程（将文件内容解码为文本并传递给用例）
+      const fileContent = req.file.buffer.toString('utf-8');
+
+      // 验证文件内容不为空
+      if (!fileContent || fileContent.trim() === '') {
+        apiLogger?.warn('文件内容为空', undefined, {
+          fileName: req.file.originalname,
+        });
+        return res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'File content cannot be empty',
+          },
+        });
+      }
+
+      const useCaseResult = await importAndIndexUseCase.execute({
+        content: fileContent,
+        title: req.file.originalname,
         collectionId: collectionId as CollectionId,
+        fileName: req.file.originalname,
+        mimeType: req.file.mimetype,
       });
+
+      const doc = useCaseResult.doc;
 
       const response = {
         docId: doc.id, // 使用id字段，但保持API响应中的docId名称
@@ -219,10 +259,11 @@ export function createDocumentRoutes(
         }
 
         // 检查文件类型
-  const allowedMimeTypes = SUPPORTED_MIME_TYPES;
-  const fileMime = req.file.mimetype as typeof SUPPORTED_MIME_TYPES[number];
+        const allowedMimeTypes = SUPPORTED_MIME_TYPES;
+        const fileMime = req.file
+          .mimetype as (typeof SUPPORTED_MIME_TYPES)[number];
 
-  if (!allowedMimeTypes.includes(fileMime)) {
+        if (!allowedMimeTypes.includes(fileMime)) {
           apiLogger?.warn('不支持的文件类型', undefined, {
             fileName: req.file.originalname,
             mimeType: req.file.mimetype,
@@ -240,7 +281,7 @@ export function createDocumentRoutes(
           apiLogger?.warn('没有可用的集合', undefined, {
             collectionsCount: collections.length,
           });
-          return res.status(400).json({
+          return res.status(422).json({
             error: {
               code: 'NO_COLLECTION_AVAILABLE',
               message:
@@ -259,11 +300,31 @@ export function createDocumentRoutes(
           collectionName: targetCollection.name,
         });
 
-        // 使用用例层执行导入和索引流程
-        const doc = await importAndIndexUseCase.execute({
-          file: req.file,
+        // 使用用例层执行导入和索引流程（将文件内容解码为文本并传递给用例）
+        const fileContent = req.file.buffer.toString('utf-8');
+
+        // 验证文件内容不为空
+        if (!fileContent || fileContent.trim() === '') {
+          apiLogger?.warn('文件内容为空', undefined, {
+            fileName: req.file.originalname,
+          });
+          return res.status(422).json({
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'File content cannot be empty',
+            },
+          });
+        }
+
+        const useCaseResult = await importAndIndexUseCase.execute({
+          content: fileContent,
+          title: req.file.originalname,
           collectionId,
+          fileName: req.file.originalname,
+          mimeType: req.file.mimetype,
         });
+
+        const doc = useCaseResult.doc;
 
         const response = {
           docId: doc.id, // 使用id字段，但保持API响应中的docId名称
@@ -421,7 +482,7 @@ export function createDocumentRoutes(
           apiLogger?.warn('查询参数验证失败', undefined, {
             query: req.query,
           });
-          return res.status(400).json({
+          return res.status(422).json({
             error: {
               code: 'VALIDATION_ERROR',
               message: 'Invalid query parameters',
@@ -526,19 +587,39 @@ export function createDocumentRoutes(
     try {
       const { docId } = req.params;
 
+      // 验证docId格式
+      if (!docId || typeof docId !== 'string' || docId.trim() === '') {
+        return res.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid document ID format',
+          },
+        });
+      }
+
       apiLogger?.info('开始获取文档', undefined, {
         docId,
       });
 
       const doc = await documentService.getDocumentById(docId as DocId);
 
+      // 如果未找到文档，返回 404（统一格式）
+      if (!doc) {
+        apiLogger?.warn('文档未找到', undefined, { docId });
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: `Document with ID ${docId} not found`,
+          },
+        });
+      }
+
       apiLogger?.info('获取文档成功', undefined, {
         docId,
-        fileName: doc?.name,
+        fileName: doc.name,
         duration: Date.now() - startTime,
       });
 
-      // 统一错误处理中间件将处理未找到的情况
       res.status(200).json(doc);
     } catch (error) {
       apiLogger?.error('获取文档失败', undefined, {
@@ -547,6 +628,31 @@ export function createDocumentRoutes(
         stack: (error as Error).stack,
         duration: Date.now() - startTime,
       });
+
+      // 检查是否为AppError类型的NotFoundError
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appError = error as { code?: string; httpStatus?: number; message?: string };
+        if (appError.code === 'NOT_FOUND' || appError.httpStatus === 404) {
+          return res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message:
+                appError.message ||
+                `Document with ID ${req.params.docId} not found`,
+            },
+          });
+        }
+      }
+
+      // 检查错误消息中是否包含not found
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message,
+          },
+        });
+      }
 
       res.status(500).json({
         error: {
@@ -589,7 +695,26 @@ export function createDocumentRoutes(
         docId,
       });
 
+      console.log(
+        'DEBUG: About to call documentService.resyncDocument with docId:',
+        docId,
+      );
       const updatedDoc = await documentService.resyncDocument(docId as DocId);
+      console.log(
+        'DEBUG: documentService.resyncDocument returned:',
+        updatedDoc,
+      );
+
+      // 如果resync未找到文档，返回404
+      if (!updatedDoc) {
+        apiLogger?.warn('重新同步目标文档未找到', undefined, { docId });
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: `Document with ID ${docId} not found`,
+          },
+        });
+      }
 
       apiLogger?.info('文档重新同步成功', undefined, {
         docId,
@@ -599,12 +724,38 @@ export function createDocumentRoutes(
 
       res.status(200).json(updatedDoc);
     } catch (error) {
+      console.log('DEBUG: Error in resync route:', error);
       apiLogger?.error('文档重新同步失败', undefined, {
         docId: req.params.docId,
         error: (error as Error).message,
         stack: (error as Error).stack,
         duration: Date.now() - startTime,
       });
+
+      // 检查是否为AppError类型的NotFoundError
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appError = error as { code?: string; httpStatus?: number; message?: string };
+        if (appError.code === 'NOT_FOUND' || appError.httpStatus === 404) {
+          return res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message:
+                appError.message ||
+                `Document with ID ${req.params.docId} not found`,
+            },
+          });
+        }
+      }
+
+      // 检查错误消息中是否包含not found
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message,
+          },
+        });
+      }
 
       res.status(500).json({
         error: {
@@ -657,6 +808,21 @@ export function createDocumentRoutes(
         duration: Date.now() - startTime,
       });
 
+      // 检查是否为AppError类型的NotFoundError
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appError = error as { code?: string; httpStatus?: number; message?: string };
+        if (appError.code === 'NOT_FOUND' || appError.httpStatus === 404) {
+          return res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message:
+                appError.message || `Document with ID ${docId} not found`,
+            },
+          });
+        }
+      }
+
+      // 检查错误消息中是否包含not found
       if (error instanceof Error && error.message.includes('not found')) {
         return res.status(404).json({
           error: {

@@ -20,8 +20,6 @@ import { Chunk } from './Chunk.js';
 @Entity('collections')
 @Index(['name'], { unique: true })
 @Index(['collectionId'], { unique: true })
-@Index(['created_at'])
-@Index(['updated_at'])
 @Check(`name IS NOT NULL AND name != ''`)
 @Check(`LENGTH(name) <= 255`)
 export class Collection extends BaseEntity {
@@ -155,12 +153,29 @@ export class Collection extends BaseEntity {
   chunks: Promise<Chunk[]>;
 
   /**
+   * 在插入前生成ID和设置collectionId
+   * 必须在BaseEntity.generateIdAndSetTimestamps之后执行
+   */
+  @BeforeInsert()
+  setCollectionIdBeforeInsert() {
+    // 确保collectionId有值，如果没有则使用id
+    if (!this.collectionId && this.id) {
+      this.collectionId = this.id;
+    }
+  }
+
+  /**
    * 在保存前验证数据
    * 优化验证逻辑，移除console.log
    */
   @BeforeInsert()
   @BeforeUpdate()
   validateCollection() {
+    // 验证collectionId不为空
+    if (!this.collectionId || this.collectionId.trim() === '') {
+      throw new Error('Collection ID cannot be empty');
+    }
+
     if (!this.name || this.name.trim() === '') {
       throw new Error('Collection name cannot be empty');
     }
@@ -226,5 +241,14 @@ export class Collection extends BaseEntity {
   updateLastSyncTime(): void {
     this.lastSyncAt = Date.now();
     this.updated_at = Date.now();
+  }
+
+  /**
+   * 重写BaseEntity的方法，控制collectionId的自动设置
+   * Collection实体需要手动设置collectionId以满足业务规则
+   * @returns 不自动设置collectionId
+   */
+  protected shouldAutoSetCollectionId(): boolean {
+    return false;
   }
 }

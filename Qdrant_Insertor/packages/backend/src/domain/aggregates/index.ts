@@ -4,45 +4,27 @@
  */
 
 // 聚合根基类
-/**
- *
- */
 export {
   AggregateRoot,
   AggregateRootManager,
   AggregateRootFactory,
 } from './AggregateRoot.js';
 
-// 聚合根类
-/**
- *
- */
+// 聚合根实现
 export { CollectionAggregate } from './CollectionAggregate.js';
-/**
- *
- */
 export { DocumentAggregate } from './DocumentAggregate.js';
 
 // 聚合工厂
-/**
- *
- */
 export { AggregateFactory } from './AggregateFactory.js';
 
 // 聚合间业务规则和事件处理
-/**
- *
- */
 export {
   AggregateBusinessRules,
   AggregateEventHandler,
   AggregateCoordinator,
 } from './AggregateBusinessRules.js';
 
-// 领域事件（向后兼容）
-/**
- *
- */
+// 向后兼容的事件导出
 export {
   type CollectionDomainEvent,
   CollectionCreatedEvent,
@@ -51,9 +33,6 @@ export {
   DocumentRemovedEvent,
 } from './CollectionAggregate.js';
 
-/**
- *
- */
 export {
   type DocumentDomainEvent,
   DocumentCreatedEvent,

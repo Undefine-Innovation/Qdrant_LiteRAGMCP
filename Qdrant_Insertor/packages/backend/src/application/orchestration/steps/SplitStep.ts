@@ -40,10 +40,11 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
     try {
       // 应用Zod schema并获取默认值
       const validatedInput = SplitStepInputSchema.parse(input);
-      
+
       // 如果原始input缺少splitterKey，则从验证后的输入中获取默认值
       if (!input.splitterKey && validatedInput.splitterKey) {
-        (input as SplitStepInput & { splitterKey?: string }).splitterKey = validatedInput.splitterKey;
+        (input as SplitStepInput & { splitterKey?: string }).splitterKey =
+          validatedInput.splitterKey;
       }
 
       // 验证分块策略是否已注册
@@ -51,9 +52,7 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
       try {
         this.strategyRegistry.getSplitter(splitterKey);
       } catch (error) {
-        this.logger.error(
-          `[${this.name}] 分块策略 '${splitterKey}' 未注册`,
-        );
+        this.logger.error(`[${this.name}] 分块策略 '${splitterKey}' 未注册`);
         throw error;
       }
 
@@ -73,7 +72,7 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
     try {
       // 确保splitterKey有值，如果没有则使用默认值
       const splitterKey = input.splitterKey || 'default';
-      
+
       this.logger.info(
         `[${this.name}] 开始分块, docId: ${input.docId}, 策略: ${splitterKey}`,
       );
@@ -82,21 +81,35 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
       const splitter = this.strategyRegistry.getSplitter(splitterKey);
 
       // 执行分块
-      const documentChunks = await splitter.split(input.content);
-
-      if (!documentChunks || documentChunks.length === 0) {
-        this.logger.warn(
-          `[${this.name}] 分块结果为空, docId: ${input.docId}`,
-        );
+      const documentChunksRaw = await splitter.split(input.content, {
+        maxChunkSize: 1000,
+        chunkOverlap: 200,
+        strategy: 'by_sentences',
+      });
+      const documentChunks = (documentChunksRaw || []) as unknown[];
+      if (documentChunks.length === 0) {
+        this.logger.warn(`[${this.name}] 分块结果为空, docId: ${input.docId}`);
       }
 
-      // 转换为输出格式
-      const chunks = documentChunks.map((chunk, index) => ({
-        index,
-        content: chunk.content,
-        title: undefined, // DocumentChunk 没有 title 字段
-        titleChain: chunk.titleChain?.join(' > ') || undefined, // 将数组转为字符串
-      }));
+      // 将可能的 string | { content } 归一为字符串内容
+      const chunks = documentChunks.map((chunk, index) => {
+        let content: string;
+        if (typeof chunk === 'string') {
+          content = chunk;
+        } else if (chunk && typeof chunk === 'object' && 'content' in chunk) {
+          const chunkObj = chunk as { content: unknown };
+          content = typeof chunkObj.content === 'string' ? chunkObj.content : String(chunkObj.content);
+        } else {
+          content = String(chunk);
+        }
+        
+        return {
+          index,
+          content,
+          title: undefined,
+          titleChain: undefined,
+        };
+      });
 
       const output: SplitStepOutput = {
         docId: input.docId,
@@ -127,13 +140,10 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
     context: StepContext<SplitStepInput, SplitStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        docId: context.input?.docId,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      docId: context.input?.docId,
+      duration: context.duration,
+    });
   }
 }

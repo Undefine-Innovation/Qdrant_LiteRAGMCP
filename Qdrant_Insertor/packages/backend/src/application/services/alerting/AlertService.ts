@@ -3,7 +3,7 @@ import {
   IAlertService,
   AlertRuleConfig,
   AlertRecord,
-} from '@domain/repositories/IAlertService.js';
+} from '@application/services/IAlertService.js';
 import { Logger } from '@logging/logger.js';
 import { AlertRule, AlertHistory } from '@infrastructure/sqlite/dao/index.js';
 import { AlertServiceCore } from './AlertServiceCore.js';

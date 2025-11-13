@@ -25,7 +25,7 @@ export class ChunkMetaRepository extends BaseRepository<ChunkMeta> {
    */
   async findByDocId(docId: DocId): Promise<ChunkMeta[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           docId: docId as unknown as string,
         } as FindOptionsWhere<ChunkMeta>,
@@ -48,7 +48,7 @@ export class ChunkMetaRepository extends BaseRepository<ChunkMeta> {
    */
   async findByCollectionId(collectionId: CollectionId): Promise<ChunkMeta[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           collectionId: collectionId as unknown as string,
         } as FindOptionsWhere<ChunkMeta>,
@@ -75,7 +75,7 @@ export class ChunkMetaRepository extends BaseRepository<ChunkMeta> {
         return 0;
       }
 
-      const result = await this.repository.delete(pointIds);
+      const result = await this.repository!.delete(pointIds);
       const deletedCount = result.affected || 0;
       this.logger.debug(`根据点ID数组删除块元数据成功`, {
         count: deletedCount,

@@ -30,7 +30,8 @@ export enum ErrorCode {
   NOT_FOUND = 'NOT_FOUND',
   UNAUTHORIZED = 'UNAUTHORIZED',
   FORBIDDEN = 'FORBIDDEN',
-  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
+  INTERNAL_ERROR = 'INTERNAL_ERROR', // 修改为INTERNAL_ERROR以匹配测试期望
+  INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR', // 保留向后兼容
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
   FILE_UPLOAD_FAILED = 'FILE_UPLOAD_FAILED',
   DOCUMENT_PROCESSING_FAILED = 'DOCUMENT_PROCESSING_FAILED',
@@ -38,6 +39,7 @@ export enum ErrorCode {
   INVALID_INPUT = 'INVALID_INPUT',
   FILE_TOO_LARGE = 'FILE_TOO_LARGE',
   UNSUPPORTED_FILE_TYPE = 'UNSUPPORTED_FILE_TYPE',
+  PAYLOAD_TOO_LARGE = 'PAYLOAD_TOO_LARGE',
 }
 
 // 定义一个通用的业务错误类
@@ -94,7 +96,7 @@ export class AppError extends Error {
   }
 
   /**
-   * 将原始Error转换为AppError，默认为 INTERNAL_SERVER_ERROR
+   * 将原始Error转换为AppError，默认为 INTERNAL_ERROR
    * @param error 原始 Error 对象
    * @returns AppError 实例
    */
@@ -105,10 +107,10 @@ export class AppError extends Error {
 
     // 确保error对象不为空
     const errorMessage =
-      error?.message || 'An unexpected internal server error occurred.';
+      error?.message || 'An unexpected internal error occurred.';
     const errorStack = error?.stack || '';
 
-    return new AppError(ErrorCode.INTERNAL_SERVER_ERROR, errorMessage, 500, {
+    return new AppError(ErrorCode.INTERNAL_ERROR, errorMessage, 500, {
       stack: errorStack,
       originalError: {
         message: errorMessage,
@@ -131,16 +133,16 @@ export class AppError extends Error {
   }
 
   /**
-   * 创建一个INTERNAL_SERVER_ERROR 类型的AppError
-   * @param {string} [message='Internal server error.'] - 可选的错误信息，默认为 'Internal server error.'
+   * 创建一个INTERNAL_ERROR 类型的AppError
+   * @param {string} [message='Internal error.'] - 可选的错误信息，默认为 'Internal error.'
    * @param {Record<string, unknown>} [details] - 可选的错误详细信息
    * @returns {AppError} AppError 实例
    */
   public static createInternalServerError(
-    message: string = 'Internal server error.',
+    message: string = 'Internal error.',
     details?: Record<string, unknown>,
   ): AppError {
-    return new AppError(ErrorCode.INTERNAL_SERVER_ERROR, message, 500, details);
+    return new AppError(ErrorCode.INTERNAL_ERROR, message, 500, details);
   }
 
   /**

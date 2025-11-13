@@ -85,14 +85,23 @@ export class CollectionAggregateRepository
 
   /**
    * 根据ID查找集合聚合
-   * @param id 集合ID
+   * 支持使用UUID或collectionId查找
+   * @param id 集合ID (可以是UUID或业务ID)
    * @returns 集合聚合或null
    */
   async findById(id: CollectionId): Promise<CollectionAggregate | null> {
     try {
-      const collectionEntity = await this.collectionRepository.findById(
+      // 先尝试通过UUID查找
+      let collectionEntity = await this.collectionRepository.findById(
         id as string,
       );
+
+      // 如果UUID查找失败，尝试通过业务collectionId查找
+      if (!collectionEntity) {
+        collectionEntity =
+          await this.collectionRepository.findByCollectionId(id);
+      }
+
       if (!collectionEntity) {
         return null;
       }
@@ -198,7 +207,7 @@ export class CollectionAggregateRepository
 
       // 获取分页的集合实体
       const result = await this.collectionRepository.findPaginated(page, limit);
-  const entities = result.items ?? [];
+      const entities = result.data ?? result.items ?? [];
       const total = result.pagination.total;
 
       // 为每个集合获取文档数量
@@ -362,10 +371,17 @@ export class CollectionAggregateRepository
       }
 
       await this.dataSource.transaction(async (manager) => {
-        // 删除集合
-        await manager.delete(Collection, { id });
+        // 获取集合实体
+        const collection = await manager.findOne(Collection, { where: { id } });
+        if (!collection) {
+          throw new Error(`Collection with ID ${id} not found`);
+        }
 
-        this.logger.info('集合聚合删除成功', {
+        // 软删除集合
+        collection.softDelete();
+        await manager.save(collection);
+
+        this.logger.info('集合聚合软删除成功', {
           collectionId: id,
         });
       });
@@ -436,6 +452,52 @@ export class CollectionAggregateRepository
     } catch (error) {
       this.logger.error('获取集合已完成文档数量失败', {
         collectionId: id,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 更新集合的部分字段
+   * @param id 集合ID
+   * @param data 更新数据（包括status等字段）
+   * @returns 更新后的集合聚合或null
+   */
+  async updateCollection(
+    id: CollectionId,
+    data: { status?: 'active' | 'inactive' | 'archived' },
+  ): Promise<CollectionAggregate | null> {
+    try {
+      // 验证DataSource是否初始化
+      if (!this.dataSource.isInitialized) {
+        this.logger.error('更新集合失败: DataSource未初始化', {
+          collectionId: id,
+        });
+        throw new Error(
+          'Database connection is not initialized. Please check connection configuration.',
+        );
+      }
+
+      // 调用底层Repository的updateCollection方法
+      const updatedEntity = await this.collectionRepository.updateCollection(
+        id,
+        data,
+      );
+
+      if (!updatedEntity) {
+        return null;
+      }
+
+      // 获取集合中的文档数量
+      const docCount = await this.docRepository.countByCollectionId(id);
+
+      // 返回更新后的聚合
+      return this.mapEntityToAggregate(updatedEntity, docCount);
+    } catch (error) {
+      this.logger.error('更新集合失败', {
+        collectionId: id,
+        data,
         error: (error as Error).message,
       });
       throw error;

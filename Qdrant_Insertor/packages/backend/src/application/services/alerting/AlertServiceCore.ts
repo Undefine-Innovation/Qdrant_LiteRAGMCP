@@ -262,7 +262,7 @@ export class AlertServiceCore {
     }[rule.severity];
 
     let message = `告警: ${rule.name} (${severityText}严重程度)\n`;
-  message += `指标 ${rule.metricName} 的值${metric.metricValue ?? 0} ${operatorText} 阈值${rule.thresholdValue}`;
+    message += `指标 ${rule.metricName} 的值${metric.metricValue ?? 0} ${operatorText} 阈值${rule.thresholdValue}`;
 
     if (rule.description) {
       message += `\n描述: ${rule.description}`;

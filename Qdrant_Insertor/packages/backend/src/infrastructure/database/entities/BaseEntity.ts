@@ -77,8 +77,15 @@ export abstract class BaseEntity {
     const entityRecord = this as Record<string, unknown>;
 
     if (Object.prototype.hasOwnProperty.call(entityRecord, 'collectionId')) {
-      const collectionAwareEntity = this as unknown as { collectionId?: string };
-      if (!collectionAwareEntity.collectionId) {
+      const collectionAwareEntity = this as unknown as {
+        collectionId?: string;
+      };
+      // 只有在明确允许自动设置collectionId时才设置
+      // 某些实体可能需要手动设置collectionId以满足业务规则
+      if (
+        !collectionAwareEntity.collectionId &&
+        this.shouldAutoSetCollectionId()
+      ) {
         collectionAwareEntity.collectionId = this.id;
       }
     }
@@ -161,4 +168,13 @@ export abstract class BaseEntity {
     comment: '更新时间戳（毫秒）',
   })
   updated_at: number;
+
+  /**
+   * 判断是否应该自动设置collectionId
+   * 子类可以重写此方法来控制自动设置行为
+   * @returns 是否自动设置collectionId
+   */
+  protected shouldAutoSetCollectionId(): boolean {
+    return true;
+  }
 }

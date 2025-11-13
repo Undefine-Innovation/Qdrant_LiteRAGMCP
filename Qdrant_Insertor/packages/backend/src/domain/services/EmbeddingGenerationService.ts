@@ -1,14 +1,14 @@
-import { Chunk, ChunkStatus } from '../entities/Chunk.js';
-import { DocumentAggregate } from '../aggregates/DocumentAggregate.js';
-import { EmbeddingVector } from '../value-objects/EmbeddingVector.js';
-import { CollectionId, DocId, PointId } from '../entities/types.js';
-import { IEventPublisher } from '../events/IEventPublisher.js';
-import { IEmbeddingProvider } from '../entities/embedding.js';
+import { Chunk, ChunkStatus } from '@domain/entities/Chunk.js';
+import { DocumentAggregate } from '@domain/aggregates/DocumentAggregate.js';
+import { EmbeddingVector } from '@domain/value-objects/EmbeddingVector.js';
+import { CollectionId, DocId, PointId } from '@domain/entities/types.js';
+import { IEventPublisher } from '@domain/events/IEventPublisher.js';
+import { IEmbeddingProvider } from '@domain/entities/embedding.js';
 import {
   ChunkEmbeddingGeneratedEvent,
   ChunkStatusChangedEvent,
-} from '../events/DomainEvents.js';
-import { Logger } from '../../infrastructure/logging/logger.js';
+} from '@domain/events/DomainEvents.js';
+import { Logger } from '@logging/logger.js';
 
 /**
  * 嵌入生成领域服务接口
@@ -144,7 +144,7 @@ export class EmbeddingGenerationService implements IEmbeddingGenerationService {
 
     try {
       // 生成嵌入向量
-      const embeddings = await this.embeddingProvider.generate([
+      const embeddings = await this.embeddingProvider.generateBatch([
         chunk.contentValue,
       ]);
 
@@ -224,7 +224,8 @@ export class EmbeddingGenerationService implements IEmbeddingGenerationService {
 
       try {
         // 批量生成嵌入向量
-        const embeddings = await this.embeddingProvider.generate(batchContents);
+        const embeddings =
+          await this.embeddingProvider.generateBatch(batchContents);
 
         // 处理结果
         for (let j = 0; j < batch.length; j++) {

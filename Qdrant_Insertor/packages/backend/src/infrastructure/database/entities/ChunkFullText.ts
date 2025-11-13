@@ -1,4 +1,11 @@
-import { Entity, Column, Index, ManyToOne, BeforeInsert } from 'typeorm';
+import {
+  Entity,
+  Column,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  BeforeInsert,
+} from 'typeorm';
 import { BaseEntity } from './BaseEntity.js';
 import { Chunk } from './Chunk.js';
 
@@ -39,6 +46,12 @@ export class ChunkFullText extends BaseEntity {
   chunkIndex: number;
 
   /**
+   * 内容长度
+   */
+  @Column({ type: 'integer', nullable: false })
+  contentLength: number;
+
+  /**
    * 标题
    */
   @Column({ type: 'text', nullable: true })
@@ -54,8 +67,13 @@ export class ChunkFullText extends BaseEntity {
    * 全文搜索向量
    * 在PostgreSQL中使用tsvector类型，在SQLite中使用text类型
    */
-  @Column({ type: 'text', nullable: true })
-  searchVector: string;
+  @Column({
+    type: 'text',
+    nullable: true,
+    default: null,
+    comment: '全文搜索向量，PostgreSQL中使用tsvector类型',
+  })
+  searchVector?: string;
 
   /**
    * 搜索语言
@@ -68,9 +86,10 @@ export class ChunkFullText extends BaseEntity {
    * 关联的块
    * 使用字符串引用避免循环依赖
    */
-  @ManyToOne('Chunk', {
+  @ManyToOne('Chunk', (chunk: Chunk) => chunk.chunkFullText, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'chunkId', referencedColumnName: 'id' })
   chunk: Chunk;
 
   /**
@@ -114,14 +133,15 @@ export class ChunkFullText extends BaseEntity {
   }
 
   /**
-   * 在插入前生成ID并确保docId和collectionId被设置
+   * 在插入前生成ID并确保所有必填字段都有值
    */
   @BeforeInsert()
   generateIds() {
     if (!this.id) {
       this.id = this.chunkId; // 使用chunkId作为主键
     }
-    // 如果没有设置docId和collectionId，从关联的Chunk实体中获取
+
+    // 如果没有设置docId、collectionId或chunkIndex，从关联的Chunk实体中获取
     // 注意：在实际使用中，这些字段应该在创建时就设置好
     if (!this.docId && this.chunk) {
       this.docId = this.chunk.docId;
@@ -129,12 +149,23 @@ export class ChunkFullText extends BaseEntity {
     if (!this.collectionId && this.chunk) {
       this.collectionId = this.chunk.collectionId;
     }
-    if (!this.chunkIndex && this.chunk) {
-      this.chunkIndex = this.chunk.chunkIndex;
+    // 使用 undefined 检查而不是 !this.chunkIndex，因为 0 是有效值
+    if (this.chunkIndex === undefined || this.chunkIndex === null) {
+      if (this.chunk && this.chunk.chunkIndex !== undefined) {
+        this.chunkIndex = this.chunk.chunkIndex;
+      } else {
+        // 如果关联的Chunk实体也没有chunkIndex，则设置为0
+        this.chunkIndex = 0;
+      }
     }
 
-    // 自动生成searchVector，如果未设置
-    if (!this.searchVector) {
+    // 自动计算contentLength
+    if (this.contentLength === undefined) {
+      this.contentLength = this.content ? this.content.length : 0;
+    }
+
+    // 自动生成searchVector，如果未设置且内容存在
+    if (!this.searchVector && this.content) {
       this.searchVector = ChunkFullText.createSearchVector(
         this.title,
         this.content,

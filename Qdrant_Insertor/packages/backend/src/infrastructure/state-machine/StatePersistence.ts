@@ -2,7 +2,10 @@
 
 import Database from 'better-sqlite3';
 import { Logger } from '@logging/logger.js';
-import { SyncJobStatusMapper, DbSyncJobStatus } from '@domain/sync/SyncJobStatusMapper.js';
+import {
+  SyncJobStatusMapper,
+  DbSyncJobStatus,
+} from '@domain/sync/SyncJobStatusMapper.js';
 import {
   StatePersistence as IStatePersistence,
   StateMachineTask,
@@ -132,7 +135,9 @@ export class InMemoryStatePersistence implements IStatePersistence {
     for (const [taskId, task] of this.tasks.entries()) {
       // 清理已完成或失败且超过指定时间的任务
       // 先尝试使用统一的持久化状态枚举进行规范化判断，兼容仓库中可能存在的大写历史值
-      const normalized = SyncJobStatusMapper.normalizeDbStatusString(task.status);
+      const normalized = SyncJobStatusMapper.normalizeDbStatusString(
+        task.status,
+      );
       const isFinalState = normalized
         ? [
             DbSyncJobStatus.COMPLETED,

@@ -1,118 +1,176 @@
-/**
- * 监控服务接口
- * @description 定义系统监控的核心业务接口，遵循依赖倒置原则
- */
+import { HealthStatus } from './IHealthCheckService.js';
+import { MetricData } from './IMetricsService.js';
 
 /**
- * 系统健康状态
+ * 告警规则接口
  */
-export interface SystemHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  services: {
-    database: 'up' | 'down';
-    qdrant: 'up' | 'down';
-    embedding: 'up' | 'down';
-  };
-  lastCheck: Date;
-  uptime: number;
+export interface AlertRule {
+  id?: string;
+  name: string;
+  condition: string;
+  threshold: number;
+  enabled: boolean;
+  metricName: string;
+  conditionOperator: string;
+  thresholdValue: number;
+  severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
 /**
- * 系统指标
+ * 告警历史接口
  */
-export interface SystemMetrics {
-  cpu: {
-    usage: number;
-    loadAverage: number[];
-  };
-  memory: {
-    used: number;
-    total: number;
-    percentage: number;
-  };
-  disk: {
-    used: number;
-    total: number;
-    percentage: number;
-  };
-  database: {
-    connections: number;
-    size: number;
-    queryTime: number;
-  };
-  qdrant: {
-    collections: number;
-    points: number;
-    responseTime: number;
-  };
-  timestamp: Date;
+export interface AlertHistoryItem {
+  id?: string;
+  ruleId: string;
+  ruleName: string;
+  status: 'triggered' | 'resolved' | 'suppressed';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  metricValue: number;
+  message?: string;
+  triggeredAt: Date;
+  resolvedAt?: Date;
 }
 
 /**
- * 性能统计
+ * 告警历史查询选项
+ */
+export interface AlertHistoryOptions {
+  startTime: Date;
+  endTime: Date;
+}
+
+/**
+ * 性能统计接口
  */
 export interface PerformanceStats {
-  requestCount: number;
-  averageResponseTime: number;
+  average: number;
+  min: number;
+  max: number;
+  p95: number;
+  p99: number;
+}
+
+/**
+ * 性能异常检测选项
+ */
+export interface AnomalyDetectionOptions {
+  threshold: number;
+  timeWindow: number;
+}
+
+/**
+ * 性能异常接口
+ */
+export interface PerformanceAnomaly {
+  value: number;
+  timestamp: Date;
+  severity: 'low' | 'medium' | 'high';
+}
+
+/**
+ * 仪表板数据接口
+ */
+export interface DashboardData {
+  overallHealth: HealthStatus;
+  components: Array<{
+    component: string;
+    status: HealthStatus;
+    message?: string;
+    lastCheck: Date;
+    responseTimeMs?: number;
+  }>;
+  metrics: Record<string, number>;
+  activeAlerts: AlertHistoryItem[];
+}
+
+/**
+ * 系统概览接口
+ */
+export interface SystemOverview {
+  healthStatus: HealthStatus;
+  uptime: number;
+  requestRate: number;
   errorRate: number;
-  throughput: number;
-  period: {
-    start: Date;
-    end: Date;
-  };
+  componentCount: number;
+  healthyComponents: number;
+  unhealthyComponents: number;
 }
 
 /**
  * 监控服务接口
- * @description 应用层应该依赖此接口而不是具体实现
  */
 export interface IMonitoringService {
   /**
-   * 获取系统健康状态
-   * @returns 系统健康状态
+   * 创建告警规则
    */
-  getHealth(): Promise<SystemHealth>;
+  createAlertRule(rule: Omit<AlertRule, 'id'>): Promise<AlertRule>;
 
   /**
-   * 获取系统指标
-   * @param timeRange 时间范围（分钟）
-   * @returns 系统指标数据
+   * 更新告警规则
    */
-  getMetrics(timeRange?: number): Promise<SystemMetrics[]>;
+  updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<AlertRule>;
+
+  /**
+   * 删除告警规则
+   */
+  deleteAlertRule(id: string): Promise<void>;
+
+  /**
+   * 获取所有告警规则
+   */
+  getAllAlertRules(): Promise<AlertRule[]>;
+
+  /**
+   * 处理告警
+   */
+  processAlerts(): Promise<AlertHistoryItem[]>;
+
+  /**
+   * 解决告警
+   */
+  resolveAlert(
+    id: string,
+    options?: { message?: string },
+  ): Promise<AlertHistoryItem>;
+
+  /**
+   * 获取告警历史
+   */
+  getAlertHistory(options: AlertHistoryOptions): Promise<AlertHistoryItem[]>;
+
+  /**
+   * 获取仪表板数据
+   */
+  getDashboardData(): Promise<DashboardData>;
+
+  /**
+   * 获取系统概览
+   */
+  getSystemOverview(): Promise<SystemOverview>;
 
   /**
    * 获取性能统计
-   * @param timeRange 时间范围（分钟）
-   * @returns 性能统计数据
    */
-  getPerformanceStats(timeRange?: number): Promise<PerformanceStats>;
+  getPerformanceStats(
+    metricName: string,
+    tags?: Record<string, string | number>,
+  ): Promise<PerformanceStats>;
 
   /**
-   * 记录指标数据
-   * @param metrics 指标数据
+   * 检测性能异常
    */
-  recordMetrics(metrics: Partial<SystemMetrics>): Promise<void>;
+  detectPerformanceAnomalies(
+    metricName: string,
+    options: AnomalyDetectionOptions,
+  ): Promise<PerformanceAnomaly[]>;
 
   /**
-   * 启动监控
+   * 记录指标
    */
-  start(): Promise<void>;
-
-  /**
-   * 停止监控
-   */
-  stop(): Promise<void>;
-
-  /**
-   * 执行健康检查
-   * @returns 健康检查结果
-   */
-  performHealthCheck(): Promise<SystemHealth>;
-
-  /**
-   * 获取服务状态
-   * @param serviceName 服务名称
-   * @returns 服务状态
-   */
-  getServiceStatus(serviceName: string): Promise<'up' | 'down'>;
+  recordMetric(
+    metricName: string,
+    value: number,
+    unit?: string,
+    tags?: Record<string, string | number>,
+  ): void;
 }

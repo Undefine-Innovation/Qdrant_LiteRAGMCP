@@ -119,7 +119,9 @@ export class TransactionContext implements ITransactionContext {
   releaseSavepoint(savepointId: string): void {
     const savepoint = this.savepoints.get(savepointId);
     if (!savepoint) {
-      throw new Error(`Savepoint ${savepointId} not found`);
+      // 保存点不存在，但这可能是正常的（例如已经被提交或回滚）
+      // 不抛出错误，只是简单地返回
+      return;
     }
 
     this.savepoints.delete(savepointId);

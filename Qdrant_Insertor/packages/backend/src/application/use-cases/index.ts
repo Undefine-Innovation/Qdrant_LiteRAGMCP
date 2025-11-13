@@ -1,8 +1,14 @@
 /**
- * 应用层用例服务导出
+ * 用例层导出
  */
 
 /**
- * 导入并索引用例
+ * 导入和索引用例类型
  */
-export { ImportAndIndexUseCase } from './ImportAndIndexUseCase.js';
+export type {
+  IImportAndIndexUseCase,
+  ImportAndIndexInput,
+} from './IImportAndIndexUseCase.js';
+
+// 导出用例实现
+export * from './ImportAndIndexUseCase.js';

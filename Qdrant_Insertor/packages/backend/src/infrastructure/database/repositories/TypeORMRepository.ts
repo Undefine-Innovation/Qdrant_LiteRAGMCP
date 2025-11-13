@@ -113,8 +113,8 @@ export class TypeORMRepository {
       dataSource,
       logger,
     );
-  this.chunkMetaRepository = new ChunkMetaRepository(dataSource, logger);
-  // SyncJobRepository (DB-backed) intentionally not created
+    this.chunkMetaRepository = new ChunkMetaRepository(dataSource, logger);
+    // SyncJobRepository (DB-backed) intentionally not created
     this.scrapeResultsRepository = new ScrapeResultsRepository(
       dataSource,
       logger,
@@ -149,7 +149,7 @@ export class TypeORMRepository {
       } as unknown as new () => FTSPlaceholder,
       logger,
     );
-  // this.syncJobs removed (DB-backed sync jobs are no longer supported)
+    // this.syncJobs removed (DB-backed sync jobs are no longer supported)
     this.systemMetrics = this.systemMetricsRepository;
     this.alertRules = this.alertRulesRepository;
     this.systemHealth = this.systemHealthRepository;

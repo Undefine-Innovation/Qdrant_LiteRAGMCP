@@ -8,7 +8,7 @@ import {
   Doc,
   ChunkMeta,
 } from '@domain/entities/types.js';
-import { ICollectionService } from '@domain/repositories/ICollectionService.js';
+import { ICollectionService } from '@application/services/index.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import {
   ITransactionManager,
@@ -145,6 +145,7 @@ export class CollectionService implements ICollectionService {
       collectionId: aggregate.id,
       name: aggregate.name,
       description: aggregate.description,
+      status: 'active' as const, // 新创建的集合默认为active状态
       created_at: aggregate.createdAt,
       updated_at: aggregate.updatedAt,
     };
@@ -161,6 +162,7 @@ export class CollectionService implements ICollectionService {
       collectionId: aggregate.id,
       name: aggregate.name,
       description: aggregate.description,
+      status: 'active' as const, // 默认状态为active
       created_at: aggregate.createdAt,
       updated_at: aggregate.updatedAt,
     }));
@@ -181,6 +183,7 @@ export class CollectionService implements ICollectionService {
         collectionId: aggregate.id,
         name: aggregate.name,
         description: aggregate.description,
+        status: 'active' as const, // 默认状态为active
         created_at: aggregate.createdAt,
         updated_at: aggregate.updatedAt,
       })),
@@ -189,9 +192,9 @@ export class CollectionService implements ICollectionService {
   }
 
   /**
-   * 根据ID获取集合
+   * 根据集合ID获取集合信息
    * @param collectionId 集合ID
-   * @returns {Promise<Collection | null>} 返回集合或null
+   * @returns {Promise<Collection | null>} 返回集合信息，如果不存在则返回null
    */
   async getCollectionById(
     collectionId: CollectionId,
@@ -203,6 +206,7 @@ export class CollectionService implements ICollectionService {
           collectionId: aggregate.id,
           name: aggregate.name,
           description: aggregate.description,
+          status: 'active' as const, // 默认状态为active
           created_at: aggregate.createdAt,
           updated_at: aggregate.updatedAt,
         }
@@ -214,12 +218,14 @@ export class CollectionService implements ICollectionService {
    * @param collectionId 集合ID
    * @param name 新的集合名称
    * @param description 新的集合描述
+   * @param status 新的集合状态
    * @returns {Promise<Collection>} 返回更新后的集合
    */
   async updateCollection(
     collectionId: CollectionId,
     name?: string,
     description?: string,
+    status?: 'active' | 'inactive' | 'archived',
   ): Promise<Collection> {
     const startTime = Date.now();
 
@@ -230,6 +236,7 @@ export class CollectionService implements ICollectionService {
       collectionId,
       name,
       description,
+      status,
     });
 
     // 获取集合聚合
@@ -259,12 +266,13 @@ export class CollectionService implements ICollectionService {
     }
 
     // 更新聚合
+    if (name !== undefined && name !== aggregate.name) {
+      aggregate.updateName(name);
+    }
+
     if (description !== undefined) {
       aggregate.updateDescription(description);
     }
-
-    // 注意：名称更新需要在Collection实体中实现，这里暂时跳过
-    // 实际实现中需要在Collection实体中添加updateName方法
 
     // 验证聚合状态
     const validation = aggregate.validate();
@@ -278,12 +286,69 @@ export class CollectionService implements ICollectionService {
       );
     }
 
-    // 保存聚合
+    // 保存聚合（这会更新name和description）
     await this.collectionRepository.save(aggregate);
 
     collectionLogger?.debug('集合聚合已更新', undefined, {
       collectionId,
     });
+
+    // 如果需要更新状态，单独调用updateCollection方法
+    if (status !== undefined) {
+      try {
+        const updatedAggregate =
+          await this.collectionRepository.updateCollection(collectionId, {
+            status,
+          });
+
+        if (!updatedAggregate) {
+          throw new Error('Failed to update collection status');
+        }
+
+        collectionLogger?.debug('集合状态更新成功', undefined, {
+          collectionId,
+          status,
+        });
+
+        // 发布领域事件
+        await this.eventPublisher.publishBatch(
+          updatedAggregate.getDomainEvents(),
+        );
+        updatedAggregate.clearDomainEvents();
+
+        this.logger.info('Collection updated successfully', {
+          collectionId,
+          name,
+          description,
+          status,
+        });
+
+        collectionLogger?.info('集合更新成功', undefined, {
+          collectionId,
+          name,
+          description,
+          status,
+          duration: Date.now() - startTime,
+        });
+
+        return {
+          id: updatedAggregate.id,
+          collectionId: updatedAggregate.id,
+          name: updatedAggregate.name,
+          description: updatedAggregate.description,
+          status: status, // 使用传入的状态值
+          created_at: updatedAggregate.createdAt,
+          updated_at: updatedAggregate.updatedAt,
+        };
+      } catch (error) {
+        collectionLogger?.error('集合状态更新失败', undefined, {
+          collectionId,
+          status,
+          error: (error as Error).message,
+        });
+        throw error;
+      }
+    }
 
     // 发布领域事件
     await this.eventPublisher.publishBatch(aggregate.getDomainEvents());
@@ -312,6 +377,7 @@ export class CollectionService implements ICollectionService {
       collectionId: aggregate.id,
       name: aggregate.name,
       description: aggregate.description,
+      status: 'active' as const, // 默认状态
       created_at: aggregate.createdAt,
       updated_at: aggregate.updatedAt,
     };
@@ -338,14 +404,16 @@ export class CollectionService implements ICollectionService {
     // 获取集合聚合
     const aggregate = await this.collectionRepository.findById(collectionId);
     if (!aggregate) {
-      // 幂等删除：目标不存在视为已删除
-      this.logger.info('[DeleteAudit] Collection not found, no-op', {
+      // 集合不存在，抛出错误而不是静默返回
+      this.logger.info('[DeleteAudit] Collection not found', {
         collectionId,
       });
-      collectionLogger?.info('集合不存在，跳过删除', undefined, {
+      collectionLogger?.error('集合不存在', undefined, {
         collectionId,
       });
-      return;
+      throw AppError.createNotFoundError(
+        `Collection with ID ${collectionId} not found`,
+      );
     }
 
     // 检查集合是否可以被删除
@@ -387,7 +455,9 @@ export class CollectionService implements ICollectionService {
       } catch (error) {
         if (
           error instanceof Error &&
-          error.message.includes('cannot start a transaction within a transaction')
+          error.message.includes(
+            'cannot start a transaction within a transaction',
+          )
         ) {
           this.logger.warn(
             'Transaction manager unavailable, falling back to non-transactional deletion',

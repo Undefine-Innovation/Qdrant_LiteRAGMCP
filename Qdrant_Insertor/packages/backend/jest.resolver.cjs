@@ -15,15 +15,40 @@ module.exports = (request, options) => {
   }
 
   const isRelative = request.startsWith('./') || request.startsWith('../');
-  const isJsExtension = request.endsWith('.js');
   const fromNodeModules = options.basedir.includes('node_modules');
 
-  if (isRelative && isJsExtension && !fromNodeModules) {
-    const tsRequest = request.replace(/\.js$/u, '.ts');
+  // Handle all relative paths with .js extensions (including deep ones)
+  if (isRelative && !fromNodeModules && request.endsWith('.js')) {
+    // Replace .js with .ts in the path
+    const tsRequest = request.slice(0, -3) + '.ts';
     try {
       return resolveRequest(tsRequest, options);
+    } catch (error) {
+      // If .ts version doesn't exist, fall back to original request
+      try {
+        return resolveRequest(request, options);
+      } catch {
+        // Re-throw the original error from .ts attempt
+        throw error;
+      }
+    }
+  }
+
+  // Handle index files without extension
+  if (isRelative && !request.includes('.') && !fromNodeModules) {
+    // Try to resolve as index.ts first, then index.js
+    const indexTsRequest = request + '/index.ts';
+    const indexJsRequest = request + '/index.js';
+    
+    try {
+      return resolveRequest(indexTsRequest, options);
     } catch {
-      // Fall back to resolving the original request if the .ts variant is missing.
+      try {
+        return resolveRequest(indexJsRequest, options);
+      } catch {
+        // Fall back to original request
+        return resolveRequest(request, options);
+      }
     }
   }
 

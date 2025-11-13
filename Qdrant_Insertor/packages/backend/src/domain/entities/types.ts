@@ -32,6 +32,7 @@ export interface Collection {
   collectionId?: CollectionId; // 向后兼容字段
   name: string; // 在应用层使用CollectionName值对象，这里保持字符串以兼容数据库层
   description?: string;
+  status?: 'active' | 'inactive' | 'archived'; // 添加status字段
   is_system?: boolean; // 添加is_system字段
   created_at?: number; // epoch ms
   updated_at?: number; // 添加updated_at字段
@@ -151,6 +152,13 @@ export type UnifiedSearchResult = SearchResult;
 export interface DocumentChunk {
   content: string; // The text content of the chunk. / 文本块的内容�?
   titleChain?: string[]; // The hierarchy of titles leading to this chunk. / 指向此块的标题层次结构�?
+}
+
+// 向后兼容：某些基础设施/处理器实现会在 DocumentChunk 中包含索引与标题字段
+// 将它们设置为可选以减少跨层类型不一致导致的问题
+export interface DocumentChunk {
+  index?: number;
+  title?: string;
 }
 
 // ---------------------------------------------
@@ -313,6 +321,8 @@ export interface PaginationMeta {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+  sort?: string;
+  order?: 'asc' | 'desc';
 }
 
 /**

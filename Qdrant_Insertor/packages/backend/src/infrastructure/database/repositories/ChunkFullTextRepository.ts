@@ -180,9 +180,10 @@ export class ChunkFullTextRepository extends BaseRepository<ChunkFullText> {
           chunkId: item.pointId as unknown as string,
           docId: item.docId as unknown as string,
           collectionId: item.collectionId as unknown as string,
-          chunkIndex: item.chunkIndex,
+          chunkIndex: item.chunkIndex, // 显式设置chunkIndex
           title: item.title,
           content: item.content,
+          contentLength: item.content.length, // 显式计算contentLength
           language,
           // 手动生成searchVector以避免NOT NULL约束失败
           searchVector: ChunkFullText.createSearchVector(
@@ -191,6 +192,15 @@ export class ChunkFullTextRepository extends BaseRepository<ChunkFullText> {
             language,
           ),
         });
+
+        // 确保所有必填字段都有值
+        if (entity.chunkIndex === undefined || entity.chunkIndex === null) {
+          entity.chunkIndex = item.chunkIndex;
+        }
+        if (!entity.contentLength) {
+          entity.contentLength = item.content.length;
+        }
+
         // 手动调用generateIds方法以确保ID生成
         if (typeof entity.generateIds === 'function') {
           entity.generateIds();
@@ -334,7 +344,7 @@ export class ChunkFullTextRepository extends BaseRepository<ChunkFullText> {
   async optimizeIndex(): Promise<void> {
     try {
       // 执行PostgreSQL的VACUUM和ANALYZE命令优化索引
-      await this.dataSource.query('VACUUM ANALYZE chunks_fulltext');
+      await this.getDataSourceOrThrow().query('VACUUM ANALYZE chunks_fulltext');
 
       this.logger.info(`全文搜索索引优化完成`);
     } catch (error) {
@@ -367,7 +377,7 @@ export class ChunkFullTextRepository extends BaseRepository<ChunkFullText> {
       const totalChunks = await this.repository.count();
 
       // 获取索引大小（近似值）
-      const indexSizeResult = await this.dataSource.query(`
+      const indexSizeResult = await this.getDataSourceOrThrow().query(`
         SELECT pg_size_pretty(pg_total_relation_size('chunks_fulltext')) as size
       `);
       const indexSize = parseInt(

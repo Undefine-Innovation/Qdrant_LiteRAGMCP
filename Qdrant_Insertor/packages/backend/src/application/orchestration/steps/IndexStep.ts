@@ -101,9 +101,8 @@ export class IndexStep implements Step<IndexStepInput, IndexStepOutput> {
         indexedCount = points.length;
       } catch (storageError) {
         hasError = true;
-        errorMessage = storageError instanceof Error
-          ? storageError.message
-          : '未知错误';
+        errorMessage =
+          storageError instanceof Error ? storageError.message : '未知错误';
         this.logger.error(`[${this.name}] 存储失败`, {
           error: storageError,
           docId: input.docId,
@@ -152,13 +151,10 @@ export class IndexStep implements Step<IndexStepInput, IndexStepOutput> {
     context: StepContext<IndexStepInput, IndexStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        docId: context.input?.docId,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      docId: context.input?.docId,
+      duration: context.duration,
+    });
   }
 }

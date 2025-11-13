@@ -18,36 +18,49 @@ export class SystemHealth extends BaseEntity {
    * 状态
    */
   @Column({ type: 'varchar', length: 20, nullable: false })
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
 
   /**
    * 最后检查时间
    */
   @Column({
+    name: 'last_check',
     type: 'bigint',
     nullable: false,
     transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10),
+      from: (value: string | null) => (value ? parseInt(value, 10) : null),
     },
   })
-  last_check: number;
+  lastCheck: number;
 
   /**
    * 响应时间（毫秒）
    */
-  @Column({ type: 'integer', nullable: true })
-  response_time_ms?: number;
+  @Column({ name: 'response_time_ms', type: 'integer', nullable: true })
+  responseTimeMs?: number;
 
   /**
    * 错误信息
    */
-  @Column({ type: 'text', nullable: true })
-  error_message?: string;
+  @Column({ name: 'error_message', type: 'text', nullable: true })
+  errorMessage?: string;
 
   /**
    * 详细信息（JSON格式）
    */
-  @Column({ type: 'text', nullable: true })
+  @Column({
+    type: 'text',
+    nullable: true,
+    transformer: {
+      to: (value?: Record<string, unknown> | string | null) =>
+        value == null
+          ? null
+          : typeof value === 'string'
+            ? value
+            : JSON.stringify(value),
+      from: (value?: string | null) => value ?? null,
+    },
+  })
   details?: string;
 }

@@ -11,7 +11,6 @@ import { BaseEntity } from './BaseEntity.js';
 @Index(['metric_name'])
 @Index(['is_active'])
 @Index(['severity'])
-@Index(['created_at'])
 @Check(`name IS NOT NULL AND name != ''`)
 @Check(`LENGTH(name) <= 255`)
 @Check(`metric_name IS NOT NULL AND metric_name != ''`)

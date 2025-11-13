@@ -104,7 +104,9 @@ export class MonitoringServiceCore {
         lastCheck: health.lastCheck,
         responseTimeMs: health.responseTimeMs,
         errorMessage: health.errorMessage,
-        details: health.details as Record<string, string | number | boolean>,
+        details: this.parseDetails(
+          health.details as string | Record<string, unknown> | null,
+        ),
       };
     } catch (error) {
       this.logger.warn('获取组件健康状态失败', {
@@ -133,18 +135,14 @@ export class MonitoringServiceCore {
       const healthList = await this.sqliteRepo.systemHealth.getAll();
       return (healthList as unknown[]).map((health: unknown) => {
         const h = health as Record<string, unknown>;
+        const detailsRaw = h.details as string | Record<string, unknown> | null;
         return {
           component: h.component as string,
           status: h.status as 'healthy' | 'degraded' | 'unhealthy',
-          lastCheck: h.last_check as number,
-          responseTimeMs: h.response_time_ms as number | undefined,
-          errorMessage: h.error_message as string | undefined,
-          details: h.details
-            ? (JSON.parse(h.details as string) as Record<
-                string,
-                string | number | boolean
-              >)
-            : undefined,
+          lastCheck: h.lastCheck as number,
+          responseTimeMs: h.responseTimeMs as number | undefined,
+          errorMessage: h.errorMessage as string | undefined,
+          details: this.parseDetails(detailsRaw),
         };
       });
     } catch (error) {
@@ -174,18 +172,14 @@ export class MonitoringServiceCore {
         await this.sqliteRepo.systemHealth.getUnhealthyComponents();
       return (healthList as unknown[]).map((health: unknown) => {
         const h = health as Record<string, unknown>;
+        const detailsRaw = h.details as string | Record<string, unknown> | null;
         return {
           component: h.component as string,
           status: h.status as 'healthy' | 'degraded' | 'unhealthy',
-          lastCheck: h.last_check as number,
-          responseTimeMs: h.response_time_ms as number | undefined,
-          errorMessage: h.error_message as string | undefined,
-          details: h.details
-            ? (JSON.parse(h.details as string) as Record<
-                string,
-                string | number | boolean
-              >)
-            : undefined,
+          lastCheck: h.lastCheck as number,
+          responseTimeMs: h.responseTimeMs as number | undefined,
+          errorMessage: h.errorMessage as string | undefined,
+          details: this.parseDetails(detailsRaw),
         };
       });
     } catch (error) {
@@ -194,6 +188,24 @@ export class MonitoringServiceCore {
       });
       return [];
     }
+  }
+
+  private parseDetails(
+    details: string | Record<string, unknown> | null | undefined,
+  ): Record<string, string | number | boolean> | undefined {
+    if (!details) {
+      return undefined;
+    }
+
+    if (typeof details === 'string') {
+      try {
+        return JSON.parse(details) as Record<string, string | number | boolean>;
+      } catch {
+        return undefined;
+      }
+    }
+
+    return details as Record<string, string | number | boolean>;
   }
 
   /**

@@ -40,7 +40,7 @@ export class EmbedStep implements Step<EmbedStepInput, EmbedStepOutput> {
     try {
       // 应用Zod默认值
       const validatedInput = EmbedStepInputSchema.parse(input);
-      
+
       // 确保embeddingKey有值，如果没有使用默认值
       const embeddingKey = validatedInput.embeddingKey || 'default';
 
@@ -48,9 +48,7 @@ export class EmbedStep implements Step<EmbedStepInput, EmbedStepOutput> {
       try {
         this.strategyRegistry.getEmbedding(embeddingKey);
       } catch (error) {
-        this.logger.error(
-          `[${this.name}] 嵌入策略 '${embeddingKey}' 未注册`,
-        );
+        this.logger.error(`[${this.name}] 嵌入策略 '${embeddingKey}' 未注册`);
         throw error;
       }
 
@@ -71,26 +69,23 @@ export class EmbedStep implements Step<EmbedStepInput, EmbedStepOutput> {
       // 应用Zod默认值并确保embeddingKey有值
       const validatedInput = EmbedStepInputSchema.parse(input);
       const embeddingKey = validatedInput.embeddingKey || 'default';
-      
+
       this.logger.info(
         `[${this.name}] 开始生成嵌入, docId: ${input.docId}, 块数: ${input.chunks.length}, 策略: ${embeddingKey}`,
       );
 
       // 获取嵌入提供者
-      const embeddingProvider = this.strategyRegistry.getEmbedding(
-        embeddingKey,
-      );
+      const embeddingProvider =
+        this.strategyRegistry.getEmbedding(embeddingKey);
 
       // 准备要嵌入的文本
       const textsToEmbed = input.chunks.map((chunk) => chunk.content);
 
       // 生成嵌入
-      const embeddings = await embeddingProvider.generate(textsToEmbed);
+      const embeddings = await embeddingProvider.generateBatch(textsToEmbed);
 
       if (!embeddings || embeddings.length === 0) {
-        this.logger.error(
-          `[${this.name}] 嵌入结果为空, docId: ${input.docId}`,
-        );
+        this.logger.error(`[${this.name}] 嵌入结果为空, docId: ${input.docId}`);
         throw new Error('嵌入生成失败: 返回结果为空');
       }
 
@@ -132,13 +127,10 @@ export class EmbedStep implements Step<EmbedStepInput, EmbedStepOutput> {
     context: StepContext<EmbedStepInput, EmbedStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        docId: context.input?.docId,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      docId: context.input?.docId,
+      duration: context.duration,
+    });
   }
 }

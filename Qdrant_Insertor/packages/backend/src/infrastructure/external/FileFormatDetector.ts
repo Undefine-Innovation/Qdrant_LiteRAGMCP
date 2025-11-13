@@ -1,9 +1,9 @@
 import { Logger } from '@logging/logger.js';
-import { LoadedFile } from '@domain/services/loader.js';
 import {
   IFileProcessorRegistry,
   IFileProcessor,
-} from '@domain/services/fileProcessor.js';
+  LoadedFile,
+} from '@infrastructure/external/index.js';
 
 /**
  * 文件格式检测结果
@@ -255,7 +255,12 @@ export class FileFormatDetector {
     const contentResult = await this.detectByContent(file);
 
     // 4. 检查是否有处理器支持
-    const processor = this.processorRegistry.getProcessor(file);
+    const processor =
+      this.processorRegistry.getProcessorForFile?.(file) ||
+      this.processorRegistry.getProcessor(
+        file.mimeType,
+        this.extractExtension(file.fileName),
+      );
     const supportedProcessors = this.getSupportedProcessors(file);
 
     // 5. 综合所有检测结果，选择最佳匹配

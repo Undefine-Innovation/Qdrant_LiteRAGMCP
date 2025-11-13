@@ -106,7 +106,7 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 集合对象
    */
   async getByName(name: string): Promise<unknown> {
-    return await this.repository.findByName(name);
+    return await this.repository!.findByName(name);
   }
 
   /**
@@ -123,7 +123,8 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 创建后的集合
    */
   async create(collection: unknown): Promise<unknown> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
+    // Legacy adapter requires explicit casting for compatibility
     return await this.repository.create(collection as any);
   }
 
@@ -134,8 +135,12 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 更新后的集合
    */
   async update(id: CollectionId, data: unknown): Promise<unknown> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await this.repository.update(id as unknown as string, data as any);
+     
+    // Legacy adapter requires explicit casting for compatibility
+    return await this.repository.update(
+      { id } as Record<string, unknown>,
+      data as any,
+    );
   }
 
   /**
@@ -144,7 +149,11 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 是否删除成功
    */
   async delete(id: CollectionId): Promise<boolean> {
-    return await this.repository.delete(id as unknown as string);
+    const result = await this.repository.delete({ id } as Record<
+      string,
+      unknown
+    >);
+    return !!result;
   }
 
   /**
@@ -152,7 +161,7 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 集合总数
    */
   async getCount(): Promise<number> {
-    return await this.repository.count();
+    return await this.repository!.count();
   }
 
   /**
@@ -163,7 +172,7 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
   async listPaginated(
     query: PaginationQuery,
   ): Promise<PaginatedResponse<unknown>> {
-    const collections = await this.repository.findAll();
+    const collections = await this.repository!.findAll();
     const { page = 1, limit = 10 } = query;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
@@ -236,7 +245,7 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 文档数组
    */
   async listByCollection(collectionId: CollectionId): Promise<unknown[]> {
-    return await this.repository.findByCollectionId(collectionId);
+    return await this.repository!.findByCollectionId(collectionId);
   }
 
   /**
@@ -253,7 +262,8 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 创建的文档
    */
   async create(doc: unknown): Promise<unknown> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
+    // Legacy adapter requires explicit casting for compatibility
     return await this.repository.create(doc as any);
   }
 
@@ -264,8 +274,12 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 更新后的文档
    */
   async update(id: DocId, data: unknown): Promise<unknown> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await this.repository.update(id as unknown as string, data as any);
+     
+    // Legacy adapter requires explicit casting for compatibility
+    return await this.repository.update(
+      { id } as Record<string, unknown>,
+      data as any,
+    );
   }
 
   /**
@@ -274,7 +288,11 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 是否删除成功
    */
   async delete(id: DocId): Promise<boolean> {
-    return await this.repository.delete(id as unknown as string);
+    const result = await this.repository.delete({ id } as Record<
+      string,
+      unknown
+    >);
+    return !!result;
   }
 
   /**
@@ -282,7 +300,7 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 已删除的文档数组
    */
   async findDeleted(): Promise<unknown[]> {
-    return await this.repository.findDeleted();
+    return await this.repository!.findDeleted();
   }
 
   /**
@@ -290,7 +308,7 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 文档总数
    */
   async getCount(): Promise<number> {
-    return await this.repository.count();
+    return await this.repository!.count();
   }
 
   /**
@@ -301,7 +319,7 @@ export class DocRepositoryAdapter implements DocsTable {
   async listPaginated(
     query: PaginationQuery,
   ): Promise<PaginatedResponse<unknown>> {
-    const docs = await this.repository.findAll();
+    const docs = await this.repository!.findAll();
     const { page = 1, limit = 10 } = query;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
@@ -328,7 +346,11 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 是否删除成功
    */
   async hardDelete(id: DocId): Promise<boolean> {
-    return await this.repository.delete(id as unknown as string);
+    const result = await this.repository!.delete({ id } as Record<
+      string,
+      unknown
+    >);
+    return !!result;
   }
 
   /**
@@ -377,7 +399,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 块数组
    */
   async getByPointIds(pointIds: PointId[]): Promise<unknown[]> {
-    return await this.repository.findByPointIds(pointIds);
+    return await this.repository!.findByPointIds(pointIds);
   }
 
   /**
@@ -386,7 +408,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 块数组
    */
   async getByDocId(docId: DocId): Promise<unknown[]> {
-    return await this.repository.findByDocId(docId);
+    return await this.repository!.findByDocId(docId);
   }
 
   /**
@@ -405,7 +427,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    */
   async create(chunk: unknown): Promise<unknown> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await this.repository.create(chunk as any);
+    return await this.repository!.create(chunk as any);
   }
 
   /**
@@ -415,7 +437,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    */
   async createBatch(chunks: unknown[]): Promise<unknown[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await this.repository.createBatch(chunks as any[]);
+    return await this.repository!.createBatch(chunks as any[]);
   }
 
   /**
@@ -424,7 +446,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 删除的块数量
    */
   async deleteByPointIds(pointIds: PointId[]): Promise<number> {
-    return await this.repository.deleteByPointIds(pointIds);
+    return await this.repository!.deleteByPointIds(pointIds);
   }
 
   /**
@@ -433,7 +455,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 删除的块数量
    */
   async deleteByDocId(docId: DocId): Promise<number> {
-    return await this.repository.deleteByDocId(docId);
+    return await this.repository!.deleteByDocId(docId);
   }
 
   /**
@@ -442,7 +464,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 删除的块数量
    */
   async deleteByCollectionId(collectionId: CollectionId): Promise<number> {
-    return await this.repository.deleteByCollectionId(collectionId);
+    return await this.repository!.deleteByCollectionId(collectionId);
   }
 
   /**
@@ -452,7 +474,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 块总数
    */
   async count(docId?: DocId, collectionId?: CollectionId): Promise<number> {
-    return await this.repository.getCount(docId, collectionId);
+    return await this.repository!.getCount(docId, collectionId);
   }
 
   /**
@@ -470,7 +492,7 @@ export class ChunkRepositoryAdapter implements ChunksTable {
    * @returns 块数量
    */
   async getCountByDocId(docId: DocId): Promise<number> {
-    return await this.repository.getCount(docId);
+    return await this.repository!.getCount(docId);
   }
 
   /**

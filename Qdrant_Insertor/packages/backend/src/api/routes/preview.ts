@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { DocId } from '@domain/entities/types.js';
-import { IFileProcessingService } from '@domain/repositories/IFileProcessingService.js';
+import { IFileProcessingService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import { DocIdParamsSchema } from '@api/contracts/document.js';
 import {

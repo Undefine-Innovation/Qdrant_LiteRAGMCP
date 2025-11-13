@@ -1,13 +1,13 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
   Index,
   BeforeInsert,
   BeforeUpdate,
   Check,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { BaseEntity } from './BaseEntity.js';
 
 /**
  * 事件实体
@@ -18,29 +18,18 @@ import { v4 as uuidv4 } from 'uuid';
 @Index(['aggregateId', 'version'])
 @Index(['aggregateType'])
 @Index(['eventType'])
-@Index(['occurredOn'])
-@Index(['createdAt'])
 @Index(['processedAt'])
 @Index(['aggregateId', 'eventType'])
-@Check(`id IS NOT NULL AND id != ''`)
+@Index(['occurredOn'])
+@Index(['created_at'])
+@Index(['updated_at'])
 @Check(`eventId IS NOT NULL AND eventId != ''`)
 @Check(`eventType IS NOT NULL AND eventType != ''`)
 @Check(`aggregateId IS NOT NULL AND aggregateId != ''`)
 @Check(`aggregateType IS NOT NULL AND aggregateType != ''`)
 @Check(`version >= 1`)
 @Check(`eventData IS NOT NULL AND eventData != ''`)
-export class Event {
-  /**
-   * 主键ID
-   * 添加长度约束
-   */
-  @PrimaryColumn({
-    type: 'varchar',
-    length: 36,
-    comment: '事件主键ID',
-  })
-  id: string;
-
+export class Event extends BaseEntity {
   /**
    * 事件ID
    * 添加唯一约束和长度限制
@@ -113,9 +102,10 @@ export class Event {
   @Column({
     type: 'integer',
     nullable: false,
+    default: 1,
     comment: '事件版本号',
   })
-  version: number;
+  version: number = 1;
 
   /**
    * 元数据（可选）
@@ -221,36 +211,28 @@ export class Event {
   tags?: string;
 
   /**
-   * 创建时间
-   * 添加索引
+   * 创建时间别名
+   * 为了兼容代码中的 createdAt 引用
    */
-  @Index(['createdAt'])
-  @Column({
-    type: 'bigint',
-    nullable: false,
-    transformer: {
-      to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10),
-    },
-    comment: '记录创建时间戳（毫秒）',
-  })
-  createdAt: number;
+  get createdAt(): number {
+    return this.created_at;
+  }
+
+  set createdAt(value: number) {
+    this.created_at = value;
+  }
 
   /**
-   * 更新时间
-   * 添加索引
+   * 更新时间别名
+   * 为了兼容代码中的 updatedAt 引用
    */
-  @Index(['updatedAt'])
-  @Column({
-    type: 'bigint',
-    nullable: false,
-    transformer: {
-      to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10),
-    },
-    comment: '记录更新时间戳（毫秒）',
-  })
-  updatedAt: number;
+  get updatedAt(): number {
+    return this.updated_at;
+  }
+
+  set updatedAt(value: number) {
+    this.updated_at = value;
+  }
 
   /**
    * 在插入前生成ID和eventId
@@ -264,11 +246,11 @@ export class Event {
       this.eventId = uuidv4();
     }
     const now = Date.now();
-    if (!this.createdAt) {
-      this.createdAt = now;
+    if (!this.created_at) {
+      this.created_at = now;
     }
-    if (!this.updatedAt) {
-      this.updatedAt = now;
+    if (!this.updated_at) {
+      this.updated_at = now;
     }
     if (!this.occurredOn) {
       this.occurredOn = now;
@@ -280,7 +262,7 @@ export class Event {
    */
   @BeforeUpdate()
   updateTimestamp() {
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -288,7 +270,7 @@ export class Event {
    */
   startProcessing(): void {
     this.processingStatus = 'processing';
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -297,7 +279,7 @@ export class Event {
   completeProcessing(): void {
     this.processingStatus = 'completed';
     this.processedAt = Date.now();
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -309,7 +291,7 @@ export class Event {
     this.processingStatus = 'failed';
     this.processingError = error;
     this.retryCount++;
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -319,7 +301,7 @@ export class Event {
     this.processingStatus = 'pending';
     this.processedAt = undefined;
     this.processingError = undefined;
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -345,7 +327,7 @@ export class Event {
    */
   setEventDataObject(data: unknown): void {
     this.eventData = JSON.stringify(data);
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -371,7 +353,7 @@ export class Event {
    */
   setMetadataObject(metadata: unknown): void {
     this.metadata = JSON.stringify(metadata);
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**
@@ -397,7 +379,7 @@ export class Event {
    */
   setTagsObject(tags: Record<string, string>): void {
     this.tags = JSON.stringify(tags);
-    this.updatedAt = Date.now();
+    this.updated_at = Date.now();
   }
 
   /**

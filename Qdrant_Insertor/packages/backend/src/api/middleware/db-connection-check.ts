@@ -30,7 +30,7 @@ export const dbConnectionCheck = async (
         .status(500)
         .json(
           new AppError(
-            ErrorCode.INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
             'Database connection not available. Please try again later.',
             500,
           ).toJSON(),
@@ -49,7 +49,7 @@ export const dbConnectionCheck = async (
         .status(500)
         .json(
           new AppError(
-            ErrorCode.INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
             'Database connection is not initialized. Please try again later.',
             500,
           ).toJSON(),
@@ -70,7 +70,7 @@ export const dbConnectionCheck = async (
         .status(500)
         .json(
           new AppError(
-            ErrorCode.INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
             'Database connection test failed. Please try again later.',
             500,
           ).toJSON(),
@@ -84,7 +84,7 @@ export const dbConnectionCheck = async (
       .status(500)
       .json(
         new AppError(
-          ErrorCode.INTERNAL_SERVER_ERROR,
+          ErrorCode.INTERNAL_ERROR,
           'An error occurred while checking database connection.',
           500,
         ).toJSON(),

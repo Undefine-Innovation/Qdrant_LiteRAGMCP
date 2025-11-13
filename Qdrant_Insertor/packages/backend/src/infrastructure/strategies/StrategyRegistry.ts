@@ -1,6 +1,6 @@
 import { Logger } from '@logging/logger.js';
-import { ISplitter } from '@domain/services/splitter.js';
-import { IEmbeddingProvider } from '@domain/entities/embedding.js';
+import { ISplitter } from '@domain/interfaces/splitter.js';
+import { IEmbeddingProvider } from '@domain/interfaces/embedding.js';
 import { IKeywordRetriever } from '@domain/repositories/IKeywordRetriever.js';
 
 /**
@@ -19,10 +19,7 @@ export interface IFusionStrategy {
    * @param weights 每个结果的权重（可选）
    * @returns 融合后的结果
    */
-  fuse(
-    results: unknown[][],
-    weights?: number[],
-  ): Promise<unknown[]>;
+  fuse(results: unknown[][], weights?: number[]): Promise<unknown[]>;
 }
 
 /**

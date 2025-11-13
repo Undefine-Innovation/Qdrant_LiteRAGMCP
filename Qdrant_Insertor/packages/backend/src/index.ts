@@ -71,9 +71,12 @@ async function main(): Promise<void> {
     startServer(app, apiPort, logger, enhancedLogger);
 
     // 7. 设置定时任务
+    const _monitoringApiService = services.monitoringApiService as unknown as
+      | MonitoringApiService
+      | undefined;
     setupScheduledTasks(
-      (services.monitoringApiService as MonitoringApiService).monitoringService,
-      (services.monitoringApiService as MonitoringApiService).alertService,
+      _monitoringApiService?.monitoringService as import('./application/services/monitoring/index.js').MonitoringService,
+      _monitoringApiService?.alertService as import('./application/services/alerting/index.js').AlertService,
       services.autoGCService as AutoGCService,
       config,
       logger,
@@ -82,8 +85,8 @@ async function main(): Promise<void> {
 
     // 8. 设置优雅关闭处理
     setupGracefulShutdown(
-      (services.monitoringApiService as MonitoringApiService).monitoringService,
-      (services.monitoringApiService as MonitoringApiService).alertService,
+      _monitoringApiService?.monitoringService as import('./application/services/monitoring/index.js').MonitoringService,
+      _monitoringApiService?.alertService as import('./application/services/alerting/index.js').AlertService,
       logger,
     );
   } catch (error) {

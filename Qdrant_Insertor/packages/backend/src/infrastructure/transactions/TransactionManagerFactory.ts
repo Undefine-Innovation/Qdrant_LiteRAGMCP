@@ -33,7 +33,11 @@ export class TransactionManagerFactory {
     }
 
     logger.info('Creating TypeORM transaction manager');
-    return new TypeORMTransactionManager(dataSource, qdrantRepo, logger) as ITransactionManager;
+    return new TypeORMTransactionManager(
+      dataSource,
+      qdrantRepo,
+      logger,
+    ) as ITransactionManager;
   }
 
   /**

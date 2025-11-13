@@ -19,7 +19,7 @@ module.exports = tseslint.config(
     ...tseslint.configs.recommended,
     {
         files: ['src/**/*.ts'],
-        ignores: ['src/generated/**/*'],
+        ignores: ['src/generated/**/*', 'src/**/*.d.ts'],
         languageOptions: {
             // Ensure typescript-eslint parser can locate correct tsconfig for this package.
             parserOptions: {

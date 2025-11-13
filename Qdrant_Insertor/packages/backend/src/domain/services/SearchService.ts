@@ -1,5 +1,5 @@
-import { Chunk } from '../entities/Chunk.js';
-import { EmbeddingVector } from '../value-objects/EmbeddingVector.js';
+import { Chunk } from '@domain/entities/Chunk.js';
+import { EmbeddingVector } from '@domain/value-objects/EmbeddingVector.js';
 import {
   CollectionId,
   DocId,
@@ -7,11 +7,15 @@ import {
   RetrievalResultDTO,
   PaginationQuery,
   PaginatedResponse,
-} from '../entities/types.js';
-import { IEventPublisher } from '../events/IEventPublisher.js';
-import { IEmbeddingProvider } from '../entities/embedding.js';
-import { SearchResult, FusionCandidate, FusedResult } from './SearchTypes.js';
-import { Logger } from '../../infrastructure/logging/logger.js';
+} from '@domain/entities/types.js';
+import { IEventPublisher } from '@domain/events/IEventPublisher.js';
+import { IEmbeddingProvider } from '@domain/interfaces/embedding.js';
+import {
+  SearchResult,
+  FusionCandidate,
+  FusedResult,
+} from '@domain/services/SearchTypes.js';
+import { Logger } from '@logging/logger.js';
 
 /**
  * 搜索领域服务接口
@@ -147,6 +151,15 @@ export class SearchDomainService implements ISearchDomainService {
     // 验证查询
     const validation = this.validateSearchQuery(query);
     if (!validation.isValid) {
+      // 如果查询过大，抛出PAYLOAD_TOO_LARGE错误
+      if (query.trim().length > SearchDomainService.MAX_QUERY_LENGTH) {
+        const { ErrorFactory } = await import('@domain/errors/ErrorFactory.js');
+        throw ErrorFactory.createPayloadTooLargeError(
+          'Search query',
+          query.length,
+          SearchDomainService.MAX_QUERY_LENGTH,
+        );
+      }
       throw new Error(`Invalid search query: ${validation.errors.join(', ')}`);
     }
 
@@ -159,7 +172,9 @@ export class SearchDomainService implements ISearchDomainService {
 
     try {
       // 生成查询嵌入向量
-      const [queryEmbedding] = await this.embeddingProvider.generate([query]);
+      const [queryEmbedding] = await this.embeddingProvider.generateBatch([
+        query,
+      ]);
 
       if (!queryEmbedding) {
         throw new Error('Failed to generate query embedding');
@@ -211,6 +226,15 @@ export class SearchDomainService implements ISearchDomainService {
     // 验证查询
     const validation = this.validateSearchQuery(query);
     if (!validation.isValid) {
+      // 如果查询过大，抛出特殊错误
+      if (query.trim().length > SearchDomainService.MAX_QUERY_LENGTH) {
+        const error = new Error(
+          `Search query exceeds maximum limit of ${SearchDomainService.MAX_QUERY_LENGTH} characters.`,
+        ) as Error & { code?: string; statusCode?: number };
+        error.code = 'PAYLOAD_TOO_LARGE';
+        error.statusCode = 413;
+        throw error;
+      }
       throw new Error(`Invalid search query: ${validation.errors.join(', ')}`);
     }
 
@@ -320,7 +344,9 @@ export class SearchDomainService implements ISearchDomainService {
     }
 
     try {
-      const [queryEmbedding] = await this.embeddingProvider.generate([query]);
+      const [queryEmbedding] = await this.embeddingProvider.generateBatch([
+        query,
+      ]);
       if (!queryEmbedding) {
         return 0;
       }

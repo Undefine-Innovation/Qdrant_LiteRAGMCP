@@ -160,6 +160,7 @@ export class Doc {
    * @param name 文档名称
    * @param sizeBytes 文档大小
    * @param mime MIME类型
+   * @param content 文档内容(可选,从数据库加载时可能不可用)
    * @param status 文档状态
    * @param isDeleted 是否已删除
    * @param createdAt 创建时间戳
@@ -173,11 +174,17 @@ export class Doc {
     name?: string,
     sizeBytes?: number,
     mime?: string,
+    content?: string,
     status: DocStatus = DocStatus.NEW,
     isDeleted: boolean = false,
     createdAt?: number,
     updatedAt?: number,
   ): Doc {
+    // 如果提供了content字符串,转换为DocumentContent对象
+    const documentContent = content
+      ? DocumentContent.create(content)
+      : undefined;
+
     return new Doc(
       id,
       collectionId,
@@ -185,7 +192,7 @@ export class Doc {
       name,
       sizeBytes,
       mime,
-      undefined, // 从数据库加载时内容可能不可用
+      documentContent,
       status,
       isDeleted,
       createdAt,

@@ -1,19 +1,14 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-  "esModuleInterop": true,
-  "isolatedModules": true,
-  "strict": true,
-  "experimentalDecorators": true,
-  "emitDecoratorMetadata": true,
-  "strictPropertyInitialization": false,
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "types": ["node", "jest"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["../../shared/*"],
+      "@backend/*": ["./"],
       "@domain/*": ["./src/domain/*"],
       "@application/*": ["./src/application/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
@@ -31,6 +26,8 @@
     "node_modules",
     "dist",
     "src/**/*.js",
+    "src/**/*.d.ts",
+    "src/infrastructure/database/repositories/*.d.ts",
     // exclude generated code since it's produced by tools and may not follow project lint/ts rules
     "src/generated",
     "src/generated/**"

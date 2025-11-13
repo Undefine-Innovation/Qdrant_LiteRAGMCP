@@ -1,5 +1,8 @@
 import { AppError, ErrorCode } from '@api/contracts/error.js';
-import { TransactionError, TransactionErrorType } from '@infrastructure/transactions/TransactionErrorHandler.js';
+import {
+  TransactionError,
+  TransactionErrorType,
+} from '@infrastructure/transactions/TransactionErrorHandler.js';
 import { ErrorCategory } from '@domain/sync/retry.js';
 import { ErrorFactory, ErrorContext } from '@domain/errors/ErrorFactory.js';
 
@@ -26,6 +29,7 @@ export class DatabaseErrorMappingStrategy implements ErrorMappingStrategy {
 
   canHandle(error: Error): boolean {
     const message = error.message.toLowerCase();
+    const errorName = error.constructor.name.toLowerCase();
     const dbKeywords = [
       'database',
       'sqlite',
@@ -37,20 +41,33 @@ export class DatabaseErrorMappingStrategy implements ErrorMappingStrategy {
       'timeout',
       'locked',
       'busy',
+      'connection',
+      'typeorm',
+      'queryrunner',
     ];
-    return dbKeywords.some(keyword => message.includes(keyword));
+    return (
+      dbKeywords.some(
+        (keyword) => message.includes(keyword) || errorName.includes(keyword),
+      ) ||
+      errorName.includes('connectionisnot') ||
+      errorName.includes('connectionerror')
+    );
   }
 
   map(error: Error, context?: ErrorContext): AppError {
     const message = error.message.toLowerCase();
 
     // 约束违反
-    if (message.includes('constraint') || message.includes('unique') || message.includes('foreign key')) {
+    if (
+      message.includes('constraint') ||
+      message.includes('unique') ||
+      message.includes('foreign key')
+    ) {
       return ErrorFactory.createValidationError(
         'Database constraint violation.',
-        { 
+        {
           originalError: error.message,
-          constraintType: this.extractConstraintType(message)
+          constraintType: this.extractConstraintType(message),
         },
         context,
       );
@@ -58,18 +75,16 @@ export class DatabaseErrorMappingStrategy implements ErrorMappingStrategy {
 
     // 连接错误
     if (message.includes('connection') || message.includes('connect')) {
-      return ErrorFactory.createServiceUnavailableError(
-        'Database',
-        context,
-      );
+      return ErrorFactory.createServiceUnavailableError('Database', context);
     }
 
     // 超时错误
-    if (message.includes('timeout') || message.includes('locked') || message.includes('busy')) {
-      return ErrorFactory.createServiceUnavailableError(
-        'Database',
-        context,
-      );
+    if (
+      message.includes('timeout') ||
+      message.includes('locked') ||
+      message.includes('busy')
+    ) {
+      return ErrorFactory.createServiceUnavailableError('Database', context);
     }
 
     // 默认数据库错误
@@ -117,8 +132,8 @@ export class NetworkErrorMappingStrategy implements ErrorMappingStrategy {
       'socket',
       'dns',
     ];
-    return networkKeywords.some(keyword => 
-      message.includes(keyword) || name.includes(keyword)
+    return networkKeywords.some(
+      (keyword) => message.includes(keyword) || name.includes(keyword),
     );
   }
 
@@ -140,7 +155,10 @@ export class NetworkErrorMappingStrategy implements ErrorMappingStrategy {
     }
 
     // 连接被拒绝
-    if (message.includes('econnrefused') || message.includes('connection refused')) {
+    if (
+      message.includes('econnrefused') ||
+      message.includes('connection refused')
+    ) {
       return ErrorFactory.createServiceUnavailableError(
         'Remote Service',
         context,
@@ -156,7 +174,10 @@ export class NetworkErrorMappingStrategy implements ErrorMappingStrategy {
     }
 
     // 连接重置
-    if (message.includes('econnreset') || message.includes('connection reset')) {
+    if (
+      message.includes('econnreset') ||
+      message.includes('connection reset')
+    ) {
       return ErrorFactory.createServiceUnavailableError(
         'Network Connection',
         context,
@@ -174,7 +195,9 @@ export class NetworkErrorMappingStrategy implements ErrorMappingStrategy {
 /**
  * 文件处理错误映射策略
  */
-export class FileProcessingErrorMappingStrategy implements ErrorMappingStrategy {
+export class FileProcessingErrorMappingStrategy
+  implements ErrorMappingStrategy
+{
   name = 'FileProcessingErrorMapping';
   priority = 3;
 
@@ -191,14 +214,18 @@ export class FileProcessingErrorMappingStrategy implements ErrorMappingStrategy 
       'corrupted',
       'invalid',
     ];
-    return fileKeywords.some(keyword => message.includes(keyword));
+    return fileKeywords.some((keyword) => message.includes(keyword));
   }
 
   map(error: Error, context?: ErrorContext): AppError {
     const message = error.message.toLowerCase();
 
     // 文件过大
-    if (message.includes('too large') || message.includes('size') || message.includes('limit')) {
+    if (
+      message.includes('too large') ||
+      message.includes('size') ||
+      message.includes('limit')
+    ) {
       return ErrorFactory.createFileTooLargeError(
         context?.resourceId,
         undefined,
@@ -208,7 +235,11 @@ export class FileProcessingErrorMappingStrategy implements ErrorMappingStrategy 
     }
 
     // 不支持的文件类型
-    if (message.includes('type') || message.includes('format') || message.includes('extension')) {
+    if (
+      message.includes('type') ||
+      message.includes('format') ||
+      message.includes('extension')
+    ) {
       return ErrorFactory.createUnsupportedFileTypeError(
         context?.resourceId,
         undefined,
@@ -236,6 +267,38 @@ export class FileProcessingErrorMappingStrategy implements ErrorMappingStrategy 
 }
 
 /**
+ * Payload过大错误映射策略
+ */
+export class PayloadTooLargeErrorMappingStrategy
+  implements ErrorMappingStrategy
+{
+  name = 'PayloadTooLargeErrorMapping';
+  priority = 3;
+
+  canHandle(error: Error): boolean {
+    const errorWithCode = error as Error & {
+      code?: string;
+      statusCode?: number;
+    };
+    return (
+      errorWithCode.code === 'PAYLOAD_TOO_LARGE' ||
+      errorWithCode.statusCode === 413 ||
+      error.message.toLowerCase().includes('exceeds maximum limit')
+    );
+  }
+
+  map(error: Error, context?: ErrorContext): AppError {
+    const errorWithCode = error as Error & { statusCode?: number };
+    return ErrorFactory.createPayloadTooLargeError(
+      'Request payload',
+      undefined,
+      undefined,
+      context,
+    );
+  }
+}
+
+/**
  * 验证错误映射策略
  */
 export class ValidationErrorMappingStrategy implements ErrorMappingStrategy {
@@ -256,8 +319,8 @@ export class ValidationErrorMappingStrategy implements ErrorMappingStrategy {
       'joi',
       'yup',
     ];
-    return validationKeywords.some(keyword => 
-      message.includes(keyword) || name.includes(keyword)
+    return validationKeywords.some(
+      (keyword) => message.includes(keyword) || name.includes(keyword),
     );
   }
 
@@ -288,33 +351,31 @@ export class PermissionErrorMappingStrategy implements ErrorMappingStrategy {
       'authentication',
       'auth',
     ];
-    return permissionKeywords.some(keyword => message.includes(keyword));
+    return permissionKeywords.some((keyword) => message.includes(keyword));
   }
 
   map(error: Error, context?: ErrorContext): AppError {
     const message = error.message.toLowerCase();
 
     // 未授权
-    if (message.includes('unauthorized') || message.includes('authentication')) {
-      return ErrorFactory.createUnauthorizedError(
-        error.message,
-        context,
-      );
+    if (
+      message.includes('unauthorized') ||
+      message.includes('authentication')
+    ) {
+      return ErrorFactory.createUnauthorizedError(error.message, context);
     }
 
     // 禁止访问
-    if (message.includes('forbidden') || message.includes('permission') || message.includes('access denied')) {
-      return ErrorFactory.createForbiddenError(
-        error.message,
-        context,
-      );
+    if (
+      message.includes('forbidden') ||
+      message.includes('permission') ||
+      message.includes('access denied')
+    ) {
+      return ErrorFactory.createForbiddenError(error.message, context);
     }
 
     // 默认权限错误
-    return ErrorFactory.createUnauthorizedError(
-      error.message,
-      context,
-    );
+    return ErrorFactory.createUnauthorizedError(error.message, context);
   }
 }
 
@@ -335,7 +396,7 @@ export class NotFoundErrorMappingStrategy implements ErrorMappingStrategy {
       'undefined',
       'null',
     ];
-    return notFoundKeywords.some(keyword => message.includes(keyword));
+    return notFoundKeywords.some((keyword) => message.includes(keyword));
   }
 
   map(error: Error, context?: ErrorContext): AppError {
@@ -375,6 +436,7 @@ export class ErrorMapper {
     this.registerStrategy(new DatabaseErrorMappingStrategy());
     this.registerStrategy(new NetworkErrorMappingStrategy());
     this.registerStrategy(new FileProcessingErrorMappingStrategy());
+    this.registerStrategy(new PayloadTooLargeErrorMappingStrategy());
     this.registerStrategy(new ValidationErrorMappingStrategy());
     this.registerStrategy(new PermissionErrorMappingStrategy());
     this.registerStrategy(new NotFoundErrorMappingStrategy());
@@ -396,7 +458,7 @@ export class ErrorMapper {
    * @param strategyName 策略名称
    */
   removeStrategy(strategyName: string): void {
-    this.strategies = this.strategies.filter(s => s.name !== strategyName);
+    this.strategies = this.strategies.filter((s) => s.name !== strategyName);
   }
 
   /**
@@ -431,7 +493,10 @@ export class ErrorMapper {
           return strategy.map(error, context);
         } catch (mappingError) {
           // 如果映射失败，记录错误并继续尝试下一个策略
-          console.error(`Error mapping strategy '${strategy.name}' failed:`, mappingError);
+          console.error(
+            `Error mapping strategy '${strategy.name}' failed:`,
+            mappingError,
+          );
           continue;
         }
       }
@@ -448,7 +513,7 @@ export class ErrorMapper {
    * @returns 映射后的AppError数组
    */
   mapBatch(errors: Error[], context?: ErrorContext): AppError[] {
-    return errors.map(error => this.map(error, context));
+    return errors.map((error) => this.map(error, context));
   }
 
   /**
@@ -479,8 +544,17 @@ export class ErrorMapper {
    * @param context 错误上下文
    * @returns 映射后的AppError
    */
-  mapByCategory(category: ErrorCategory, error: Error, context?: ErrorContext): AppError {
-    return ErrorFactory.fromErrorCategory(category, error.message, context, error);
+  mapByCategory(
+    category: ErrorCategory,
+    error: Error,
+    context?: ErrorContext,
+  ): AppError {
+    return ErrorFactory.fromErrorCategory(
+      category,
+      error.message,
+      context,
+      error,
+    );
   }
 }
 

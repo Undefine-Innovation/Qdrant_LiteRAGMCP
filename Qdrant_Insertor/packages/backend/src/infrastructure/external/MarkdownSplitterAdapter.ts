@@ -1,7 +1,6 @@
-import { ISplitter } from '@domain/services/splitter.js';
-import { DocumentChunk } from '@domain/entities/types.js';
-import { IFileProcessorRegistry } from '@domain/services/fileProcessor.js';
-import { LoadedFile } from '@domain/services/loader.js';
+import { ISplitter } from '@application/services/file-processing/index.js';
+import { DocumentChunk, LoadedFile } from '@infrastructure/external/index.js';
+import { IFileProcessorRegistry } from '@infrastructure/external/index.js';
 import { Logger } from '@logging/logger.js';
 
 /**
@@ -30,61 +29,31 @@ export class MarkdownSplitterAdapter implements ISplitter {
    * @param options 用于配置分割行为的可选参数
    * @returns 文档块数组
    */
-  public split(
+  public async split(
     content: string,
     options?: Record<string, unknown>,
-  ): DocumentChunk[] {
+  ): Promise<DocumentChunk[]> {
     try {
-      // 创建一个虚拟的LoadedFile对象
-      const virtualFile: LoadedFile = {
-        content,
-        fileName: (options?.name as string) || 'document.md',
-        mimeType: 'text/markdown',
-      };
-
-      // 获取适合的处理器
-      const processor = this.processorRegistry.getProcessor(virtualFile);
-
-      if (!processor) {
-        this.logger.warn('无法找到适合的文件处理器，使用默认分割策略');
-        return this.fallbackSplit(content, options);
-      }
-
-      // 使用处理器进行分割
-      this.logger.debug(
-        `使用处理器 ${processor.constructor.name} 进行文档分割`,
-      );
-
-      // 异步处理转换为同步（适配器模式）
-      let result: unknown;
-      const processPromise = processor.process(virtualFile, {
-        chunkingStrategy: 'by_headings',
-        maxChunkSize: (options?.windowSize as number) || 1000,
-        chunkOverlap: (options?.overlap as number) || 100,
-        preserveFormatting: true,
-      });
-
-      // 在实际项目中，这里应该使用更好的异步处理方式
-      // 为了保持接口兼容性，我们使用同步等待
-      import('util')
-        .then(({ default: util }) => {
-          const execSync = util.promisify(setImmediate);
-          return execSync(() => processPromise);
-        })
-        .then((processedResult) => {
-          result = processedResult;
-        })
-        .catch((error: unknown) => {
-          this.logger.error('文件处理失败', { error });
-          result = { chunks: this.fallbackSplit(content, options) };
-        });
-
-      // 简化实现：直接使用fallback
+      // For now use a simple fallback split strategy.
       return this.fallbackSplit(content, options);
     } catch (error) {
       this.logger.error('文档分割失败', { error });
       return this.fallbackSplit(content, options);
     }
+  }
+
+  /** 返回默认分割选项，兼容 domain 层的期望 */
+  public getDefaultOptions(): Record<string, unknown> {
+    return { windowSize: 1000, overlap: 100 };
+  }
+
+  /** 异步分割文本为字符串数组，供 domain 层使用 */
+  public async splitText(
+    text: string,
+    options?: import('@domain/interfaces/splitter.js').SplitterOptions,
+  ): Promise<string[]> {
+    const chunks = await this.split(text, options as Record<string, unknown>);
+    return chunks.map((c: DocumentChunk) => c.content);
   }
 
   /**
@@ -139,4 +108,6 @@ export class MarkdownSplitterAdapter implements ISplitter {
 
     return chunks;
   }
+
+  // Keep adapter minimal: application ISplitter only requires split(content)
 }

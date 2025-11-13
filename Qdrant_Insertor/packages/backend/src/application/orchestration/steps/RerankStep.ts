@@ -112,16 +112,18 @@ export class RerankStep implements Step<RerankStepInput, RerankStepOutput> {
           titleChain?: string;
           score: number;
         }>
-      ).slice(0, input.limit).map((result) => ({
-        pointId: result.pointId,
-        content: result.content,
-        title: result.title,
-        docId: result.docId,
-        chunkIndex: result.chunkIndex,
-        collectionId: result.collectionId,
-        titleChain: result.titleChain,
-        score: result.score,
-      }));
+      )
+        .slice(0, input.limit)
+        .map((result) => ({
+          pointId: result.pointId,
+          content: result.content,
+          title: result.title,
+          docId: result.docId,
+          chunkIndex: result.chunkIndex,
+          collectionId: result.collectionId,
+          titleChain: result.titleChain,
+          score: result.score,
+        }));
 
       const duration = Date.now() - startTime;
 
@@ -146,7 +148,10 @@ export class RerankStep implements Step<RerankStepInput, RerankStepOutput> {
       // 返回错误状态但不中断流程
       return {
         query: input.query,
-        results: input.results.slice(0, input.limit) as RerankStepOutput['results'],
+        results: input.results.slice(
+          0,
+          input.limit,
+        ) as RerankStepOutput['results'],
         rerankerDuration: duration,
       };
     }
@@ -161,13 +166,10 @@ export class RerankStep implements Step<RerankStepInput, RerankStepOutput> {
     context: StepContext<RerankStepInput, RerankStepOutput>,
     error: Error,
   ): Promise<void> {
-    this.logger.error(
-      `[${this.name}] 步骤出错`,
-      {
-        error: error.message,
-        query: context.input?.query,
-        duration: context.duration,
-      },
-    );
+    this.logger.error(`[${this.name}] 步骤出错`, {
+      error: error.message,
+      query: context.input?.query,
+      duration: context.duration,
+    });
   }
 }

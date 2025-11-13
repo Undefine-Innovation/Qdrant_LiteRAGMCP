@@ -1,6 +1,6 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
-import { IAutoGCService } from '@domain/repositories/IAutoGCService.js';
+import { IAutoGCService } from '@application/services/index.js';
 import { Logger } from '@logging/logger.js'; // 确保导入的是 .js 文件
 import { AppConfig } from '@config/config.js';
 import { CollectionId, PointId, ChunkMeta } from '@domain/entities/types.js';

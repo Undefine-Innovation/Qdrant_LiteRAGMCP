@@ -227,6 +227,7 @@ export class Chunk extends BaseEntity {
   @OneToMany('ChunkFullText', 'chunk', {
     cascade: true,
     lazy: true,
+    onDelete: 'CASCADE',
   })
   chunkFullText: Promise<ChunkFullText[]>;
 
@@ -238,6 +239,7 @@ export class Chunk extends BaseEntity {
     onDelete: 'CASCADE',
     lazy: true,
   })
+  @JoinColumn({ name: 'docId', referencedColumnName: 'id' })
   doc: Promise<Doc>;
 
   /**
@@ -252,13 +254,43 @@ export class Chunk extends BaseEntity {
   collection: Promise<Collection>;
 
   /**
-   * 在插入前计算内容长度
+   * 在插入前计算内容长度和验证内容
    */
   @BeforeInsert()
   @BeforeUpdate()
-  calculateContentLength() {
-    if (this.content) {
-      this.contentLength = this.content.length;
+  validateAndCalculateContent() {
+    // 验证内容不为空
+    if (!this.content || this.content.trim() === '') {
+      throw new Error('Chunk content cannot be empty');
+    }
+
+    // 计算内容长度
+    this.contentLength = this.content.length;
+
+    // 同时验证所有外键约束
+    this.validateForeignKeys();
+  }
+
+  /**
+   * 验证外键约束
+   */
+  validateForeignKeys() {
+    // 验证docId不为空
+    if (
+      !this.docId ||
+      typeof this.docId !== 'string' ||
+      this.docId.trim() === ''
+    ) {
+      throw new Error('Doc ID cannot be empty');
+    }
+
+    // 验证collectionId不为空
+    if (
+      !this.collectionId ||
+      typeof this.collectionId !== 'string' ||
+      this.collectionId.trim() === ''
+    ) {
+      throw new Error('Collection ID cannot be empty');
     }
   }
 

@@ -8,7 +8,6 @@ import { BaseEntity } from './BaseEntity.js';
 @Entity('scrape_results')
 @Index(['task_id'])
 @Index(['status'])
-@Index(['created_at'])
 export class ScrapeResults extends BaseEntity {
   /**
    * 任务ID

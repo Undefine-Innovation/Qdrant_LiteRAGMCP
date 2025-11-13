@@ -2,23 +2,9 @@
  * @file 定义文件加载器的接口�?
  */
 
-/**
- * 表示从源加载的文件�?
- */
-export interface LoadedFile {
-  /**
-   * 文件的原始内容�?
-   */
-  content: string;
-  /**
-   * 文件�?MIME 类型，用于确定如何处理它�?
-   */
-  mimeType: string;
-  /**
-   * 文件名�?
-   */
-  fileName: string;
-}
+// Import and re-export LoadedFile from infrastructure layer to ensure consistency
+import type { LoadedFile } from '../../../infrastructure/external/index.js';
+export type { LoadedFile };
 
 /**
  * 一个用于从给定路径读取文件的加载器接口�?

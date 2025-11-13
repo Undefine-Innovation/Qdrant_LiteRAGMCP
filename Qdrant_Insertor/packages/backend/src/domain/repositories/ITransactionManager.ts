@@ -68,7 +68,9 @@ export interface ITransactionManager {
    * @param metadata 事务元数据（可选）
    * @returns 事务上下文
    */
-  beginTransaction(metadata?: Record<string, unknown>): Promise<TransactionContext>;
+  beginTransaction(
+    metadata?: Record<string, unknown>,
+  ): Promise<TransactionContext>;
 
   /**
    * 开始一个嵌套事务
@@ -195,5 +197,5 @@ export interface ITransactionManager {
    * 清理已完成的事务
    * @param maxAge 最大保留时间（毫秒）
    */
-  cleanupCompletedTransactions(maxAge?: number): void;
+  cleanupCompletedTransactions(maxAge?: number): Promise<void>;
 }

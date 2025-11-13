@@ -617,27 +617,30 @@ export class TransactionErrorHandler {
     },
   ): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         if (attempt === options.maxRetries) {
           throw lastError;
         }
-        
-        this.logger.warn(`Operation failed, retrying (${attempt + 1}/${options.maxRetries})`, {
-          error: lastError.message,
-          attempt: attempt + 1,
-        });
-        
+
+        this.logger.warn(
+          `Operation failed, retrying (${attempt + 1}/${options.maxRetries})`,
+          {
+            error: lastError.message,
+            attempt: attempt + 1,
+          },
+        );
+
         // 等待后重试
-        await new Promise(resolve => setTimeout(resolve, options.retryDelay));
+        await new Promise((resolve) => setTimeout(resolve, options.retryDelay));
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -687,7 +690,7 @@ export class TransactionErrorHandler {
       } catch (error) {
         results.push(error instanceof Error ? error : new Error(String(error)));
         failed++;
-        
+
         if (!options.continueOnError || failed > options.maxFailures) {
           break;
         }
@@ -730,25 +733,25 @@ export class TransactionErrorHandler {
 
         try {
           const result = await operation();
-          
+
           if (state === 'HALF_OPEN') {
             state = 'CLOSED';
             failureCount = 0;
           }
-          
+
           return result;
         } catch (error) {
           failureCount++;
           lastFailureTime = Date.now();
-          
+
           if (failureCount >= options.failureThreshold) {
             state = 'OPEN';
           }
-          
+
           throw error;
         }
       },
-      
+
       isOpen: () => state === 'OPEN',
     };
   }
@@ -767,17 +770,26 @@ export class TransactionErrorHandler {
       return await primaryOperation();
     } catch (primaryError) {
       this.logger.warn('Primary operation failed, trying fallback', {
-        error: primaryError instanceof Error ? primaryError.message : String(primaryError),
+        error:
+          primaryError instanceof Error
+            ? primaryError.message
+            : String(primaryError),
       });
-      
+
       try {
         return await fallbackOperation();
       } catch (fallbackError) {
         this.logger.error('Both primary and fallback operations failed', {
-          primaryError: primaryError instanceof Error ? primaryError.message : String(primaryError),
-          fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          primaryError:
+            primaryError instanceof Error
+              ? primaryError.message
+              : String(primaryError),
+          fallbackError:
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : String(fallbackError),
         });
-        
+
         throw fallbackError;
       }
     }
@@ -800,14 +812,13 @@ export class TransactionErrorHandler {
    * @param options 查询选项
    * @returns 错误日志数组
    */
-  async getErrorLogs(options: {
-    startTime: Date;
-    endTime: Date;
-  }): Promise<Array<{
-    message: string;
-    context: Record<string, unknown>;
-    timestamp: Date;
-  }>> {
+  async getErrorLogs(options: { startTime: Date; endTime: Date }): Promise<
+    Array<{
+      message: string;
+      context: Record<string, unknown>;
+      timestamp: Date;
+    }>
+  > {
     const entries = this.filterLogsByRange(options.startTime, options.endTime);
 
     return entries.map((entry) => ({
@@ -850,9 +861,7 @@ export class TransactionErrorHandler {
     };
   }
 
-  async calculateErrorRate(options: {
-    timeWindow: number;
-  }): Promise<number> {
+  async calculateErrorRate(options: { timeWindow: number }): Promise<number> {
     if (!this.dataSource || options.timeWindow <= 0) {
       return 0;
     }
@@ -883,11 +892,7 @@ export class TransactionErrorHandler {
         const tags = this.normalizeMetricTags(metric.tags);
         const status = tags.status?.toLowerCase();
 
-        if (
-          status === 'error' ||
-          status === 'failed' ||
-          status === 'failure'
-        ) {
+        if (status === 'error' || status === 'failed' || status === 'failure') {
           errorCount += value;
         }
       }
@@ -960,9 +965,7 @@ export class TransactionErrorHandler {
       timestamp: new Date(),
       stack: error.stack,
       type:
-        error instanceof TransactionError
-          ? error.type
-          : error.name || 'Error',
+        error instanceof TransactionError ? error.type : error.name || 'Error',
     };
   }
 
@@ -981,10 +984,7 @@ export class TransactionErrorHandler {
     }
   }
 
-  private filterLogsByRange(
-    startTime: Date,
-    endTime: Date,
-  ): ErrorLogEntry[] {
+  private filterLogsByRange(startTime: Date, endTime: Date): ErrorLogEntry[] {
     const start = Math.min(startTime.getTime(), endTime.getTime());
     const end = Math.max(startTime.getTime(), endTime.getTime());
 
@@ -1024,7 +1024,3 @@ export class TransactionErrorHandler {
     return normalized;
   }
 }
-
-
-
-

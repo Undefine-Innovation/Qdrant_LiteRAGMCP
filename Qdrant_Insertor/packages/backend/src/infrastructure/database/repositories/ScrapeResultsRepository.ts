@@ -26,7 +26,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    */
   async findByTaskId(taskId: string): Promise<ScrapeResults[]> {
     try {
-      const results = await this.repository.find({
+      const results = await this.repository!.find({
         where: {
           task_id: taskId,
         },
@@ -76,8 +76,8 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
         options.skip = offset;
       }
 
-  const findOptions = options as unknown as FindManyOptions<ScrapeResults>;
-  const results = await this.repository.find(findOptions);
+      const findOptions = options as unknown as FindManyOptions<ScrapeResults>;
+      const results = await this.repository!.find(findOptions);
       return results;
     } catch (error) {
       this.logger.error('根据状态获取抓取结果失败', { error });
@@ -93,7 +93,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    */
   async markAsImported(id: string, docId: string): Promise<boolean> {
     try {
-      const result = await this.repository.update(id, {
+      const result = await this.repository!.update(id, {
         status: DbSyncJobStatus.COMPLETED,
         updated_at: Date.now(),
       });
@@ -165,7 +165,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
         options.skip = params.offset;
       }
 
-      const results = await this.repository.find(options);
+      const results = await this.repository!.find(options);
 
       // 如果不包含内容，则移除content字段
       if (params?.includeContent === false) {
@@ -194,7 +194,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    */
   async getById(id: string): Promise<ScrapeResults | null> {
     try {
-      const result = await this.repository.findOne({
+      const result = await this.repository!.findOne({
         where: { id },
       });
       return result || null;
@@ -247,7 +247,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
         ${params?.offset ? `OFFSET ${params.offset}` : ''}
       `;
 
-      const results = (await this.repository.query(query)) as Array<{
+      const results = (await this.repository!.query(query)) as Array<{
         taskId: string;
         total: number;
         pending: number;
@@ -270,7 +270,7 @@ export class ScrapeResultsRepository extends BaseRepository<ScrapeResults> {
    */
   async deleteByTask(taskId: string): Promise<number> {
     try {
-      const result: DeleteResult = await this.repository.delete({
+      const result: DeleteResult = await this.repository!.delete({
         task_id: taskId,
       });
       return result.affected || 0;

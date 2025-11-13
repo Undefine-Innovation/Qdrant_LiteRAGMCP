@@ -1,11 +1,11 @@
-import { Doc, DocStatus } from '../entities/Doc.js';
-import { Chunk, ChunkStatus } from '../entities/Chunk.js';
-import { DocumentAggregate } from '../aggregates/DocumentAggregate.js';
-import { DocumentContent } from '../value-objects/DocumentContent.js';
-import { ChunkContent } from '../value-objects/ChunkContent.js';
-import { CollectionId, DocId, PointId } from '../entities/types.js';
-import { IDomainEvent } from '../events/IDomainEventInterface.js';
-import { IEventPublisher } from '../events/IEventPublisher.js';
+import { Doc, DocStatus } from '@domain/entities/Doc.js';
+import { Chunk, ChunkStatus } from '@domain/entities/Chunk.js';
+import { DocumentAggregate } from '@domain/aggregates/DocumentAggregate.js';
+import { DocumentContent } from '@domain/value-objects/DocumentContent.js';
+import { ChunkContent } from '@domain/value-objects/ChunkContent.js';
+import { CollectionId, DocId, PointId } from '@domain/entities/types.js';
+import { IDomainEvent } from '@domain/events/IDomainEventInterface.js';
+import { IEventPublisher } from '@domain/events/IEventPublisher.js';
 import {
   DocumentCreatedEvent,
   DocumentContentUpdatedEvent,
@@ -13,8 +13,8 @@ import {
   ChunkCreatedEvent,
   ChunkEmbeddingGeneratedEvent,
   ChunkStatusChangedEvent,
-} from '../events/DomainEvents.js';
-import { Logger } from '../../infrastructure/logging/logger.js';
+} from '@domain/events/DomainEvents.js';
+import { Logger } from '@logging/logger.js';
 
 /**
  * 文档处理领域服务接口

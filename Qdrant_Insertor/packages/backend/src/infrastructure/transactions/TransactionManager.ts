@@ -30,7 +30,9 @@ export class TransactionManager implements ITransactionManager {
     private readonly logger: Logger,
   ) {}
 
-  async beginTransaction(metadata?: Record<string, unknown>): Promise<TransactionContext> {
+  async beginTransaction(
+    metadata?: Record<string, unknown>,
+  ): Promise<TransactionContext> {
     const transactionId = randomUUID();
     const context: InternalTransactionContext = {
       transactionId,
@@ -76,8 +78,13 @@ export class TransactionManager implements ITransactionManager {
 
   async commit(transactionId: string): Promise<void> {
     const context = this.getExistingTransaction(transactionId);
-    if (context.status !== TransactionStatus.ACTIVE) {
-      throw new Error(`Transaction ${transactionId} is not active`);
+    if (
+      context.status !== TransactionStatus.ACTIVE &&
+      context.status !== TransactionStatus.PENDING
+    ) {
+      throw new Error(
+        `Transaction ${transactionId} is not in a valid state for commit`,
+      );
     }
 
     this.logger.info('Committing SQLite transaction', { transactionId });
@@ -86,12 +93,20 @@ export class TransactionManager implements ITransactionManager {
     context.status = TransactionStatus.COMMITTED;
     context.completedAt = Date.now();
     this.logger.info('Transaction committed successfully', { transactionId });
+
+    // 清理已完成的事务
+    this.activeTransactions.delete(transactionId);
   }
 
   async rollback(transactionId: string): Promise<void> {
     const context = this.getExistingTransaction(transactionId);
-    if (context.status !== TransactionStatus.ACTIVE) {
-      throw new Error(`Transaction ${transactionId} is not active`);
+    if (
+      context.status !== TransactionStatus.ACTIVE &&
+      context.status !== TransactionStatus.PENDING
+    ) {
+      throw new Error(
+        `Transaction ${transactionId} is not in a valid state for rollback`,
+      );
     }
 
     context.status = TransactionStatus.ROLLED_BACK;
@@ -99,6 +114,9 @@ export class TransactionManager implements ITransactionManager {
     context.operations = [];
     context.savepoints.clear();
     this.logger.info('Transaction rolled back successfully', { transactionId });
+
+    // 清理已完成的事务
+    this.activeTransactions.delete(transactionId);
   }
 
   async executeOperation(
@@ -132,9 +150,6 @@ export class TransactionManager implements ITransactionManager {
     const context = await this.beginTransaction(metadata);
     try {
       const result = await fn(context);
-      if (context.status === TransactionStatus.PENDING) {
-        context.status = TransactionStatus.ACTIVE;
-      }
       await this.commit(context.transactionId);
       return result;
     } catch (error) {
@@ -149,6 +164,7 @@ export class TransactionManager implements ITransactionManager {
       }
       throw error;
     }
+    // 注意：不在这里清理事务上下文，因为commit和rollback方法已经处理了清理
   }
 
   async executeInNestedTransaction<T>(
@@ -156,12 +172,12 @@ export class TransactionManager implements ITransactionManager {
     fn: (context: TransactionContext) => Promise<T>,
     metadata?: Record<string, unknown>,
   ): Promise<T> {
-    const context = await this.beginNestedTransaction(parentTransactionId, metadata);
+    const context = await this.beginNestedTransaction(
+      parentTransactionId,
+      metadata,
+    );
     try {
       const result = await fn(context);
-      if (context.status === TransactionStatus.PENDING) {
-        context.status = TransactionStatus.ACTIVE;
-      }
       await this.commit(context.transactionId);
       return result;
     } catch (error) {
@@ -176,6 +192,7 @@ export class TransactionManager implements ITransactionManager {
       }
       throw error;
     }
+    // 注意：不在这里清理事务上下文，因为commit和rollback方法已经处理了清理
   }
 
   getTransactionStatus(transactionId: string): TransactionContext | undefined {
@@ -192,7 +209,10 @@ export class TransactionManager implements ITransactionManager {
     metadata?: Record<string, unknown>,
   ): Promise<string> {
     const context = this.getExistingTransaction(transactionId);
-    if (context.status !== TransactionStatus.ACTIVE) {
+    if (
+      context.status !== TransactionStatus.ACTIVE &&
+      context.status !== TransactionStatus.PENDING
+    ) {
       throw new Error(
         `Transaction ${transactionId} is not in a valid state for savepoints`,
       );
@@ -253,9 +273,9 @@ export class TransactionManager implements ITransactionManager {
     return current.transactionId;
   }
 
-  cleanupCompletedTransactions(
+  async cleanupCompletedTransactions(
     maxAge: number = DEFAULT_CLEANUP_MAX_AGE_MS,
-  ): void {
+  ): Promise<void> {
     const now = Date.now();
     let removed = 0;
 

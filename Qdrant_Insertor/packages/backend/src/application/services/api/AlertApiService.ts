@@ -65,11 +65,11 @@ export class AlertApiService {
         condition: rule.conditionOperator,
         threshold: rule.thresholdValue,
         severity: rule.severity,
-  enabled: rule.isActive ?? false,
+        enabled: rule.isActive ?? false,
         cooldownMinutes: rule.cooldownMinutes,
         notificationChannels: rule.notificationChannels,
-  createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
-  updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
+        createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
+        updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
         lastTriggered: undefined, // AlertRule中没有这个字段
       };
     } catch (error) {
@@ -96,11 +96,11 @@ export class AlertApiService {
         condition: rule.conditionOperator,
         threshold: rule.thresholdValue,
         severity: rule.severity,
-  enabled: rule.isActive ?? false,
+        enabled: rule.isActive ?? false,
         cooldownMinutes: rule.cooldownMinutes,
         notificationChannels: rule.notificationChannels,
-  createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
-  updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
+        createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
+        updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
         lastTriggered: undefined, // AlertRule中没有这个字段
       }));
     } catch (error) {
@@ -168,11 +168,11 @@ export class AlertApiService {
         condition: rule.conditionOperator,
         threshold: rule.thresholdValue,
         severity: rule.severity,
-  enabled: rule.isActive ?? false,
+        enabled: rule.isActive ?? false,
         cooldownMinutes: rule.cooldownMinutes,
         notificationChannels: rule.notificationChannels,
-  createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
-  updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
+        createdAt: new Date(rule.createdAt ?? Date.now()).toISOString(),
+        updatedAt: new Date(rule.updatedAt ?? Date.now()).toISOString(),
         lastTriggered: undefined, // AlertRule中没有这个字段
       }));
 

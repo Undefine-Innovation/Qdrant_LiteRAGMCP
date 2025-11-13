@@ -256,7 +256,7 @@ export class ScrapeService implements IScrapeService {
   private readonly stateMachine: IStateMachineEngine;
   private readonly logger: Logger;
   private readonly sqliteRepo: import('@domain/repositories/ISQLiteRepo.js').ISQLiteRepo;
-  private readonly importService?: import('@domain/repositories/IImportService.js').IImportService;
+  private readonly importService?: import('@application/services/index.js').IImportService;
 
   /**
    * 创建爬虫服务实例
@@ -273,7 +273,7 @@ export class ScrapeService implements IScrapeService {
     sqliteRepo: import('@domain/repositories/ISQLiteRepo.js').ISQLiteRepo,
     webCrawler?: IWebCrawler,
     contentExtractor?: IContentExtractor,
-    importService?: import('@domain/repositories/IImportService.js').IImportService,
+    importService?: import('@application/services/index.js').IImportService,
   ) {
     this.stateMachine = stateMachine;
     this.logger = logger;
@@ -669,22 +669,24 @@ export class ScrapeService implements IScrapeService {
       includeContent: params?.includeContent ?? false,
     });
     // 为前端列表提供轻量摘要，避免一次性渲染大量Markdown
-    return records.map((r: {
-      id: string;
-      taskId: string;
-      url: string;
-      title?: string;
-      content?: string;
-      links?: Array<{ url: string; text?: string; title?: string }>;
-      status: 'PENDING' | 'IMPORTED' | 'DELETED';
-      created_at: number;
-      updated_at: number;
-      imported_doc_id?: string | null;
-    }) => ({
-      ...r,
-      snippet: r.content ? r.content.slice(0, 300) : undefined,
-      content: params?.includeContent ? r.content : undefined,
-    }));
+    return records.map(
+      (r: {
+        id: string;
+        taskId: string;
+        url: string;
+        title?: string;
+        content?: string;
+        links?: Array<{ url: string; text?: string; title?: string }>;
+        status: 'PENDING' | 'IMPORTED' | 'DELETED';
+        created_at: number;
+        updated_at: number;
+        imported_doc_id?: string | null;
+      }) => ({
+        ...r,
+        snippet: r.content ? r.content.slice(0, 300) : undefined,
+        content: params?.includeContent ? r.content : undefined,
+      }),
+    );
   }
 
   /**

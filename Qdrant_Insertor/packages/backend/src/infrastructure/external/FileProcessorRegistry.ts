@@ -2,8 +2,8 @@ import { Logger } from '@logging/logger.js';
 import {
   IFileProcessor,
   IFileProcessorRegistry,
-} from '@domain/services/fileProcessor.js';
-import { LoadedFile } from '@domain/services/loader.js';
+  LoadedFile,
+} from '@infrastructure/external/index.js';
 
 /**
  * 文件处理器注册表实现
@@ -63,11 +63,12 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
 
   /**
    * 注销文件处理器
-   * @param processorName - 处理器名称
+   * @param processor - 文件处理器实例
    */
-  public unregister(processorName: string): void {
-    const processor = this.processors.get(processorName);
-    if (!processor) {
+  public unregister(proc: IFileProcessor): void {
+    const processorName = proc.constructor.name;
+    const existingProcessor = this.processors.get(processorName);
+    if (!existingProcessor) {
       this.logger.warn(`文件处理器 ${processorName} 不存在`);
       return;
     }
@@ -76,11 +77,11 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
     this.processors.delete(processorName);
 
     // 从MIME类型索引中移除
-    const formats = processor.getSupportedFormats();
+    const formats = existingProcessor.getSupportedFormats();
     formats.mimeTypes.forEach((mimeType) => {
       const processors = this.mimeTypeIndex.get(mimeType);
       if (processors) {
-        const index = processors.indexOf(processor);
+        const index = processors.indexOf(existingProcessor);
         if (index > -1) {
           processors.splice(index, 1);
         }
@@ -98,7 +99,7 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
 
       const processors = this.extensionIndex.get(normalizedExt);
       if (processors) {
-        const index = processors.indexOf(processor);
+        const index = processors.indexOf(existingProcessor);
         if (index > -1) {
           processors.splice(index, 1);
         }
@@ -112,11 +113,49 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
   }
 
   /**
+   * 获取能够处理指定MIME类型的处理器
+   * @param mimeType - MIME类型
+   * @param extension - 文件扩展名（可选）
+   * @returns 匹配的处理器，如果没有则返回null
+   */
+  public getProcessor(
+    mimeType: string,
+    extension?: string,
+  ): IFileProcessor | null {
+    // 首先尝试通过MIME类型匹配
+    const mimeTypeProcessors = this.mimeTypeIndex.get(mimeType);
+    if (mimeTypeProcessors && mimeTypeProcessors.length > 0) {
+      // 按优先级排序，返回最高优先级的处理器
+      const sortedProcessors = mimeTypeProcessors.sort(
+        (a, b) => b.getPriority() - a.getPriority(),
+      );
+      return sortedProcessors[0];
+    }
+
+    // 如果MIME类型匹配失败，尝试通过文件扩展名匹配
+    if (extension) {
+      const normalizedExt = extension.toLowerCase().startsWith('.')
+        ? extension.toLowerCase()
+        : `.${extension.toLowerCase()}`;
+
+      const extensionProcessors = this.extensionIndex.get(normalizedExt);
+      if (extensionProcessors && extensionProcessors.length > 0) {
+        const sortedProcessors = extensionProcessors.sort(
+          (a, b) => b.getPriority() - a.getPriority(),
+        );
+        return sortedProcessors[0];
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * 获取能够处理指定文件的处理器
    * @param file - 文件对象
    * @returns 匹配的处理器，如果没有则返回null
    */
-  public getProcessor(file: LoadedFile): IFileProcessor | null {
+  public getProcessorForFile(file: LoadedFile): IFileProcessor | null {
     // 首先尝试通过MIME类型匹配
     const mimeTypeProcessors = this.mimeTypeIndex.get(file.mimeType);
     if (mimeTypeProcessors && mimeTypeProcessors.length > 0) {
@@ -175,6 +214,15 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
    */
   public getAllProcessors(): IFileProcessor[] {
     return Array.from(this.processors.values());
+  }
+
+  /**
+   * 根据MIME类型获取处理器
+   * @param mimeType - MIME类型
+   * @returns 处理器数组
+   */
+  public getProcessors(mimeType: string): IFileProcessor[] {
+    return this.mimeTypeIndex.get(mimeType) || [];
   }
 
   /**

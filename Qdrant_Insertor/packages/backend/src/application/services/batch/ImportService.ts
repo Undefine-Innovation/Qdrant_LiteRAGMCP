@@ -1,13 +1,13 @@
 import path from 'path';
 import { CollectionId, Doc, DocId } from '@domain/entities/types.js';
 import { IEmbeddingProvider } from '@domain/entities/embedding.js';
-import { IFileLoader } from '@domain/services/loader.js';
-import { ISplitter } from '@domain/services/splitter.js';
+import { IFileLoader } from '@application/services/file-processing/index.js';
+import { ISplitter } from '@application/services/file-processing/index.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { Logger } from '@logging/logger.js';
 import { AppError } from '@api/contracts/error.js';
-import { IImportService } from '@domain/repositories/IImportService.js';
+import { IImportService } from '@application/services/index.js';
 import {
   ITransactionManager,
   TransactionOperationType,
@@ -61,9 +61,10 @@ export class ImportService implements IImportService {
     entity: import('@infrastructure/database/entities/Doc.js').Doc,
   ): Doc {
     return {
-      id: entity.id as DocId,
+      id: entity.docId as DocId, // 使用docId作为业务标识符
+      docId: entity.docId as DocId, // 向后兼容字段
       collectionId: entity.collectionId as CollectionId,
-      key: entity.key as DocId,
+      key: entity.key,
       name: entity.name || '',
       size_bytes: entity.size_bytes || 0,
       mime: entity.mime || '',
@@ -136,7 +137,8 @@ export class ImportService implements IImportService {
           );
         }
 
-        const collection = await this.collectionRepository.findById(collectionId);
+        const collection =
+          await this.collectionRepository.findById(collectionId);
         if (!collection) {
           throw ErrorFactory.createNotFoundError('Collection', collectionId);
         }
@@ -150,7 +152,12 @@ export class ImportService implements IImportService {
           );
         }
 
+        // 生成docId（基于内容的哈希）
+        const docId = makeDocId(loadedFile.content) as DocId;
+        this.logger.info(`Generated docId: ${docId} for file: ${filePath}`);
+
         const newDoc = await this.docRepository.create({
+          docId,
           collectionId,
           key: filePath,
           name: path.basename(filePath),
@@ -161,7 +168,6 @@ export class ImportService implements IImportService {
           status: 'new',
           deleted: false,
         });
-        const docId = newDoc.key as DocId;
         this.logger.info(`Document record created with id: ${docId}`);
 
         // 更新操作记录中的targetId
@@ -212,7 +218,12 @@ export class ImportService implements IImportService {
         );
       }
 
+      // 生成docId（基于内容的哈希）
+      const docId = makeDocId(loadedFile.content) as DocId;
+      this.logger.info(`Generated docId: ${docId} for file: ${filePath}`);
+
       const newDoc = await this.docRepository.create({
+        docId,
         collectionId,
         key: filePath,
         name: path.basename(filePath),
@@ -223,7 +234,6 @@ export class ImportService implements IImportService {
         status: 'new',
         deleted: false,
       });
-      const docId = newDoc.key as DocId;
       this.logger.info(`Document record created with id: ${docId}`);
 
       // 触发同步状态机
@@ -346,6 +356,12 @@ export class ImportService implements IImportService {
         // 为了避免相同内容导致的docId冲突，我们在内容前添加时间戳
         const uniqueContent = `${Date.now()}_${loadedFile.content}`;
 
+        // 生成docId（基于唯一内容的哈希）
+        const docId = makeDocId(uniqueContent) as DocId;
+        this.logger.info(
+          `Generated docId: ${docId} for file: ${file.originalname}`,
+        );
+
         // 使用TypeORM repository创建文档
         if (!this.docRepository) {
           throw ErrorFactory.createInternalServerError(
@@ -354,6 +370,7 @@ export class ImportService implements IImportService {
         }
 
         const newDoc = await this.docRepository.create({
+          docId,
           collectionId: actualCollectionId,
           key: docKey,
           name: file.originalname,
@@ -364,7 +381,6 @@ export class ImportService implements IImportService {
           status: 'new',
           deleted: false,
         });
-        const docId = newDoc.key as DocId;
         this.logger.info(`Document record created with id: ${docId}`);
 
         // 更新操作记录中的targetId
@@ -416,6 +432,12 @@ export class ImportService implements IImportService {
       // 为了避免相同内容导致的docId冲突，我们在内容前添加时间戳
       const uniqueContent = `${Date.now()}_${loadedFile.content}`;
 
+      // 生成docId（基于唯一内容的哈希）
+      const docId = makeDocId(uniqueContent) as DocId;
+      this.logger.info(
+        `Generated docId: ${docId} for file: ${file.originalname}`,
+      );
+
       if (!this.docRepository) {
         throw ErrorFactory.createInternalServerError(
           'DocRepository not initialized',
@@ -423,6 +445,7 @@ export class ImportService implements IImportService {
       }
 
       const newDoc = await this.docRepository.create({
+        docId,
         collectionId,
         key: docKey,
         name: file.originalname,
@@ -433,7 +456,6 @@ export class ImportService implements IImportService {
         status: 'new',
         deleted: false,
       });
-      const docId = newDoc.key as DocId;
       this.logger.info(`Document record created with id: ${docId}`);
 
       // 触发同步状态机
@@ -456,26 +478,84 @@ export class ImportService implements IImportService {
    * @returns {Promise<Doc>} 返回重新同步后的文档
    */
   public async resyncDocument(docId: DocId): Promise<Doc> {
+    console.log(
+      'DEBUG: ImportService.resyncDocument called with docId:',
+      docId,
+    );
     this.logger.info(`Resyncing document: ${docId}`);
 
     if (!this.docRepository) {
-      throw ErrorFactory.createInternalServerError('DocRepository not initialized');
+      console.log('DEBUG: DocRepository not initialized');
+      throw ErrorFactory.createInternalServerError(
+        'DocRepository not initialized',
+      );
     }
 
+    console.log('DEBUG: About to find document by docId');
     // Find document by docId (business identifier, not key/file path)
     const docEntity = await this.docRepository.findById(docId);
+    console.log('DEBUG: Found document entity:', docEntity);
 
     if (!docEntity) {
+      console.log('DEBUG: Document not found');
       throw ErrorFactory.createNotFoundError('Document', docId);
     }
 
-    // To resync, we first delete the old document and its associated data,
-    // then re-import it from the source file.
-    await this.deleteDocument(docId);
-    return this.importDocument(
-      docEntity.key,
-      docEntity.collectionId as CollectionId,
+    // 保存文档的原始属性
+    const originalKey = docEntity.key;
+    const collectionId = docEntity.collectionId as CollectionId;
+    const originalDocId = docEntity.docId; // 保存原始docId
+
+    console.log(
+      'DEBUG: Saved original docId:',
+      originalDocId,
+      'key:',
+      originalKey,
+      'collectionId:',
+      collectionId,
     );
+
+    // 删除旧文档和相关数据
+    await this.deleteDocument(docId);
+    console.log(
+      'DEBUG: Document deleted, now reimporting from key:',
+      originalKey,
+    );
+
+    // 重新加载文件内容
+    if (!this.collectionRepository) {
+      throw ErrorFactory.createInternalServerError(
+        'CollectionRepository not initialized',
+      );
+    }
+
+    const collection = await this.collectionRepository.findById(collectionId);
+    if (!collection) {
+      throw ErrorFactory.createNotFoundError('Collection', collectionId);
+    }
+
+    const loadedFile = await this.fileLoader.load(originalKey);
+    this.logger.info(`File loaded for resync: ${loadedFile.fileName}`);
+
+    // 使用原始docId重新创建文档（保持业务标识符不变）
+    const newDoc = await this.docRepository.create({
+      docId: originalDocId, // 使用原始docId而不是生成新的
+      collectionId,
+      key: originalKey,
+      name: path.basename(originalKey),
+      mime: loadedFile.mimeType,
+      size_bytes: loadedFile.content.length,
+      content_hash: '',
+      content: loadedFile.content,
+      status: 'new',
+      deleted: false,
+    });
+    this.logger.info(`Document resynced with original id: ${originalDocId}`);
+
+    // 触发同步状态机
+    await this.syncStateMachine.triggerSync(originalDocId as DocId);
+
+    return this.toDoc(newDoc);
   }
 
   /**
@@ -484,23 +564,40 @@ export class ImportService implements IImportService {
    * @returns {Promise<void>}
    */
   public async deleteDocument(docId: DocId): Promise<void> {
+    console.log(
+      'DEBUG: ImportService.deleteDocument called with docId:',
+      docId,
+    );
     this.logger.info(`Deleting document: ${docId}`);
 
     if (!this.docRepository) {
-      throw ErrorFactory.createInternalServerError('DocRepository not initialized');
+      console.log('DEBUG: DocRepository not initialized in deleteDocument');
+      throw ErrorFactory.createInternalServerError(
+        'DocRepository not initialized',
+      );
     }
 
+    console.log('DEBUG: About to find document for deletion');
     const doc = await this.docRepository.findById(docId);
+    console.log('DEBUG: Found document for deletion:', doc);
 
     if (!doc) {
+      console.log('DEBUG: Document not found for deletion');
       this.logger.warn(
         `Document with id ${docId} not found. Nothing to delete.`,
       );
       return; // Idempotent deletion
     }
 
+    console.log('DEBUG: About to delete points from Qdrant');
     await this.qdrantRepo.deletePointsByDoc(docId);
-    this.sqliteRepo.deleteDoc(docId); // 使用协调deleteDoc 方法
+    console.log('DEBUG: About to delete doc from TypeORM repository');
+
+    // 使用TypeORM repository直接删除（硬删除）
+    // 注意：Doc实体使用docId字段作为业务标识符
+    await this.docRepository.delete({ docId: docId as string });
+
+    console.log('DEBUG: Document deletion completed');
     this.logger.info(`成功删除文档 ${docId} 及其关联的向量点。`);
   }
 
@@ -655,6 +752,10 @@ export class ImportService implements IImportService {
           },
         });
 
+        // 生成docId（基于内容的哈希）
+        const docId = makeDocId(content) as DocId;
+        this.logger.info(`Generated docId: ${docId} for text: ${name}`);
+
         if (!this.docRepository) {
           throw ErrorFactory.createInternalServerError(
             'DocRepository not initialized',
@@ -662,6 +763,7 @@ export class ImportService implements IImportService {
         }
 
         const newDoc = await this.docRepository.create({
+          docId,
           collectionId: actualCollectionId,
           key: `text_${Date.now()}_${name}`,
           name,
@@ -672,7 +774,6 @@ export class ImportService implements IImportService {
           status: 'new',
           deleted: false,
         });
-        const docId = newDoc.key as DocId;
         this.logger.info(`Document created from text with id: ${docId}`);
 
         // 更新操作记录中的targetId
@@ -745,6 +846,10 @@ export class ImportService implements IImportService {
         );
       }
 
+      // 生成docId（基于内容的哈希）
+      const docId = makeDocId(content) as DocId;
+      this.logger.info(`Generated docId: ${docId} for text: ${name}`);
+
       if (!this.docRepository) {
         throw ErrorFactory.createInternalServerError(
           'DocRepository not initialized',
@@ -752,6 +857,7 @@ export class ImportService implements IImportService {
       }
 
       const newDoc = await this.docRepository.create({
+        docId,
         collectionId: actualCollectionId,
         key: `text_${Date.now()}_${name}`,
         name,
@@ -762,7 +868,6 @@ export class ImportService implements IImportService {
         status: 'new',
         deleted: false,
       });
-      const docId = newDoc.key as DocId;
       this.logger.info(`Document created from text with id: ${docId}`);
 
       await this.syncStateMachine.triggerSync(docId);
