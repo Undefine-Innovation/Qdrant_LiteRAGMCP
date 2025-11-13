@@ -50,6 +50,9 @@ jobs:
       - name: Run tests
         run: npm run test
 
+      - name: Run coverage quality gate
+        run: npm run test:quality-gate
+
       - name: Run API consistency check
         run: npm run api:check
 
