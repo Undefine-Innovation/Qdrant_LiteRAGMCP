@@ -1,0 +1,66 @@
+# Minimal GraphQL schema for core operations (manual authoring)
+
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  document(docId: ID!): Document
+  documents(page: Int, limit: Int, sort: String, order: String): DocumentPagination
+  collection(collectionId: ID!): Collection
+}
+
+type Mutation {
+  createCollection(input: CollectionCreate!): Collection!
+  uploadDocumentToCollection(collectionId: ID!, file: Upload!): DocumentResponse!
+  resyncDocument(docId: ID!): DocumentResponse!
+  deleteDocument(docId: ID!): Boolean!
+}
+
+scalar Upload
+
+type Collection {
+  id: ID!
+  collectionId: String!
+  name: String
+  description: String
+  createdAt: Int
+  updatedAt: Int
+}
+
+type CollectionCreate {
+  collectionId: String!
+  name: String!
+  description: String
+}
+
+type Document {
+  id: ID!
+  docId: String!
+  name: String
+  collectionId: String
+  content: String
+  createdAt: Int
+  updatedAt: Int
+}
+
+type DocumentResponse {
+  docId: String!
+  name: String
+  collectionId: String
+}
+
+type DocumentPagination {
+  data: [Document!]!
+  pagination: PaginationMeta!
+}
+
+type PaginationMeta {
+  page: Int
+  limit: Int
+  total: Int
+  totalPages: Int
+  hasNext: Boolean
+  hasPrev: Boolean
+}

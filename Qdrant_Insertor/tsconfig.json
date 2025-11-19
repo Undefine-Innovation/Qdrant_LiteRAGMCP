@@ -4,14 +4,44 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
-    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
     "strict": true,
-    "types": ["node", "jest"],
-    "baseUrl": ".",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "ignoreDeprecations": "5.0",
     "paths": {
-      "config": ["./config.ts"] // 暂时保留，后续再看是否需要调整
+      "@shared/*": ["./shared/*"],
+      "@backend/*": ["./packages/backend/*"],
+      "@frontend/*": ["./packages/frontend/*"],
+      "@domain/*": ["./packages/backend/src/domain/*"],
+      "@application/*": ["./packages/backend/src/application/*"],
+      "@infrastructure/*": ["./packages/backend/src/infrastructure/*"],
+      "@api/*": ["./packages/backend/src/api/*"],
+      "@config/*": ["./packages/backend/src/infrastructure/config/*"],
+      "@logging/*": ["./packages/backend/src/infrastructure/logging/*"],
+      "@di/*": ["./packages/backend/src/infrastructure/di/*"],
+      "@lifecycle/*": ["./packages/backend/src/infrastructure/lifecycle/*"],
+      "@scheduling/*": ["./packages/backend/src/infrastructure/scheduling/*"],
+      "@middleware/*": ["./packages/backend/src/api/middleware/*", "./packages/backend/src/middlewares/*"]
     }
   },
-  "include": ["src", "test", "utils", "config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage"
+  ],
+  "references": [
+    { "path": "./packages/backend" },
+    { "path": "./packages/frontend" },
+    { "path": "./shared" }
+  ]
 }

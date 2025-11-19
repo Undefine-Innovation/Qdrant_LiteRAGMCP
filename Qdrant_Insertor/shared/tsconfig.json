@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "outDir": "./dist",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@domain/*": ["../packages/backend/src/domain/*"],
+      "@shared/*": ["./"]
+    }
+  },
+  "include": ["types/**/*", "utils/**/*", "index.ts"],
+  "exclude": ["node_modules", "dist"]
+}

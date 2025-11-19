@@ -1,0 +1,286 @@
+# Document Schemas
+
+DocumentResponse:
+  type: object
+  description: |
+    文档响应对象，包含文档的完整信息和元数据。
+    
+    ## 文档生命周期
+    
+    文档经历以下生命周期阶段：
+    1. **上传**: 文件上传到系统，创建文档记录
+    2. **处理**: 系统提取内容、分块并生成向量嵌入
+    3. **可用**: 文档处理完成，可用于搜索
+    4. **更新**: 可通过重新同步更新文档内容
+    5. **删除**: 可删除文档及其所有相关数据
+    
+    ## 使用场景
+    
+    - **文档列表**: 在文档管理界面显示文档信息
+    - **文档详情**: 显示文档的详细信息和状态
+    - **搜索结果**: 作为搜索结果的元数据部分
+    - **统计报告**: 用于生成文档统计和报告
+  properties:
+    docId:
+      type: string
+      description: |
+        文档的唯一标识符。
+        
+        **格式**: 系统生成的唯一字符串
+        **用途**: 用于文档的引用和操作
+        **示例**: "doc-abc123def456"
+      example: "doc-abc123def456"
+    name:
+      type: string
+      description: |
+        文档的名称，通常来自原始文件名。
+        
+        **来源**: 上传文件的原始文件名
+        **用途**: 在用户界面中显示和识别文档
+        **注意**: 不保证唯一性
+      example: "技术文档.md"
+    collectionId:
+      type: string
+      description: |
+        所属集合的ID。
+        
+        **用途**: 将文档组织到逻辑分组中
+        **关系**: 必须是已存在的集合ID
+        **影响**: 限制搜索范围和权限控制
+      example: "tech-docs"
+    key:
+      type: string
+      description: |
+        文档在存储系统中的路径或键。
+        
+        **用途**: 系统内部文件定位
+        **格式**: 相对路径或存储键
+        **注意**: 不用于用户界面显示
+      example: "/uploads/tech-docs/技术文档.md"
+    sizeBytes:
+      type: integer
+      format: int64
+      description: |
+        文档文件的大小（字节）。
+        
+        **用途**: 存储空间统计和限制检查
+        **单位**: 字节
+        **注意**: 可能为null（某些情况下无法获取）
+      nullable: true
+      example: 10240
+    mime:
+      type: string
+      description: |
+        文档的MIME类型。
+        
+        **用途**: 确定文件类型和处理方式
+        **常见值**: "text/plain", "text/markdown"
+        **注意**: 可能为null（某些情况下无法检测）
+      nullable: true
+      example: "text/markdown"
+    createdAt:
+      type: integer
+      format: int64
+      description: |
+        文档创建时的时间戳。
+        
+        **格式**: Unix时间戳（毫秒）
+        **用途**: 跟踪文档创建时间和排序
+        **时区**: UTC
+      example: 1672531200000
+    updatedAt:
+      type: integer
+      format: int64
+      description: |
+        文档最后更新时的时间戳。
+        
+        **格式**: Unix时间戳（毫秒）
+        **用途**: 跟踪文档修改时间和同步状态
+        **触发**: 文档重新同步或元数据更新
+        **时区**: UTC
+      nullable: true
+      example: 1672617600000
+    isDeleted:
+      type: boolean
+      description: |
+        文档是否被标记为已删除。
+        
+        **用途**: 软删除标记，支持数据恢复
+        **行为**: 被删除的文档不会出现在搜索结果中
+        **清理**: 定期清理被标记删除的文档
+      nullable: true
+      example: false
+  required:
+    - docId
+    - name
+    - collectionId
+    - createdAt
+    - updatedAt
+
+UploadDocumentResponse:
+  type: object
+  description: |
+    文档上传响应对象，包含上传成功后的基本信息。
+    
+    ## 响应时机
+    
+    此响应在文档文件成功上传后立即返回，但不表示文档处理完成。
+    文档处理（分块、嵌入生成）是异步进行的。
+    
+    ## 后续操作
+    
+    上传成功后，可以：
+    - 使用返回的docId查询文档处理状态
+    - 等待文档处理完成后进行搜索
+    - 通过文档同步API重新处理文档
+    
+    ## 使用场景
+    
+    - **上传确认**: 确认文档已成功上传
+    - **ID获取**: 获取文档ID用于后续操作
+    - **状态跟踪**: 开始跟踪文档处理状态
+  properties:
+    docId:
+      type: string
+      description: |
+        上传文档的唯一标识符。
+        
+        **用途**: 用于后续的文档操作和查询
+        **格式**: 系统生成的唯一字符串
+        **注意**: 请保存此ID以供后续使用
+      example: "doc-abc123def456"
+    name:
+      type: string
+      description: |
+        上传文件的名称。
+        
+        **来源**: 原始上传文件的文件名
+        **用途**: 在用户界面中显示和识别
+        **注意**: 可能与存储在系统中的文件名不同
+      example: "技术文档.md"
+    collectionId:
+      type: string
+      description: |
+        文档所属集合的ID。
+        
+        **来源**: 上传时指定的集合ID或默认集合
+        **用途**: 确定文档的组织归属
+        **影响**: 影响文档的搜索范围和访问权限
+      example: "tech-docs"
+  required:
+    - docId
+    - name
+    - collectionId
+
+ChunkDTO:
+  type: object
+  description: |
+    文档块数据传输对象，包含文本块的所有信息和元数据。
+    
+    ## 文档块概念
+    
+    文档块是文档被分割后的最小可搜索单位：
+    - **分割策略**: 根据配置的分块大小和重叠策略分割
+    - **向量嵌入**: 每个块都有对应的向量嵌入用于语义搜索
+    - **上下文保持**: 通过标题链保持文档结构上下文
+    
+    ## 分块策略
+    
+    - **大小限制**: 通常为几百到一千个字符
+    - **重叠处理**: 相邻块之间可能有重叠内容
+    - **结构感知**: 尊重文档的自然结构（段落、章节等）
+    
+    ## 使用场景
+    
+    - **搜索结果**: 作为搜索结果的主要内容
+    - **内容审查**: 查看文档被分割的具体情况
+    - **调试分析**: 分析分块质量和效果
+    - **上下文提供**: 为AI应用提供相关上下文
+  properties:
+    pointId:
+      type: string
+      description: |
+        Qdrant中的向量点ID，格式为 `${docId}_${chunkIndex}`。
+        
+        **用途**: 在向量数据库中唯一标识向量点
+        **格式**: 文档ID和块索引的组合
+        **关系**: 与向量嵌入一一对应
+      example: "doc-abc123def456_0"
+    docId:
+      type: string
+      description: |
+        所属文档的ID。
+        
+        **用途**: 建立块与文档的关联关系
+        **关系**: 必须是已存在的文档ID
+        **用途**: 用于文档级别的操作和统计
+      example: "doc-abc123def456"
+    chunkIndex:
+      type: integer
+      description: |
+        文本块在文档中的顺序索引（从0开始）。
+        
+        **用途**: 保持文本块的原始顺序
+        **排序**: 用于重建文档的原始结构
+        **范围**: 0到文档总块数-1
+      example: 0
+    content:
+      type: string
+      description: |
+        文本块的实际内容。
+        
+        **来源**: 从原始文档中提取的文本
+        **用途**: 作为搜索和显示的主要内容
+        **长度**: 根据分块策略确定，通常为几百字符
+      example: "这是文档的第一个文本块，包含了文档的引言部分..."
+    titleChain:
+      type: string
+      description: |
+        文本块的标题链，提供上下文信息。
+        
+        **用途**: 保持文档结构上下文
+        **格式**: 从根到当前位置的标题路径
+        **分隔符**: 通常使用" > "分隔
+        **示例**: "文档标题 > 第一章节 > 1.1 小节"
+      example: "技术文档 > 入门指南 > 安装步骤"
+    title:
+      type: string
+      description: |
+        文本块的直接标题。
+        
+        **来源**: 文本块所在章节的标题
+        **用途**: 提供更精确的上下文信息
+        **关系**: 是标题链的最后一部分
+        **注意**: 可能为null（如果没有明确标题）
+      nullable: true
+      example: "安装步骤"
+    contentHash:
+      type: string
+      description: |
+        文本块内容的哈希值。
+        
+        **用途**: 检测内容变化和重复
+        **算法**: 通常使用SHA-256等哈希算法
+        **应用**: 用于增量更新和去重
+        **注意**: 可能为null（某些情况下未计算）
+      nullable: true
+      example: "a1b2c3d4e5f6..."
+    createdAt:
+      type: integer
+      format: int64
+      description: |
+        文本块创建时的时间戳。
+        
+        **格式**: Unix时间戳（毫秒）
+        **用途**: 跟踪文本块的创建时间
+        **来源**: 通常与文档创建时间相同
+        **时区**: UTC
+        **注意**: 可能为null（某些情况下未记录）
+      nullable: true
+      example: 1672531200000
+  required:
+    - pointId
+    - docId
+    - chunkIndex
+    - content
+    - titleChain

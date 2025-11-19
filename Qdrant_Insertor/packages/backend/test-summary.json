@@ -1,0 +1,121 @@
+{
+  "timestamp": "2025-11-18T06:33:59.188Z",
+  "totals": {
+    "testSuites": {
+      "total": 36,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 6
+    },
+    "tests": {
+      "total": 623,
+      "passed": 498,
+      "failed": 0,
+      "skipped": 125
+    },
+    "duration": "65.61s"
+  },
+  "failedTestSuites": [
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\qdrant-batch-performance.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.delete-restore.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\CollectionRepository.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\collection-management-service-immutability.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\collection-aggregate-immutability.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\batch-operations-performance.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\AdapterFactory.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.find.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.delete.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.create-update.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.query.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.pagination-update.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.statistics.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\PostgreSQLRepositoryAdapter.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\TypeORMTransactionManager.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    }
+  ],
+  "coverage": null
+}

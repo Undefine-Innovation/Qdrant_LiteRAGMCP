@@ -1,0 +1,17 @@
+{
+  "name": "splitter",
+  "description": "Tool spec for document splitter/chunker",
+  "type": "splitter",
+  "input": {
+    "document": { "type": "string" }
+  },
+  "output": {
+    "chunks": {
+      "type": "array",
+      "items": { "type": "object", "properties": { "chunkIndex": { "type": "integer" }, "content": { "type": "string" } } }
+    }
+  },
+  "config": {
+    "chunkSize": { "type": "integer", "default": 1000 }
+  }
+}

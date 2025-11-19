@@ -1,0 +1,268 @@
+name: API Consistency Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # 每天UTC 02:00运行（北京时间10:00）
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  api-consistency-check:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [18.x, 20.x]
+      fail-fast: false # 允许其他Node.js版本继续运行
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # 获取完整历史记录，用于更好的分析
+        
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run install:all
+        
+    - name: Validate OpenAPI specification first
+      run: |
+        npm run check-openapi
+        npm run bundle-openapi
+        
+    - name: Run API consistency check
+      id: api-check
+      continue-on-error: true
+      run: |
+        npm run api:check
+        
+    - name: Check if report exists
+      id: check-report
+      run: |
+        if [ -f "api-consistency-report.json" ]; then
+          echo "report_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "report_exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Upload consistency report
+      if: steps.check-report.outputs.report_exists == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-consistency-report-${{ matrix.node-version }}
+        path: api-consistency-report.json
+        retention-days: 30
+        
+    - name: Upload bundled OpenAPI spec
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: bundled-openapi-${{ matrix.node-version }}
+        path: docs/apis/bundled.yaml
+        retention-days: 30
+        
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && steps.check-report.outputs.report_exists == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          try {
+            const report = JSON.parse(fs.readFileSync('api-consistency-report.json', 'utf8'));
+            const { summary, issues, warnings, recommendations } = report;
+            
+            let comment = `## 🔍 API一致性检查结果 (Node.js ${{ matrix.node-version }})\n\n`;
+            comment += `**检查时间**: ${report.timestamp}\n\n`;
+            comment += `### 📊 统计信息\n`;
+            comment += `- ❌ 错误数量: ${summary.totalErrors}\n`;
+            comment += `- ⚠️ 警告数量: ${summary.totalWarnings}\n`;
+            comment += `- 📋 问题总数: ${summary.totalIssues}\n\n`;
+            
+            if (issues.length > 0) {
+              comment += `### ❌ 错误列表\n`;
+              issues.forEach((issue, index) => {
+                comment += `${index + 1}. [${issue.severity}] ${issue.message}\n`;
+                if (issue.route) comment += `   - 路由: ${issue.route}\n`;
+              });
+              comment += '\n';
+            }
+            
+            if (warnings.length > 0) {
+              comment += `### ⚠️ 警告列表\n`;
+              warnings.forEach((warning, index) => {
+                comment += `${index + 1}. [${warning.severity}] ${warning.message}\n`;
+                if (warning.route) comment += `   - 路由: ${warning.route}\n`;
+              });
+              comment += '\n';
+            }
+            
+            if (recommendations.length > 0) {
+              comment += `### 💡 改进建议\n`;
+              recommendations.forEach((rec, index) => {
+                comment += `${index + 1}. ${rec}\n`;
+              });
+            }
+            
+            // 添加状态徽章
+            if (summary.totalErrors > 0) {
+              comment += `\n### 🚫 状态\n`;
+              comment += `![Error](https://img.shields.io/badge/status-error-red) 发现错误，需要修复`;
+            } else if (summary.totalWarnings > 0) {
+              comment += `\n### ⚠️ 状态\n`;
+              comment += `![Warning](https://img.shields.io/badge/status-warning-yellow) 发现警告，建议修复`;
+            } else {
+              comment += `\n### ✅ 状态\n`;
+              comment += `![Success](https://img.shields.io/badge/status-success-green) 检查通过`;
+            }
+            
+            // 添加下载链接
+            comment += `\n\n### 📄 详细报告\n`;
+            comment += `完整报告请查看 [Actions Artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) 中的 \`api-consistency-report-${{ matrix.node-version }}\` 文件。`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+            
+          } catch (error) {
+            console.error('Error reading report file:', error);
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 API一致性检查结果 (Node.js ${{ matrix.node-version }})\n\n❌ 检查过程中发生错误，请查看详细日志。`
+            });
+          }
+          
+    - name: Check for failures
+      if: steps.api-check.outcome == 'failure'
+      run: |
+        echo "API consistency check failed. Please review the report and fix the issues."
+        if [ "${{ steps.check-report.outputs.report_exists }}" == "true" ]; then
+          echo "Report file exists, checking error count..."
+          ERROR_COUNT=$(node -e "const report = JSON.parse(require('fs').readFileSync('api-consistency-report.json', 'utf8')); console.log(report.summary.totalErrors)")
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "Found $ERROR_COUNT errors, exiting with failure"
+            exit 1
+          fi
+        else
+          echo "No report file found, exiting with failure"
+          exit 1
+        fi
+        
+    - name: Security scan
+      run: |
+        npm audit --audit-level=moderate
+        
+    - name: Performance monitoring
+      run: |
+        echo "API consistency check performance metrics:"
+        time npm run api:check
+        
+    - name: Generate summary
+      if: always()
+      run: |
+        echo "## API Consistency Check Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Node.js Version: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Check Status: ${{ steps.api-check.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Report Generated: ${{ steps.check-report.outputs.report_exists }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.check-report.outputs.report_exists }}" == "true" ]; then
+          ERROR_COUNT=$(node -e "const report = JSON.parse(require('fs').readFileSync('api-consistency-report.json', 'utf8')); console.log(report.summary.totalErrors)")
+          WARNING_COUNT=$(node -e "const report = JSON.parse(require('fs').readFileSync('api-consistency-report.json', 'utf8')); console.log(report.summary.totalWarnings)")
+          echo "- Errors: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- Warnings: $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+  notify:
+    needs: api-consistency-check
+    runs-on: ubuntu-latest
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'push')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: api-consistency-report-*
+        merge-multiple: true
+        
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          try {
+            // 检查是否有报告文件
+            const reportFiles = fs.readdirSync('.').filter(file => file.startsWith('api-consistency-report-'));
+            
+            if (reportFiles.length === 0) {
+              console.log('No report files found');
+              return;
+            }
+            
+            // 读取第一个报告文件（假设所有版本结果相同）
+            const report = JSON.parse(fs.readFileSync(reportFiles[0], 'utf8'));
+            const { summary } = report;
+            
+            if (summary.totalErrors > 0) {
+              // 这里可以集成Slack、钉钉等通知
+              console.log(`API consistency check failed with ${summary.totalErrors} errors`);
+              
+              // 创建Issue
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `API一致性检查失败 - ${new Date().toISOString().split('T')[0]}`,
+                body: |
+                  API一致性检查发现了 ${summary.totalErrors} 个错误和 ${summary.totalWarnings} 个警告。
+                  
+                  请查看详细报告并修复相关问题。
+                  
+                  **检查时间**: ${report.timestamp}
+                  **错误数量**: ${summary.totalErrors}
+                  **警告数量**: ${summary.totalWarnings}
+                  **触发事件**: ${context.eventName}
+                  
+                  详细报告请查看Actions中的artifacts。
+                labels: ['bug', 'api-consistency']
+              });
+            }
+          } catch (error) {
+            console.error('Error processing report files:', error);
+            
+            // 如果无法读取报告，仍然创建一个Issue
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `API一致性检查执行失败 - ${new Date().toISOString().split('T')[0]}`,
+              body: |
+                API一致性检查执行过程中发生错误。
+                
+                **触发事件**: ${context.eventName}
+                **工作流运行**: ${context.runId}
+                
+                请查看Actions日志获取详细信息。
+              labels: ['bug', 'api-consistency']
+            });
+          }

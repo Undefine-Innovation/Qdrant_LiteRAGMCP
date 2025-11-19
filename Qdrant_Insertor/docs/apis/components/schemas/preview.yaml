@@ -1,0 +1,114 @@
+# Document Preview Schemas
+
+DocumentPreviewResponse:
+  type: object
+  properties:
+    content:
+      type: string
+      description: 预览内容
+      example: "<html><head><title>技术文档</title></head><body><h1>技术文档</h1><p>这是文档内容...</p></body></html>"
+    mimeType:
+      type: string
+      description: 内容MIME类型
+      example: "text/html"
+    format:
+      type: string
+      description: 响应格式
+      example: "html"
+  required:
+    - content
+    - mimeType
+    - format
+  description: 文档预览响应的Schema
+
+FileDownloadResponse:
+  type: object
+  properties:
+    content:
+      type: string
+      format: binary
+      description: 文件内容（二进制数据）
+    mimeType:
+      type: string
+      description: 文件MIME类型
+      example: "text/html"
+    filename:
+      type: string
+      description: 推荐的文件名
+      example: "技术文档.html"
+  required:
+    - content
+    - mimeType
+    - filename
+  description: 文件下载响应的Schema
+
+FileFormatInfo:
+  type: object
+  properties:
+    mimeType:
+      type: string
+      description: 文件MIME类型
+      example: "text/markdown"
+    extension:
+      type: string
+      description: 文件扩展名
+      example: ".md"
+    category:
+      type: string
+      enum: [text, markdown, pdf, word, unknown]
+      description: 文件类别
+      example: "markdown"
+  required:
+    - mimeType
+    - extension
+    - category
+  description: 文件格式信息的Schema
+
+FileFormatInfoResponse:
+  type: object
+  properties:
+    format:
+      $ref: '#/FileFormatInfo'
+      description: 文件格式信息
+  required:
+    - format
+  description: 文件格式信息响应的Schema
+
+ThumbnailRequest:
+  type: object
+  properties:
+    width:
+      type: integer
+      default: 200
+      minimum: 1
+      maximum: 1000
+      description: 缩略图宽度（像素）
+      example: 300
+    height:
+      type: integer
+      default: 200
+      minimum: 1
+      maximum: 1000
+      description: 缩略图高度（像素）
+      example: 300
+  description: 缩略图请求参数的Schema
+
+PreviewFormat:
+  type: string
+  enum: [html, text, json]
+  default: text
+  description: 预览格式枚举
+  example: "html"
+
+DownloadFormat:
+  type: string
+  enum: [original, html, txt]
+  default: original
+  description: 下载格式枚举
+  example: "html"
+
+FileCategory:
+  type: string
+  enum: [text, markdown, pdf, word, unknown]
+  description: 文件类别枚举
+  example: "markdown"

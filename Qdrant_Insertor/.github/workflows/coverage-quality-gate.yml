@@ -1,0 +1,90 @@
+name: Coverage Quality Gate
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  coverage-quality-gate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run install:all
+
+      - name: Run coverage quality gate
+        run: npm run test:quality-gate
+        env:
+          # 设置更严格的覆盖率阈值用于CI/CD
+          COVERAGE_BRANCHES_THRESHOLD: 80
+          COVERAGE_FUNCTIONS_THRESHOLD: 80
+          COVERAGE_LINES_THRESHOLD: 80
+          COVERAGE_STATEMENTS_THRESHOLD: 80
+          COVERAGE_DOMAIN_BRANCHES_THRESHOLD: 85
+          COVERAGE_DOMAIN_FUNCTIONS_THRESHOLD: 85
+          COVERAGE_DOMAIN_LINES_THRESHOLD: 85
+          COVERAGE_DOMAIN_STATEMENTS_THRESHOLD: 85
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: packages/backend/coverage/
+          retention-days: 30
+
+      - name: Comment PR with coverage report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './packages/backend/coverage/coverage-summary.json';
+            
+            if (fs.existsSync(path)) {
+              const coverage = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const total = coverage.total;
+              
+              const comment = `
+              ## 📊 覆盖率报告
+              
+              | 指标 | 覆盖率 | 状态 |
+              |------|--------|------|
+              | 语句覆盖率 | ${total.statements.pct.toFixed(2)}% | ${total.statements.pct >= 80 ? '✅' : '❌'} |
+              | 分支覆盖率 | ${total.branches.pct.toFixed(2)}% | ${total.branches.pct >= 80 ? '✅' : '❌'} |
+              | 函数覆盖率 | ${total.functions.pct.toFixed(2)}% | ${total.functions.pct >= 80 ? '✅' : '❌'} |
+              | 行覆盖率 | ${total.lines.pct.toFixed(2)}% | ${total.lines.pct >= 80 ? '✅' : '❌'} |
+              
+              ${total.statements.pct >= 80 && total.branches.pct >= 80 && total.functions.pct >= 80 && total.lines.pct >= 80 
+                ? '🎉 所有覆盖率指标均达到要求！' 
+                : '⚠️ 部分覆盖率指标未达到要求，请增加测试覆盖率。'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+      - name: Check coverage trend
+        if: github.event_name == 'pull_request'
+        run: |
+          # 简单的覆盖率趋势检查脚本
+          node scripts/coverage-trend-check.js

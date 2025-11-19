@@ -1,0 +1,289 @@
+# Document Preview Paths
+
+preview:
+  get:
+    operationId: getDocumentPreview
+    tags:
+      - 文档预览
+    summary: 获取文档预览
+    description: |
+      获取文档的预览内容，支持多种格式。
+      
+      ## 预览功能特点
+      
+      - **多格式支持**: 支持HTML、文本和JSON格式的预览
+      - **内容转换**: 自动将文档内容转换为指定格式
+      - **样式保留**: 在HTML格式中保留原始文档的样式
+      - **元数据包含**: 包含文档的元数据信息
+      
+      ## 使用场景
+      
+      - **快速浏览**: 在不下载的情况下快速浏览文档内容
+      - **内容检查**: 检查文档内容是否符合预期
+      - **格式验证**: 验证文档格式转换是否正确
+      - **嵌入展示**: 在其他应用中嵌入文档预览
+      
+      ## 格式说明
+      
+      - **html**: 保留原始样式的HTML格式，适合网页展示
+      - **text**: 纯文本格式，适合文本处理和分析
+      - **json**: 结构化JSON格式，包含内容和元数据，适合程序处理
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: |
+          要预览的文档ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "doc-abc123def456"
+        example: "doc-abc123def456"
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum: [html, text, json]
+          default: text
+        description: |
+          预览格式，可选值：
+          
+          - **html**: HTML格式，保留原始样式
+          - **text**: 纯文本格式（默认）
+          - **json**: JSON格式，包含内容和元数据
+        example: "html"
+    responses:
+      '200':
+        description: 文档预览获取成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/preview.yaml#/DocumentPreviewResponse'
+            example:
+              content: "<html><head><title>技术文档</title></head><body><h1>技术文档</h1><p>这是文档内容...</p></body></html>"
+              mimeType: "text/html"
+              format: "html"
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+download:
+  get:
+    operationId: downloadDocument
+    tags:
+      - 文档预览
+    summary: 下载文档
+    description: |
+      下载文档，支持原始格式或转换后的格式。
+      
+      ## 下载功能特点
+      
+      - **多格式支持**: 支持原始格式、HTML和TXT格式下载
+      - **格式转换**: 自动将文档转换为指定格式
+      - **文件名处理**: 自动处理文件名编码和特殊字符
+      - **MIME类型**: 设置正确的MIME类型
+      
+      ## 使用场景
+      
+      - **离线查看**: 下载文档供离线查看
+      - **格式转换**: 将文档转换为更适合的格式
+      - **备份存档**: 下载重要文档进行备份
+      - **分享传输**: 下载文档后分享给其他人
+      
+      ## 格式说明
+      
+      - **original**: 原始上传格式，不做任何转换
+      - **html**: HTML格式，适合在浏览器中查看
+      - **txt**: 纯文本格式，适合文本编辑器打开
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: |
+          要下载的文档ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "doc-abc123def456"
+        example: "doc-abc123def456"
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum: [original, html, txt]
+          default: original
+        description: |
+          下载格式，可选值：
+          
+          - **original**: 原始格式（默认）
+          - **html**: HTML格式
+          - **txt**: 纯文本格式
+        example: "html"
+    responses:
+      '200':
+        description: 文档下载成功
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+            headers:
+              Content-Disposition:
+                description: 文件下载的标头，包含文件名
+                example: "attachment; filename=\"技术文档.html\""
+              Content-Type:
+                description: 文件的MIME类型
+                example: "text/html"
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+thumbnail:
+  get:
+    operationId: getDocumentThumbnail
+    tags:
+      - 文档预览
+    summary: 获取文档缩略图
+    description: |
+      获取文档的缩略图，支持自定义尺寸。
+      
+      ## 缩略图功能特点
+      
+      - **自定义尺寸**: 支持自定义宽度和高度
+      - **比例保持**: 自动保持原始图像比例
+      - **格式优化**: 优化缩略图格式和大小
+      - **缓存支持**: 支持缩略图缓存，提高性能
+      
+      ## 使用场景
+      
+      - **文档列表**: 在文档列表中显示缩略图
+      - **快速识别**: 通过缩略图快速识别文档内容
+      - **UI美化**: 提升用户界面的视觉效果
+      - **预览加载**: 在加载完整预览前显示缩略图
+      
+      ## 尺寸说明
+      
+      - **默认尺寸**: 200x200像素
+      - **最大尺寸**: 1000x1000像素
+      - **最小尺寸**: 1x1像素
+      - **比例处理**: 自动保持原始比例，避免变形
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: |
+          要生成缩略图的文档ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "doc-abc123def456"
+        example: "doc-abc123def456"
+      - in: query
+        name: width
+        schema:
+          type: integer
+          default: 200
+          minimum: 1
+          maximum: 1000
+        description: |
+          缩略图宽度（像素）。
+          
+          **默认值**: 200
+          **范围**: 1-1000
+        example: 300
+      - in: query
+        name: height
+        schema:
+          type: integer
+          default: 200
+          minimum: 1
+          maximum: 1000
+        description: |
+          缩略图高度（像素）。
+          
+          **默认值**: 200
+          **范围**: 1-1000
+        example: 300
+    responses:
+      '200':
+        description: 缩略图获取成功
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+            headers:
+              Cache-Control:
+                description: 缓存控制标头
+                example: "public, max-age=3600"
+              ETag:
+                description: 缓存标识符
+                example: "\"thumbnail-abc123\""
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'
+
+format:
+  get:
+    operationId: getDocumentFormat
+    tags:
+      - 文档预览
+    summary: 获取文档格式信息
+    description: |
+      获取文档的格式信息，包括MIME类型、文件扩展名和类别。
+      
+      ## 格式信息功能特点
+      
+      - **自动检测**: 自动检测文档的文件格式
+      - **MIME类型**: 提供标准的MIME类型信息
+      - **文件类别**: 将文档分类到预定义类别中
+      - **扩展名**: 提供推荐的文件扩展名
+      
+      ## 使用场景
+      
+      - **格式验证**: 验证文档格式是否支持
+      - **图标选择**: 根据文件类型选择合适的图标
+      - **处理策略**: 根据文件类型选择合适的处理策略
+      - **用户提示**: 向用户显示文件类型信息
+      
+      ## 类别说明
+      
+      - **text**: 纯文本文件
+      - **markdown**: Markdown文档
+      - **pdf**: PDF文档
+      - **word**: Word文档
+      - **unknown**: 未知格式
+    parameters:
+      - in: path
+        name: docId
+        schema:
+          type: string
+        required: true
+        description: |
+          要获取格式信息的文档ID。
+          
+          **格式**: 系统生成的唯一标识符
+          **示例**: "doc-abc123def456"
+        example: "doc-abc123def456"
+    responses:
+      '200':
+        description: 文档格式信息获取成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/preview.yaml#/FileFormatInfoResponse'
+            example:
+              format:
+                mimeType: "text/markdown"
+                extension: ".md"
+                category: "markdown"
+      '404':
+        $ref: '../components/responses/common.yaml#/NotFoundError'
+      '500':
+        $ref: '../components/responses/common.yaml#/InternalServerError'

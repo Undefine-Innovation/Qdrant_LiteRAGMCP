@@ -1,0 +1,297 @@
+# Batch Operations Schemas
+
+BatchUploadRequest:
+  type: object
+  properties:
+    collectionId:
+      type: string
+      description: 目标集合的ID，如果不提供则使用默认集合
+  description: 批量文档上传请求的Schema
+
+BatchUploadResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: 批量上传是否成功
+      example: true
+    operationId:
+      type: string
+      description: 操作ID，用于跟踪进度
+      example: "batch-upload-uuid-12345"
+    total:
+      type: integer
+      description: 总文件数
+      example: 3
+    successful:
+      type: integer
+      description: 成功上传的文件数
+      example: 2
+    failed:
+      type: integer
+      description: 上传失败的文件数
+      example: 1
+    results:
+      type: array
+      items:
+        $ref: '#/BatchUploadResult'
+      description: 每个文件的上传结果
+  required:
+    - success
+    - operationId
+    - total
+    - successful
+    - failed
+    - results
+  description: 批量文档上传响应的Schema
+
+BatchUploadResult:
+  type: object
+  properties:
+    fileName:
+      type: string
+      description: 文件名
+      example: "document1.txt"
+    docId:
+      type: string
+      description: 上传成功后返回的文档ID
+      example: "doc-abc123"
+    collectionId:
+      type: string
+      description: 所属集合的ID
+      example: "tech-docs"
+    error:
+      type: string
+      description: 上传失败时的错误信息
+      example: "File type application/octet-stream is not supported"
+  required:
+    - fileName
+  description: 单个文件上传结果的Schema
+
+BatchDeleteDocsRequest:
+  type: object
+  properties:
+    docIds:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      description: 要删除的文档ID列表
+      example: ["doc-abc123", "doc-def456", "doc-ghi789"]
+  required:
+    - docIds
+  description: 批量删除文档请求的Schema
+
+BatchDeleteDocsResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: 批量删除是否成功
+      example: true
+    operationId:
+      type: string
+      description: 操作ID，用于跟踪进度
+      example: "batch-delete-docs-uuid-12345"
+    total:
+      type: integer
+      description: 总文档数
+      example: 3
+    successful:
+      type: integer
+      description: 成功删除的文档数
+      example: 3
+    failed:
+      type: integer
+      description: 删除失败的文档数
+      example: 0
+    results:
+      type: array
+      items:
+        $ref: '#/BatchDeleteDocResult'
+      description: 每个文档的删除结果
+  required:
+    - success
+    - operationId
+    - total
+    - successful
+    - failed
+    - results
+  description: 批量删除文档响应的Schema
+
+BatchDeleteDocResult:
+  type: object
+  properties:
+    docId:
+      type: string
+      description: 文档ID
+      example: "doc-abc123"
+    success:
+      type: boolean
+      description: 删除是否成功
+      example: true
+    error:
+      type: string
+      description: 删除失败时的错误信息
+      example: "Document not found"
+  required:
+    - docId
+    - success
+  description: 单个文档删除结果的Schema
+
+BatchDeleteCollectionsRequest:
+  type: object
+  properties:
+    collectionIds:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      description: 要删除的集合ID列表
+      example: ["collection-1", "collection-2", "collection-3"]
+  required:
+    - collectionIds
+  description: 批量删除集合请求的Schema
+
+BatchDeleteCollectionsResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: 批量删除是否成功
+      example: true
+    operationId:
+      type: string
+      description: 操作ID，用于跟踪进度
+      example: "batch-delete-collections-uuid-12345"
+    total:
+      type: integer
+      description: 总集合数
+      example: 3
+    successful:
+      type: integer
+      description: 成功删除的集合数
+      example: 3
+    failed:
+      type: integer
+      description: 删除失败的集合数
+      example: 0
+    results:
+      type: array
+      items:
+        $ref: '#/BatchDeleteCollectionResult'
+      description: 每个集合的删除结果
+  required:
+    - success
+    - operationId
+    - total
+    - successful
+    - failed
+    - results
+  description: 批量删除集合响应的Schema
+
+BatchDeleteCollectionResult:
+  type: object
+  properties:
+    collectionId:
+      type: string
+      description: 集合ID
+      example: "collection-1"
+    success:
+      type: boolean
+      description: 删除是否成功
+      example: true
+    error:
+      type: string
+      description: 删除失败时的错误信息
+      example: "Collection not found"
+  required:
+    - collectionId
+    - success
+  description: 单个集合删除结果的Schema
+
+BatchOperationProgress:
+  type: object
+  properties:
+    operationId:
+      type: string
+      description: 操作ID
+      example: "batch-upload-uuid-12345"
+    type:
+      type: string
+      enum: [upload, delete]
+      description: 操作类型
+      example: "upload"
+    status:
+      type: string
+      enum: [pending, processing, completed, failed]
+      description: 操作状态
+      example: "processing"
+    total:
+      type: integer
+      description: 总项目数
+      example: 10
+    processed:
+      type: integer
+      description: 已处理的项目数
+      example: 6
+    successful:
+      type: integer
+      description: 成功的项目数
+      example: 5
+    failed:
+      type: integer
+      description: 失败的项目数
+      example: 1
+    startTime:
+      type: integer
+      description: 开始时间戳（毫秒）
+      example: 1640995200000
+    endTime:
+      type: integer
+      description: 结束时间戳（毫秒）
+      example: 1640995260000
+    estimatedTimeRemaining:
+      type: integer
+      description: 预估剩余时间（秒）
+      example: 30
+    results:
+      type: array
+      items:
+        $ref: '#/BatchOperationItemResult'
+      description: 每个项目的处理结果
+  required:
+    - operationId
+    - type
+    - status
+    - total
+    - processed
+    - successful
+    - failed
+    - startTime
+  description: 批量操作进度的Schema
+
+BatchOperationItemResult:
+  type: object
+  properties:
+    fileName:
+      type: string
+      description: 文件名（仅适用于上传操作）
+      example: "document1.txt"
+    itemId:
+      type: string
+      description: 项目ID（文档ID或集合ID）
+      example: "doc-abc123"
+    status:
+      type: string
+      enum: [pending, processing, completed, failed]
+      description: 项目处理状态
+      example: "completed"
+    error:
+      type: string
+      description: 处理失败时的错误信息
+      example: "File type not supported"
+  required:
+    - itemId
+    - status
+  description: 单个项目处理结果的Schema

@@ -1,0 +1,13 @@
+# Common Response Definitions
+
+ValidationError:
+  description: Validation Error
+
+NotFoundError:
+  description: Resource Not Found
+
+InternalServerError:
+  description: Internal Server Error
+
+FileTooLargeError:
+  description: Payload Too Large
