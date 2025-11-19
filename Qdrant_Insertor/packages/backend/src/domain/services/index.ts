@@ -25,6 +25,11 @@ export {
   EventSystemServiceFactory,
 } from './EventSystemService.js';
 
+// 限流相关服务
+export { RateLimiterFactory, RateLimitStrategy } from './RateLimitStrategy.js';
+export { RateLimitMetrics } from './RateLimitMetrics.js';
+export { TokenBucketRateLimiter } from './TokenBucketRateLimiter.js';
+
 // 值对象示例服务
 export { ValueObjectExampleService } from './ValueObjectExampleService.js';
 

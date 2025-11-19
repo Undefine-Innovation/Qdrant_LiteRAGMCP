@@ -3,11 +3,11 @@
  * 导出所有API契约定义
  */
 
-export * from './batch.js';
-export * from './collection.js';
-export * from './document.js';
-export * from './error.js';
-export * from './monitoring.js';
-export * from './preview.js';
-export * from './scrape.js';
-export * from './search.js';
+export * from './Batch.js';
+export * from './Collection.js';
+export * from './Document.js';
+export * from './Error.js';
+export * from './Monitoring.js';
+export * from './Preview.js';
+export * from './Scrape.js';
+export * from './Search.js';

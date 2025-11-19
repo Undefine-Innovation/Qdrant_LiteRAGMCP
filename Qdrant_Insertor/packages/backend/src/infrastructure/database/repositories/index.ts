@@ -1,7 +1,15 @@
 /**
- * TypeORM Repository导出文件
- * 统一导出所有Repository实现
+ * Repository导出文件
+ * 统一导出所有Repository实现和接口
  */
+
+// 新的统一仓库架构
+export { AbstractRepository } from './AbstractRepository.js';
+export { DatabaseRepository } from './DatabaseRepository.js';
+export {
+  RepositoryFactory,
+  RepositoryFactoryBuilder,
+} from './RepositoryFactory.js';
 
 /**
  * 基础Repository类，提供通用CRUD操作
@@ -9,9 +17,15 @@
 export { BaseRepository } from './BaseRepository.js';
 
 /**
- * 简单基础Repository类，提供基础CRUD操作
+ * 统一Repository适配器
  */
-export { SimpleBaseRepository } from './SimpleBaseRepository.js';
+export { UnifiedRepositoryAdapter } from './UnifiedRepositoryAdapter.js';
+
+/**
+ * Repository扩展
+ */
+export type { IRepositoryExtensions } from './extensions/RepositoryExtensions.js';
+export { RepositoryExtensionFactory } from './extensions/RepositoryExtensions.js';
 
 /**
  * 集合Repository，处理集合相关操作
@@ -69,6 +83,16 @@ export { ScrapeResultsRepository } from './ScrapeResultsRepository.js';
  * TypeORM主Repository，实现ISQLiteRepo接口
  */
 export { TypeORMRepository } from './TypeORMRepository.js';
+
+/**
+ * TypeORM Repository 模块化组件
+ */
+export { TypeORMRepositoryCore } from './TypeORMRepositoryCore.js';
+export { TypeORMRepositoryTransactions } from './TypeORMRepositoryTransactions.js';
+export { TypeORMRepositoryCollections } from './TypeORMRepositoryCollections.js';
+export { TypeORMRepositoryDocuments } from './TypeORMRepositoryDocuments.js';
+export { TypeORMRepositoryChunks } from './TypeORMRepositoryChunks.js';
+export { TypeORMRepositoryDatabase } from './TypeORMRepositoryDatabase.js';
 
 /**
  * 集合聚合仓储，处理集合聚合相关操作

@@ -145,7 +145,7 @@ export class AggregateFactory {
     }> = [],
   ): CollectionAggregate {
     // 创建集合聚合
-    const collectionAggregate = this.createCollection(
+    let collectionAggregate = this.createCollection(
       collectionData.id,
       collectionData.name,
       collectionData.description,
@@ -175,7 +175,7 @@ export class AggregateFactory {
       }
 
       // 将文档添加到集合聚合
-      collectionAggregate.addDocument(
+      collectionAggregate = collectionAggregate.withDocument(
         docData.id,
         docData.key,
         docData.content,
@@ -201,14 +201,14 @@ export class AggregateFactory {
     }> = [],
   ): CollectionAggregate {
     // 重建集合聚合
-    const collectionAggregate = this.reconstituteCollection(collection);
+    let collectionAggregate = this.reconstituteCollection(collection);
 
     // 为每个文档重建文档聚合
     for (const { document, chunks } of documentsWithChunks) {
       const documentAggregate = this.reconstituteDocument(document, chunks);
 
       // 将文档添加到集合聚合
-      collectionAggregate.addDocument(
+      collectionAggregate = collectionAggregate.withDocument(
         document.id,
         document.key,
         document.contentValue || '',

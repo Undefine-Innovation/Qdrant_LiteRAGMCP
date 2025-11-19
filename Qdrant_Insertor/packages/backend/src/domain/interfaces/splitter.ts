@@ -46,7 +46,7 @@ export interface SplitterOptions {
   /**
    * 分割策略
    */
-  strategy?: 'by_size' | 'by_sentences' | 'by_headings' | 'auto';
+  strategy?: 'by_size' | 'by_sentences' | 'by_headings' | 'auto' | 'semantic' | 'hybrid';
 
   /**
    * 分隔符

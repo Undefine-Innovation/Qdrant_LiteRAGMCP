@@ -10,7 +10,7 @@ import { ChunkTransactionHelpers } from './ChunkTransactionHelpers.js';
 import {
   BaseRepository,
   PaginationOptions,
-  PaginatedResult,
+  PaginationResult,
   BatchOperationResult,
 } from './BaseRepository.js';
 import { Chunk } from '../entities/Chunk.js';
@@ -78,11 +78,40 @@ export class ChunkRepository extends BaseRepository<Chunk> {
   }
 
   async findWithPagination(
-    paginationOptions: PaginationOptions = {},
+    page: number,
+    pageSize: number,
+    options?: Record<string, unknown>,
+  ): Promise<PaginationResult<Chunk>> {
+    // 转换参数格式以匹配内部实现
+    const paginationOptions: PaginationOptions = { page, pageSize };
+    const docId = options?.docId as DocId | undefined;
+    const collectionId = options?.collectionId as CollectionId | undefined;
+    const queryOptions = { ...options };
+    delete queryOptions.docId;
+    delete queryOptions.collectionId;
+
+    return this.queries.findWithPagination(
+      paginationOptions,
+      docId,
+      collectionId,
+      queryOptions,
+    );
+  }
+
+  /**
+   * 扩展的分页查询方法，支持更多参数
+   * @param paginationOptions - 分页选项
+   * @param docId - 文档ID过滤
+   * @param collectionId - 集合ID过滤
+   * @param options - 查询选项
+   * @returns 分页结果
+   */
+  async findWithPaginationExtended(
+    paginationOptions: PaginationOptions,
     docId?: DocId,
     collectionId?: CollectionId,
     options: Record<string, unknown> = {},
-  ): Promise<PaginatedResult<Chunk>> {
+  ): Promise<PaginationResult<Chunk>> {
     return this.queries.findWithPagination(
       paginationOptions,
       docId,
@@ -103,7 +132,7 @@ export class ChunkRepository extends BaseRepository<Chunk> {
     chunks: Partial<Chunk>[],
     batchSize: number = 100,
   ): Promise<Chunk[]> {
-    return this.batchOperations.createBatch(chunks);
+    return this.batchOperations.createBatchWithConfig(chunks, { batchSize });
   }
 
   async deleteByDocId(docId: DocId): Promise<number> {
@@ -163,12 +192,12 @@ export class ChunkRepository extends BaseRepository<Chunk> {
     groupBy: string,
     where?: Record<string, unknown>,
   ): Promise<Record<string, number>> {
-     
-    // TypeORM query builder requires any casting for complex where conditions
-    return (await this.statistics.getStatistics(
+    // TypeORM query builder requires explicit casting for complex where conditions
+    const result = await this.statistics.getStatistics(
       groupBy,
-      where as any,
-    )) as Record<string, number>;
+      where as Record<string, unknown>,
+    );
+    return result as Record<string, number>;
   }
 
   // 时间范围查询方法 - 委托给ChunkTimeQueries

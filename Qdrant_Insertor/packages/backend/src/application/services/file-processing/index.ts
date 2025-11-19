@@ -10,7 +10,9 @@ export * from './IFileProcessingService.js';
 export * from './fileProcessor.js';
 export * from './loader.js';
 export * from './splitter.js';
-export * from './stream-loader.js';
+// export * from './stream-loader.js'; // 暂时注释
+// 流加载器类型和接口
+export * from './StreamLoader.js';
 export * from './FileProcessingService.js';
 export * from './EnhancedFileProcessingService.js';
 export * from './FileFormatDetector.js';

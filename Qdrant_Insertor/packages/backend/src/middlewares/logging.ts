@@ -3,7 +3,7 @@ import {
   EnhancedLogger,
   LogTag,
   TraceIdGenerator,
-} from '@infrastructure/logging/enhanced-logger.js';
+} from '@infrastructure/logging/EnhancedLogger.js';
 
 /**
  * 扩展Express Request接口，添加日志相关属性

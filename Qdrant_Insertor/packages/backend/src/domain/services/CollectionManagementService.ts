@@ -13,6 +13,7 @@ import {
   DocumentRemovedFromCollectionEvent,
 } from '../events/DomainEvents.js';
 import { Logger } from '../../infrastructure/logging/logger.js';
+import { ErrorFactory, ErrorContext } from '../errors/index.js';
 
 /**
  * 集合管理领域服务接口
@@ -160,11 +161,19 @@ export class CollectionManagementService
     name: string,
     description?: string,
   ): Promise<CollectionAggregate> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'createCollection',
+      parameters: { name, description },
+    };
+
     // 验证集合名称
     const nameValidation = this.validateCollectionName(name);
     if (!nameValidation.isValid) {
-      throw new Error(
+      throw ErrorFactory.validation(
         `Invalid collection name: ${nameValidation.errors.join(', ')}`,
+        { validationErrors: nameValidation.errors },
+        errorContext,
       );
     }
 
@@ -174,8 +183,14 @@ export class CollectionManagementService
       description.length >
         CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH
     ) {
-      throw new Error(
+      throw ErrorFactory.validation(
         `Collection description cannot exceed ${CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH} characters`,
+        {
+          descriptionLength: description.length,
+          maxLength:
+            CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH,
+        },
+        errorContext,
       );
     }
 
@@ -207,12 +222,24 @@ export class CollectionManagementService
     name?: string,
     description?: string,
   ): Promise<CollectionAggregate> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'updateCollection',
+      parameters: {
+        collectionId: collectionAggregate.id,
+        name,
+        description,
+      },
+    };
+
     // 验证新名称（如果提供）
     if (name && name !== collectionAggregate.name) {
       const nameValidation = this.validateCollectionName(name);
       if (!nameValidation.isValid) {
-        throw new Error(
+        throw ErrorFactory.validation(
           `Invalid collection name: ${nameValidation.errors.join(', ')}`,
+          { validationErrors: nameValidation.errors },
+          errorContext,
         );
       }
     }
@@ -223,14 +250,26 @@ export class CollectionManagementService
       description.length >
         CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH
     ) {
-      throw new Error(
+      throw ErrorFactory.validation(
         `Collection description cannot exceed ${CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH} characters`,
+        {
+          descriptionLength: description.length,
+          maxLength:
+            CollectionManagementService.MAX_COLLECTION_DESCRIPTION_LENGTH,
+        },
+        errorContext,
       );
     }
 
-    // 更新集合
-    if (name || description !== undefined) {
-      collectionAggregate.updateDescription(description);
+    // 更新集合（使用不可变操作）
+    let updatedAggregate = collectionAggregate;
+
+    if (name && name !== collectionAggregate.name) {
+      updatedAggregate = updatedAggregate.withName(name);
+    }
+
+    if (description !== undefined) {
+      updatedAggregate = updatedAggregate.withDescription(description);
     }
 
     // 发布领域事件
@@ -257,10 +296,25 @@ export class CollectionManagementService
     name?: string,
     mime?: string,
   ): Promise<DocumentAggregate> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'addDocumentToCollection',
+      parameters: {
+        collectionId: collectionAggregate.id,
+        docId,
+        docKey,
+        contentLength: content.length,
+        name,
+        mime,
+      },
+    };
+
     // 验证文档键唯一性
     if (!this.isDocumentKeyUnique(collectionAggregate, docKey)) {
-      throw new Error(
+      throw ErrorFactory.conflict(
         `Document with key '${docKey}' already exists in collection`,
+        { docKey, collectionId: collectionAggregate.id },
+        errorContext,
       );
     }
 
@@ -268,8 +322,13 @@ export class CollectionManagementService
     try {
       DocumentContent.create(content);
     } catch (error) {
-      throw new Error(
+      throw ErrorFactory.validation(
         `Invalid document content: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        {
+          originalError:
+            error instanceof Error ? error.message : 'Unknown error',
+        },
+        errorContext,
       );
     }
 
@@ -278,13 +337,18 @@ export class CollectionManagementService
       collectionAggregate.getDocumentCount() >=
       CollectionManagementService.MAX_DOCUMENTS_PER_COLLECTION
     ) {
-      throw new Error(
+      throw ErrorFactory.businessRule(
         `Collection cannot contain more than ${CollectionManagementService.MAX_DOCUMENTS_PER_COLLECTION} documents`,
+        {
+          currentCount: collectionAggregate.getDocumentCount(),
+          maxCount: CollectionManagementService.MAX_DOCUMENTS_PER_COLLECTION,
+        },
+        errorContext,
       );
     }
 
-    // 添加文档到集合
-    const doc = collectionAggregate.addDocument(
+    // 添加文档到集合（使用不可变操作）
+    const updatedAggregate = collectionAggregate.withDocument(
       docId,
       docKey,
       content,
@@ -292,11 +356,21 @@ export class CollectionManagementService
       mime,
     );
 
+    // 获取新添加的文档
+    const newDoc = updatedAggregate.getDocument(docId);
+    if (!newDoc) {
+      throw ErrorFactory.infrastructure(
+        'Failed to retrieve newly added document',
+        { docId, collectionId: collectionAggregate.id },
+        errorContext,
+      );
+    }
+
     // 创建文档聚合
-    const documentAggregate = DocumentAggregate.reconstitute(doc);
+    const documentAggregate = DocumentAggregate.reconstitute(newDoc);
 
     // 发布领域事件
-    await this.publishDomainEvents(collectionAggregate);
+    await this.publishDomainEvents(updatedAggregate);
     await this.publishDomainEvents(documentAggregate);
 
     return documentAggregate;
@@ -312,6 +386,15 @@ export class CollectionManagementService
     collectionAggregate: CollectionAggregate,
     docId: DocId,
   ): Promise<boolean> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'removeDocumentFromCollection',
+      parameters: {
+        collectionId: collectionAggregate.id,
+        docId,
+      },
+    };
+
     // 检查文档是否存在
     const doc = collectionAggregate.getDocument(docId);
     if (!doc) {
@@ -320,18 +403,20 @@ export class CollectionManagementService
 
     // 检查文档是否可以被删除
     if (!doc.canBeDeleted()) {
-      throw new Error(`Document ${docId} cannot be deleted`);
+      throw ErrorFactory.businessRule(
+        `Document ${docId} cannot be deleted`,
+        { docId, documentStatus: doc.status },
+        errorContext,
+      );
     }
 
-    // 从集合中移除文档
-    const removed = collectionAggregate.removeDocument(docId);
+    // 从集合中移除文档（使用不可变操作）
+    const updatedAggregate = collectionAggregate.withoutDocument(docId);
 
-    if (removed) {
-      // 发布领域事件
-      await this.publishDomainEvents(collectionAggregate);
-    }
+    // 发布领域事件
+    await this.publishDomainEvents(updatedAggregate);
 
-    return removed;
+    return true;
   }
 
   /**
@@ -400,7 +485,7 @@ export class CollectionManagementService
     collectionAggregate: CollectionAggregate,
   ): boolean {
     // 检查集合本身是否可以删除
-    if (!collectionAggregate.collection.canBeDeleted()) {
+    if (!collectionAggregate.canBeDeleted()) {
       return false;
     }
 

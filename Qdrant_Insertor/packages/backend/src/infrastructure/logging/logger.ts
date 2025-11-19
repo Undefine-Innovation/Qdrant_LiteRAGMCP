@@ -12,7 +12,7 @@ import {
   createEnhancedLogger,
   LoggerAdapter,
   LogTag,
-} from './enhanced-logger.js';
+} from './EnhancedLogger.js';
 
 /**
  * 定义日志器接口，支持不同级别的日志输出
@@ -22,24 +22,28 @@ export interface Logger {
    * 输出调试级别日志
    * @param message - 日志消息
    * @param args - 额外参数
+   * @returns {void}
    */
   debug(message: string, ...args: unknown[]): void;
   /**
    * 输出信息级别日志
    * @param message - 日志消息
    * @param args - 额外参数
+   * @returns {void}
    */
   info(message: string, ...args: unknown[]): void;
   /**
    * 输出警告级别日志
    * @param message - 日志消息
    * @param args - 额外参数
+   * @returns {void}
    */
   warn(message: string, ...args: unknown[]): void;
   /**
    * 输出错误级别日志
    * @param message - 日志消息
    * @param args - 额外参数
+   * @returns {void}
    */
   error(message: string, ...args: unknown[]): void;
 }
@@ -47,7 +51,7 @@ export interface Logger {
 /**
  * 创建一个 Winston Logger 实例
  * @param config - 应用程序配置，用于获取日志级别
- * @returns 配置好的日志器实例
+ * @returns {Logger} 配置好的日志器实例
  */
 export function createLogger(config: AppConfig): Logger {
   const { combine, timestamp, json, colorize, simple } = winston.format;
@@ -90,7 +94,7 @@ export function createLogger(config: AppConfig): Logger {
 /**
  * 创建增强的日志器实例（推荐使用）
  * @param config - 应用程序配置，用于获取日志级别
- * @returns 配置好的增强日志器实例
+ * @returns {Logger} 配置好的增强日志器实例
  */
 export function createEnhancedLoggerFromConfig(config: AppConfig): Logger {
   const enhancedLogger = createEnhancedLogger(config);
@@ -105,21 +109,60 @@ export const logger: Logger = createLogger({
   log: { level: 'info' },
   // 为满足 AppConfig 接口，提供模拟值。在实际应用中，应使用完整配置创建 Logger
   openai: { baseUrl: '', apiKey: '', model: '' },
+  llm: {
+    provider: 'openai',
+    apiKey: '',
+    baseUrl: '',
+    model: '',
+    maxTokens: 0,
+    temperature: 0,
+    timeout: 0,
+    semanticSplitting: {
+      enabled: false,
+      targetChunkSize: 1000,
+      chunkOverlap: 100,
+      maxChunks: 0,
+      strategy: 'balanced',
+      enableFallback: true,
+      fallbackStrategy: 'auto',
+      maxRetries: 1,
+      retryDelay: 0,
+      enableCache: false,
+      cacheTTL: 0,
+    },
+  },
   db: { type: 'sqlite', path: '' },
   qdrant: { url: '', collection: '', vectorSize: 0 },
   embedding: { batchSize: 0 },
   api: { port: 0 },
   gc: { intervalHours: 0 }, // 新增 gc 属性以符合 AppConfig 接口
+  rateLimit: {
+    enabled: false,
+    global: { enabled: false },
+    ip: { enabled: false },
+    user: { enabled: false },
+    path: { enabled: false },
+    search: { enabled: false },
+    upload: { enabled: false },
+    metrics: { enabled: false },
+    middleware: {
+      includeHeaders: false,
+      logEvents: false,
+      logOnlyBlocked: false,
+      skipHealthCheck: true,
+      skipOptions: true,
+    },
+  },
 });
 
 // 重新导出增强日志系统的相关类型和函数
 /**
  * 重新导出增强 Logger 相关的类型。
  */
-export type { EnhancedLogger, LogContext } from './enhanced-logger.js';
+export type { EnhancedLogger, LogContext } from './EnhancedLogger.js';
 
 /**
- * 重新导出增强 Logger 的实现与辅助工具。
+ * 重新导出增强 Logger 的实现与辅助工具（从 `EnhancedLogger` 单一源导出以避免重复）。
  */
 export {
   LogTag,
@@ -128,4 +171,4 @@ export {
   createEnhancedLogger,
   WinstonEnhancedLogger,
   LoggerAdapter,
-} from './enhanced-logger.js';
+} from './EnhancedLogger.js';

@@ -26,7 +26,7 @@ export {
 /**
  * 测试兼容性相关导出
  */
-export { testTypeORMCompatibility } from './test-compatibility.js';
+export { testTypeORMCompatibility } from './TestCompatibility.js';
 
 /**
  * 实体相关导出

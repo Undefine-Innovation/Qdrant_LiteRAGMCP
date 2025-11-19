@@ -33,11 +33,19 @@ export class Doc extends BaseEntity {
    * 软删除标记别名
    * 为了兼容代码中的 is_deleted 引用
    * 使用虚拟属性，映射到deleted字段
+   * @returns {boolean} 软删除状态
    */
   get is_deleted(): boolean {
     return this.deleted;
   }
 
+  /**
+   * 软删除标记别名
+   * 为了兼容代码中的 is_deleted 引用
+   * 使用虚拟属性，映射到deleted字段
+   * @param {boolean} value 软删除状态
+   * @returns {void}
+   */
   set is_deleted(value: boolean) {
     this.deleted = value;
   }
@@ -45,6 +53,7 @@ export class Doc extends BaseEntity {
   /**
    * 重写基类方法，禁止自动设置collectionId
    * 文档必须显式提供collectionId
+   * @returns {boolean} 始终返回false
    */
   protected shouldAutoSetCollectionId(): boolean {
     return false;
@@ -52,6 +61,7 @@ export class Doc extends BaseEntity {
 
   /**
    * 在插入前验证约束
+   * @returns {void}
    */
   @BeforeInsert()
   validateConstraints() {
@@ -293,6 +303,7 @@ export class Doc extends BaseEntity {
 
   /**
    * 开始处理
+   * @returns {void}
    */
   startProcessing(): void {
     this.status = 'processing';
@@ -303,6 +314,7 @@ export class Doc extends BaseEntity {
 
   /**
    * 完成处理
+   * @returns {void}
    */
   completeProcessing(): void {
     this.status = 'completed';
@@ -332,6 +344,7 @@ export class Doc extends BaseEntity {
 
   /**
    * 重置处理状态
+   * @returns {void}
    */
   resetProcessing(): void {
     this.status = 'new';
@@ -354,6 +367,7 @@ export class Doc extends BaseEntity {
 
   /**
    * 更新同步时间
+   * @returns {void}
    */
   updateSyncTime(): void {
     this.last_sync_at = Date.now();

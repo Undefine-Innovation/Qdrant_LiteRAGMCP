@@ -1,0 +1,200 @@
+{
+  "timestamp": "2025-11-18T06:33:59.189Z",
+  "failedTestSuites": [
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\qdrant-batch-performance.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.delete-restore.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\CollectionRepository.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\collection-management-service-immutability.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\collection-aggregate-immutability.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\batch-operations-performance.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\AdapterFactory.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.find.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.delete.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.create-update.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.query.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.pagination-update.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.statistics.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\PostgreSQLRepositoryAdapter.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\TypeORMTransactionManager.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\RateLimitStrategy.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\TransactionManager.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\LLMServiceFactory.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.validation.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\middlewares\\rateLimit.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\UnifiedMarkdownSplitter.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateFactory.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\SyncJobStatusMapper.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.events-coordination.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\SearchService.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.processing.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\sync\\SimplifiedSyncStateMachine.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\database\\adapters\\DatabaseHealthMonitor.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\coverage-config.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\DocumentAggregate.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\CollectionAggregate.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    }
+  ],
+  "summaryStats": {
+    "testSuites": {
+      "total": 36,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 6
+    },
+    "tests": {
+      "total": 623,
+      "passed": 498,
+      "failed": 0,
+      "skipped": 125
+    },
+    "duration": "65.61s"
+  }
+}

@@ -111,6 +111,7 @@ export abstract class DomainEventBase implements IDomainEvent {
 
   /**
    * 获取事件类型（与eventType相同，为了兼容性）
+   * @returns 事件类型
    */
   get type(): string {
     return this.eventType;
@@ -118,6 +119,7 @@ export abstract class DomainEventBase implements IDomainEvent {
 
   /**
    * 获取事件数据（作为属性访问）
+   * @returns 事件数据
    */
   get data(): Record<string, unknown> {
     return this.getData();

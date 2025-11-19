@@ -6,7 +6,7 @@ import {
   TransactionStatus,
 } from '@domain/repositories/ITransactionManager.js';
 import { TransactionCleanup } from '@infrastructure/transactions/TransactionCleanup.js';
-import { TransactionError } from '@infrastructure/transactions/TransactionErrorHandler.js';
+import { CoreError } from '@domain/errors/CoreError.js';
 
 /**
  * 事务状态管理器
@@ -29,13 +29,13 @@ export class TransactionStateManager {
   ): void {
     const context = activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     if (!context.parentTransactionId) {
-       
-      throw new TransactionError(
-        'INVALID_TRANSACTION_STATE' as any,
+      throw CoreError.internal(
         `Transaction ${transactionId} is not a nested transaction`,
         { transactionId },
       );
@@ -43,7 +43,9 @@ export class TransactionStateManager {
 
     const parentContext = activeTransactions.get(context.parentTransactionId);
     if (!parentContext) {
-      throw TransactionError.transactionNotFound(context.parentTransactionId);
+      throw CoreError.notFound(`Transaction ${context.parentTransactionId}`, {
+        transactionId: context.parentTransactionId,
+      });
     }
 
     // 将嵌套事务的操作合并到父事务
@@ -109,7 +111,9 @@ export class TransactionStateManager {
   ): Savepoint[] {
     const context = activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     return context.getSavepoints();
@@ -127,7 +131,9 @@ export class TransactionStateManager {
   ): boolean {
     const context = activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     return context.isNested();
@@ -145,7 +151,9 @@ export class TransactionStateManager {
   ): string | undefined {
     const context = activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     if (context.isRootTransaction) {

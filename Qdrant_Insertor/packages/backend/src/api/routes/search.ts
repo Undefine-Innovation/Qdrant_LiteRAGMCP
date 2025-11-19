@@ -6,7 +6,7 @@ import { validate, ValidatedRequest } from '@middleware/validate.js';
 import {
   SearchQuerySchema,
   SearchPaginatedQuerySchema,
-} from '../../api/contracts/search.js';
+} from '../../api/contracts/Search.js';
 import { Logger } from '@logging/logger.js';
 
 /**

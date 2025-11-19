@@ -1,559 +1,870 @@
-import { ErrorCode, AppError } from '@api/contracts/error.js';
+/**
+ * 统一错误工厂
+ * 提供统一的错误创建接口，替代现有的复杂ErrorFactory
+ */
+
 import {
-  TransactionError,
-  TransactionErrorType,
-} from '@infrastructure/transactions/TransactionErrorHandler.js';
-import { ErrorCategory } from '@domain/sync/retry.js';
+  CoreError,
+  ErrorType,
+  ErrorContext,
+  ErrorSeverity,
+  ErrorRecoveryStrategy,
+  getErrorTypeConfig,
+  getErrorTypeFromHttpStatus,
+  inferErrorTypeFromMessage,
+} from './CoreError.js';
 
 /**
- * 错误上下文接口
- */
-export interface ErrorContext {
-  /** 操作名称 */
-  operation?: string;
-  /** 用户ID */
-  userId?: string;
-  /** 请求ID */
-  requestId?: string;
-  /** 事务ID */
-  transactionId?: string;
-  /** 资源ID */
-  resourceId?: string;
-  /** 额外的上下文信息 */
-  [key: string]: unknown;
-}
-
-/**
- * 错误创建选项
- */
-export interface ErrorOptions {
-  /** 错误详情 */
-  details?: Record<string, unknown>;
-  /** 错误上下文 */
-  context?: ErrorContext;
-  /** 原始错误 */
-  cause?: Error;
-  /** HTTP状态码 */
-  httpStatus?: number;
-}
-
-/**
- * 错误工厂类
- * 提供统一的错误创建方法，确保错误格式的一致性和类型安全
+ * 统一错误工厂类
+ * 提供统一的错误创建接口，替代现有的复杂ErrorFactory
  */
 export class ErrorFactory {
   /**
    * 创建验证错误
-   * @param message 错误消息
-   * @param details 错误详情
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static createValidationError(
-    message: string = 'Validation failed.',
+  static validation(
+    message: string,
     details?: Record<string, unknown>,
     context?: ErrorContext,
-  ): AppError {
-    return new AppError(
-      ErrorCode.VALIDATION_ERROR,
-      message,
-      422,
-      this.mergeDetails(details, context),
-    );
+  ): CoreError {
+    return CoreError.validation(message, details, context);
   }
 
   /**
    * 创建未找到错误
-   * @param resource 资源名称
-   * @param resourceId 资源ID
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param resource - 资源名称
+   * @param resourceId - 资源ID
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static createNotFoundError(
-    resource: string = 'Resource',
+  static notFound(
+    resource: string,
     resourceId?: string,
     context?: ErrorContext,
-  ): AppError {
-    const message = resourceId
-      ? `${resource} with ID '${resourceId}' not found.`
-      : `${resource} not found.`;
-
-    return new AppError(
-      ErrorCode.NOT_FOUND,
-      message,
-      404,
-      this.mergeDetails({ resource, resourceId }, context),
-    );
+  ): CoreError {
+    return CoreError.notFound(resource, resourceId, context);
   }
 
   /**
    * 创建未授权错误
-   * @param message 错误消息
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static createUnauthorizedError(
-    message: string = 'Unauthorized access.',
+  static unauthorized(
+    message: string = 'Unauthorized access',
     context?: ErrorContext,
-  ): AppError {
-    return new AppError(
-      ErrorCode.UNAUTHORIZED,
-      message,
-      401,
-      this.mergeDetails(undefined, context),
-    );
+  ): CoreError {
+    return CoreError.unauthorized(message, context);
   }
 
   /**
    * 创建禁止访问错误
-   * @param message 错误消息
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static createForbiddenError(
-    message: string = 'Access forbidden.',
+  static forbidden(
+    message: string = 'Access forbidden',
     context?: ErrorContext,
-  ): AppError {
-    return new AppError(
-      ErrorCode.FORBIDDEN,
-      message,
-      403,
-      this.mergeDetails(undefined, context),
-    );
+  ): CoreError {
+    return CoreError.forbidden(message, context);
+  }
+
+  /**
+   * 创建冲突错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static conflict(
+    message: string = 'Resource conflict',
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.conflict(message, details, context);
+  }
+
+  /**
+   * 创建业务规则错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static businessRule(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.businessRule(message, details, context);
+  }
+
+  /**
+   * 创建基础设施错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static infrastructure(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.infrastructure(message, details, context, cause);
+  }
+
+  /**
+   * 创建配置错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static configuration(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.configuration(message, details, context);
   }
 
   /**
    * 创建内部服务器错误
-   * @param message 错误消息
-   * @param details 错误详情
-   * @param context 错误上下文
-   * @param cause 原始错误
-   * @returns AppError实例
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
    */
-  static createInternalServerError(
-    message: string = 'Internal server error.',
+  static internal(
+    message: string = 'Internal server error',
     details?: Record<string, unknown>,
     context?: ErrorContext,
     cause?: Error,
-  ): AppError {
-    const mergedDetails = this.mergeDetails(details, context);
-
-    // 如果有原始错误，添加到详情中
-    if (cause) {
-      mergedDetails.originalError = {
-        name: cause.name,
-        message: cause.message,
-        stack: process.env.NODE_ENV === 'development' ? cause.stack : undefined,
-      };
-    }
-
-    return new AppError(
-      ErrorCode.INTERNAL_ERROR, // 使用INTERNAL_ERROR以匹配测试期望
-      message,
-      500,
-      mergedDetails,
-    );
+  ): CoreError {
+    return CoreError.internal(message, details, context, cause);
   }
 
   /**
    * 创建服务不可用错误
-   * @param service 服务名称
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param service - 服务名称
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static createServiceUnavailableError(
+  static serviceUnavailable(
     service: string = 'Service',
     context?: ErrorContext,
-  ): AppError {
-    const message = `${service} is currently unavailable.`;
-    return new AppError(
-      ErrorCode.SERVICE_UNAVAILABLE,
-      message,
-      503,
-      this.mergeDetails({ service }, context),
-    );
+  ): CoreError {
+    return CoreError.serviceUnavailable(service, context);
   }
 
   /**
-   * 创建文件上传失败错误
-   * @param reason 失败原因
-   * @param filename 文件名
-   * @param context 错误上下文
-   * @returns AppError实例
+   * 创建数据库错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
    */
-  static createFileUploadFailedError(
-    reason: string,
-    filename?: string,
+  static database(
+    message: string,
+    details?: Record<string, unknown>,
     context?: ErrorContext,
-  ): AppError {
-    const message = filename
-      ? `File upload failed for '${filename}': ${reason}`
-      : `File upload failed: ${reason}`;
-
-    return new AppError(
-      ErrorCode.FILE_UPLOAD_FAILED,
-      message,
-      400,
-      this.mergeDetails({ reason, filename }, context),
-    );
+    cause?: Error,
+  ): CoreError {
+    return CoreError.database(message, details, context, cause);
   }
 
   /**
-   * 创建文档处理失败错误
-   * @param documentId 文档ID
-   * @param reason 失败原因
-   * @param context 错误上下文
-   * @returns AppError实例
+   * 创建网络错误
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
    */
-  static createDocumentProcessingFailedError(
-    documentId: string,
-    reason: string,
+  static network(
+    message: string,
+    details?: Record<string, unknown>,
     context?: ErrorContext,
-  ): AppError {
-    const message = `Document processing failed: ${reason}`;
-    return new AppError(
-      ErrorCode.DOCUMENT_PROCESSING_FAILED,
-      message,
-      500,
-      this.mergeDetails({ documentId, reason }, context),
-    );
+    cause?: Error,
+  ): CoreError {
+    return CoreError.network(message, details, context, cause);
   }
 
   /**
-   * 创建同步失败错误
-   * @param resourceId 资源ID
-   * @param reason 失败原因
-   * @param context 错误上下文
-   * @returns AppError实例
+   * 创建外部服务错误
+   * @param service - 服务名称
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
    */
-  static createSyncFailedError(
-    resourceId: string,
-    reason: string,
+  static externalService(
+    service: string,
+    message: string,
+    details?: Record<string, unknown>,
     context?: ErrorContext,
-  ): AppError {
-    const message = `Synchronization failed: ${reason}`;
-    return new AppError(
-      ErrorCode.SYNC_FAILED,
-      message,
-      500,
-      this.mergeDetails({ resourceId, reason }, context),
-    );
-  }
-
-  /**
-   * 创建无效输入错误
-   * @param field 字段名
-   * @param value 无效值
-   * @param reason 无效原因
-   * @param context 错误上下文
-   * @returns AppError实例
-   */
-  static createInvalidInputError(
-    field: string,
-    value: unknown,
-    reason: string,
-    context?: ErrorContext,
-  ): AppError {
-    const message = `Invalid input for field '${field}': ${reason}`;
-    return new AppError(
-      ErrorCode.INVALID_INPUT,
-      message,
-      400,
-      this.mergeDetails({ field, value, reason }, context),
-    );
-  }
-
-  /**
-   * 创建文件过大错误
-   * @param filename 文件名
-   * @param size 文件大小
-   * @param maxSize 最大允许大小
-   * @param context 错误上下文
-   * @returns AppError实例
-   */
-  static createFileTooLargeError(
-    filename?: string,
-    size?: number,
-    maxSize?: number,
-    context?: ErrorContext,
-  ): AppError {
-    const message = maxSize
-      ? `File size exceeds maximum limit of ${maxSize} bytes.`
-      : 'File size exceeds maximum limit.';
-
-    return new AppError(
-      ErrorCode.FILE_TOO_LARGE,
-      message,
-      413,
-      this.mergeDetails({ filename, size, maxSize }, context),
-    );
+    cause?: Error,
+  ): CoreError {
+    return CoreError.externalService(service, message, details, context, cause);
   }
 
   /**
    * 创建请求体过大错误
-   * @param resource 资源类型（如'query', 'payload'等）
-   * @param size 实际大小
-   * @param maxSize 最大允许大小
-   * @param context 错误上下文
-   * @returns AppError实例
+   * @param resource - 资源名称
+   * @param size - 实际大小
+   * @param maxSize - 最大允许大小
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static payloadTooLarge(
+    resource: string = 'Request payload',
+    size?: number,
+    maxSize?: number,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.payloadTooLarge(resource, size, maxSize, context);
+  }
+
+  /**
+   * 创建文件过大错误
+   * @param filename - 文件名
+   * @param size - 实际大小
+   * @param maxSize - 最大允许大小
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static fileTooLarge(
+    filename?: string,
+    size?: number,
+    maxSize?: number,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.fileTooLarge(filename, size, maxSize, context);
+  }
+
+  /**
+   * 创建不支持的文件类型错误
+   * @param filename - 文件名
+   * @param fileType - 文件类型
+   * @param supportedTypes - 支持的文件类型列表
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static unsupportedFileType(
+    filename?: string,
+    fileType?: string,
+    supportedTypes?: string[],
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.unsupportedFileType(
+      filename,
+      fileType,
+      supportedTypes,
+      context,
+    );
+  }
+
+  /**
+   * 从原始错误创建错误
+   * @param error - 原始错误
+   * @param context - 错误上下文
+   * @param defaultMessage - 默认错误消息
+   * @returns CoreError实例
+   */
+  static fromError(
+    error: Error,
+    context?: ErrorContext,
+    defaultMessage: string = 'An unexpected error occurred',
+  ): CoreError {
+    return CoreError.fromError(error, context, defaultMessage);
+  }
+
+  /**
+   * 从HTTP状态码创建错误
+   * @param httpStatus - HTTP状态码
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static fromHttpStatus(
+    httpStatus: number,
+    message?: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.fromHttpStatus(httpStatus, message, details, context);
+  }
+
+  // ==================== 向后兼容的方法 ====================
+
+  /**
+   * 创建验证错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createValidationError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.validation(message, details, context);
+  }
+
+  /**
+   * 创建未找到错误（向后兼容）
+   * @param resource - 资源名称
+   * @param resourceId - 资源ID
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createNotFoundError(
+    resource: string,
+    resourceId?: string,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.notFound(resource, resourceId, context);
+  }
+
+  /**
+   * 创建未授权错误（向后兼容）
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnauthorizedError(
+    message: string = 'Unauthorized access',
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.unauthorized(message, context);
+  }
+
+  /**
+   * 创建禁止访问错误（向后兼容）
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createForbiddenError(
+    message: string = 'Access forbidden',
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.forbidden(message, context);
+  }
+
+  /**
+   * 创建冲突错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createConflictError(
+    message: string = 'Resource conflict',
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.conflict(message, details, context);
+  }
+
+  /**
+   * 创建业务规则错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createBusinessRuleError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.businessRule(message, details, context);
+  }
+
+  /**
+   * 创建基础设施错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static createInfrastructureError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.infrastructure(message, details, context, cause);
+  }
+
+  /**
+   * 创建配置错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createConfigurationError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.configuration(message, details, context);
+  }
+
+  /**
+   * 创建内部服务器错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static createInternalServerError(
+    message: string = 'Internal server error',
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.internal(message, details, context, cause);
+  }
+
+  /**
+   * 创建服务不可用错误（向后兼容）
+   * @param service - 服务名称
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createServiceUnavailableError(
+    service: string = 'Service',
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.serviceUnavailable(service, context);
+  }
+
+  /**
+   * 创建数据库错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static createDatabaseError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.database(message, details, context, cause);
+  }
+
+  /**
+   * 创建网络错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static createNetworkError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.network(message, details, context, cause);
+  }
+
+  /**
+   * 创建外部服务错误（向后兼容）
+   * @param service - 服务名称
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @param cause - 原始错误
+   * @returns CoreError实例
+   */
+  static createExternalServiceError(
+    service: string,
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+    cause?: Error,
+  ): CoreError {
+    return CoreError.externalService(service, message, details, context, cause);
+  }
+
+  /**
+   * 创建请求体过大错误（向后兼容）
+   * @param resource - 资源名称
+   * @param size - 实际大小
+   * @param maxSize - 最大允许大小
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
   static createPayloadTooLargeError(
     resource: string = 'Request payload',
     size?: number,
     maxSize?: number,
     context?: ErrorContext,
-  ): AppError {
-    const message = maxSize
-      ? `${resource} exceeds maximum limit of ${maxSize} characters.`
-      : `${resource} exceeds maximum limit.`;
-
-    return new AppError(
-      ErrorCode.PAYLOAD_TOO_LARGE,
-      message,
-      413,
-      this.mergeDetails({ resource, size, maxSize }, context),
-    );
+  ): CoreError {
+    return CoreError.payloadTooLarge(resource, size, maxSize, context);
   }
 
   /**
-   * 创建不支持的文件类型错误
-   * @param filename 文件名
-   * @param fileType 文件类型
-   * @param supportedTypes 支持的类型列表
-   * @param context 错误上下文
-   * @returns AppError实例
+   * 创建文件过大错误（向后兼容）
+   * @param filename - 文件名
+   * @param size - 实际大小
+   * @param maxSize - 最大允许大小
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createFileTooLargeError(
+    filename?: string,
+    size?: number,
+    maxSize?: number,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.fileTooLarge(filename, size, maxSize, context);
+  }
+
+  /**
+   * 创建不支持的文件类型错误（向后兼容）
+   * @param filename - 文件名
+   * @param fileType - 文件类型
+   * @param supportedTypes - 支持的文件类型列表
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
   static createUnsupportedFileTypeError(
     filename?: string,
     fileType?: string,
     supportedTypes?: string[],
     context?: ErrorContext,
-  ): AppError {
-    const message = fileType
-      ? `File type '${fileType}' is not supported.`
-      : 'File type is not supported.';
-
-    return new AppError(
-      ErrorCode.UNSUPPORTED_FILE_TYPE,
-      message,
-      422,
-      this.mergeDetails({ filename, fileType, supportedTypes }, context),
+  ): CoreError {
+    return CoreError.unsupportedFileType(
+      filename,
+      fileType,
+      supportedTypes,
+      context,
     );
   }
 
   /**
-   * 从原始错误创建AppError
-   * @param error 原始错误
-   * @param context 错误上下文
-   * @param defaultMessage 默认错误消息
-   * @returns AppError实例
+   * 创建文件上传失败错误（向后兼容）
+   * @param filename - 文件名
+   * @param reason - 失败原因
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static fromError(
+  static createFileUploadFailedError(
+    filename?: string,
+    reason?: string,
+    context?: ErrorContext,
+  ): CoreError {
+    const message = reason
+      ? `File upload failed: ${reason}`
+      : 'File upload failed';
+    return CoreError.infrastructure(message, { filename, reason }, context);
+  }
+
+  /**
+   * 从原始错误创建错误（向后兼容）
+   * @param error - 原始错误
+   * @param context - 错误上下文
+   * @param defaultMessage - 默认错误消息
+   * @returns CoreError实例
+   */
+  static createFromError(
     error: Error,
     context?: ErrorContext,
-    defaultMessage: string = 'An unexpected error occurred.',
-  ): AppError {
-    if (error instanceof AppError) {
-      // 如果已经是AppError，合并上下文并返回
-      return new AppError(
-        error.code,
-        error.message,
-        error.httpStatus,
-        this.mergeDetails(error.details, context),
-      );
-    }
-
-    // 对于其他类型的错误，创建内部服务器错误
-    return this.createInternalServerError(
-      error.message || defaultMessage,
-      { originalErrorName: error.name },
-      context,
-      error,
-    );
+    defaultMessage?: string,
+  ): CoreError {
+    return CoreError.fromError(error, context, defaultMessage);
   }
 
-  /**
-   * 从事务错误创建AppError
-   * @param transactionError 事务错误
-   * @param context 错误上下文
-   * @returns AppError实例
-   */
-  static fromTransactionError(
-    transactionError: TransactionError,
-    context?: ErrorContext,
-  ): AppError {
-    // 根据事务错误类型映射到相应的ErrorCode
-    const errorCodeMap: Record<TransactionErrorType, ErrorCode> = {
-      [TransactionErrorType.TRANSACTION_NOT_FOUND]: ErrorCode.NOT_FOUND,
-      [TransactionErrorType.QUERY_RUNNER_NOT_FOUND]: ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.INVALID_TRANSACTION_STATE]:
-        ErrorCode.VALIDATION_ERROR,
-      [TransactionErrorType.OPERATION_EXECUTION_FAILED]:
-        ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.SAVEPOINT_ERROR]: ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.NESTED_TRANSACTION_ERROR]: ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.COMMIT_FAILED]: ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.ROLLBACK_FAILED]: ErrorCode.INTERNAL_ERROR,
-      [TransactionErrorType.DATABASE_CONNECTION_ERROR]:
-        ErrorCode.SERVICE_UNAVAILABLE,
-      [TransactionErrorType.TIMEOUT_ERROR]: ErrorCode.SERVICE_UNAVAILABLE,
-      [TransactionErrorType.CONSTRAINT_VIOLATION]: ErrorCode.VALIDATION_ERROR,
-    };
-
-    const errorCode =
-      errorCodeMap[transactionError.type] || ErrorCode.INTERNAL_ERROR;
-    const httpStatus = this.getHttpStatusForErrorCode(errorCode);
-
-    return new AppError(
-      errorCode,
-      transactionError.message,
-      httpStatus,
-      this.mergeDetails(
-        {
-          transactionErrorType: transactionError.type,
-          transactionId: transactionError.transactionId,
-          operation: transactionError.operation,
-          transactionDetails: transactionError.getDetails(),
-        },
-        context,
-      ),
-    );
-  }
+  // ==================== Unified错误方法（向后兼容） ====================
 
   /**
-   * 从错误分类创建AppError
-   * @param category 错误分类
-   * @param message 错误消息
-   * @param context 错误上下文
-   * @param cause 原始错误
-   * @returns AppError实例
+   * 创建统一验证错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  static fromErrorCategory(
-    category: ErrorCategory,
-    message?: string,
-    context?: ErrorContext,
-    cause?: Error,
-  ): AppError {
-    // 根据错误分类映射到相应的ErrorCode
-    const categoryToErrorCodeMap: Record<ErrorCategory, ErrorCode> = {
-      [ErrorCategory.NETWORK_CONNECTION]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.NETWORK_TIMEOUT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.NETWORK_DNS]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.DATABASE_CONNECTION]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.DATABASE_TIMEOUT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.DATABASE_CONSTRAINT]: ErrorCode.VALIDATION_ERROR,
-      [ErrorCategory.QDRANT_CONNECTION]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.QDRANT_CAPACITY]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.QDRANT_INVALID_VECTOR]: ErrorCode.VALIDATION_ERROR,
-      [ErrorCategory.EMBEDDING_RATE_LIMIT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.EMBEDDING_QUOTA_EXCEEDED]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.EMBEDDING_INVALID_INPUT]: ErrorCode.VALIDATION_ERROR,
-      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]:
-        ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.DOCUMENT_NOT_FOUND]: ErrorCode.NOT_FOUND,
-      [ErrorCategory.DOCUMENT_CORRUPTED]: ErrorCode.DOCUMENT_PROCESSING_FAILED,
-      [ErrorCategory.DOCUMENT_TOO_LARGE]: ErrorCode.FILE_TOO_LARGE,
-      [ErrorCategory.DOCUMENT_EMPTY]: ErrorCode.VALIDATION_ERROR,
-      [ErrorCategory.MEMORY_INSUFFICIENT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.DISK_SPACE_INSUFFICIENT]: ErrorCode.SERVICE_UNAVAILABLE,
-      [ErrorCategory.UNKNOWN]: ErrorCode.INTERNAL_ERROR,
-    };
-
-    const errorCode =
-      categoryToErrorCodeMap[category] || ErrorCode.INTERNAL_ERROR;
-    const httpStatus = this.getHttpStatusForErrorCode(errorCode);
-    const errorMessage = message || this.getDefaultMessageForCategory(category);
-
-    return new AppError(
-      errorCode,
-      errorMessage,
-      httpStatus,
-      this.mergeDetails({ errorCategory: category }, context),
-    );
-  }
-
-  /**
-   * 合并错误详情和上下文
-   * @param details 错误详情
-   * @param context 错误上下文
-   * @returns 合并后的详情对象
-   */
-  private static mergeDetails(
+  static createUnifiedValidationError(
+    message: string,
     details?: Record<string, unknown>,
     context?: ErrorContext,
-  ): Record<string, unknown> {
-    const merged: Record<string, unknown> = {};
-
-    if (details) {
-      Object.assign(merged, details);
-    }
-
-    if (context) {
-      Object.assign(merged, { context });
-    }
-
-    return merged;
+  ): CoreError {
+    return CoreError.validation(message, details, context);
   }
 
   /**
-   * 获取ErrorCode对应的HTTP状态码
-   * @param errorCode 错误码
-   * @returns HTTP状态码
+   * 创建统一数据库连接错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  private static getHttpStatusForErrorCode(errorCode: ErrorCode): number {
-    const statusMap: Record<ErrorCode, number> = {
-      [ErrorCode.VALIDATION_ERROR]: 422,
-      [ErrorCode.NOT_FOUND]: 404,
-      [ErrorCode.UNAUTHORIZED]: 401,
-      [ErrorCode.FORBIDDEN]: 403,
-      [ErrorCode.INTERNAL_ERROR]: 500,
-      [ErrorCode.INTERNAL_SERVER_ERROR]: 500, // 保留向后兼容
-      [ErrorCode.SERVICE_UNAVAILABLE]: 503,
-      [ErrorCode.FILE_UPLOAD_FAILED]: 400,
-      [ErrorCode.DOCUMENT_PROCESSING_FAILED]: 500,
-      [ErrorCode.SYNC_FAILED]: 500,
-      [ErrorCode.INVALID_INPUT]: 400,
-      [ErrorCode.FILE_TOO_LARGE]: 413,
-      [ErrorCode.UNSUPPORTED_FILE_TYPE]: 422,
-      [ErrorCode.PAYLOAD_TOO_LARGE]: 413,
-    };
-
-    return statusMap[errorCode] || 500;
+  static createUnifiedDatabaseConnectionError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.database(message, details, context);
   }
 
   /**
-   * 获取错误分类的默认消息
-   * @param category 错误分类
-   * @returns 默认错误消息
+   * 创建统一网络连接错误（向后兼容）
+   * @param message - 错误消息
+   * @param details - 错误详情
+   * @param context - 错误上下文
+   * @returns CoreError实例
    */
-  private static getDefaultMessageForCategory(category: ErrorCategory): string {
-    const messageMap: Record<ErrorCategory, string> = {
-      [ErrorCategory.NETWORK_CONNECTION]: 'Network connection error.',
-      [ErrorCategory.NETWORK_TIMEOUT]: 'Network timeout error.',
-      [ErrorCategory.NETWORK_DNS]: 'DNS resolution error.',
-      [ErrorCategory.DATABASE_CONNECTION]: 'Database connection error.',
-      [ErrorCategory.DATABASE_TIMEOUT]: 'Database timeout error.',
-      [ErrorCategory.DATABASE_CONSTRAINT]: 'Database constraint violation.',
-      [ErrorCategory.QDRANT_CONNECTION]: 'Vector database connection error.',
-      [ErrorCategory.QDRANT_CAPACITY]: 'Vector database capacity exceeded.',
-      [ErrorCategory.QDRANT_INVALID_VECTOR]: 'Invalid vector data.',
-      [ErrorCategory.EMBEDDING_RATE_LIMIT]:
-        'Embedding service rate limit exceeded.',
-      [ErrorCategory.EMBEDDING_QUOTA_EXCEEDED]:
-        'Embedding service quota exceeded.',
-      [ErrorCategory.EMBEDDING_INVALID_INPUT]:
-        'Invalid input for embedding service.',
-      [ErrorCategory.EMBEDDING_SERVICE_UNAVAILABLE]:
-        'Embedding service unavailable.',
-      [ErrorCategory.DOCUMENT_NOT_FOUND]: 'Document not found.',
-      [ErrorCategory.DOCUMENT_CORRUPTED]: 'Document corrupted or invalid.',
-      [ErrorCategory.DOCUMENT_TOO_LARGE]: 'Document size exceeds limit.',
-      [ErrorCategory.DOCUMENT_EMPTY]: 'Document is empty.',
-      [ErrorCategory.MEMORY_INSUFFICIENT]: 'Insufficient memory.',
-      [ErrorCategory.DISK_SPACE_INSUFFICIENT]: 'Insufficient disk space.',
-      [ErrorCategory.UNKNOWN]: 'An unknown error occurred.',
-    };
+  static createUnifiedNetworkConnectionError(
+    message: string,
+    details?: Record<string, unknown>,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.network(message, details, context);
+  }
 
-    return messageMap[category] || 'An unknown error occurred.';
+  /**
+   * 创建统一文件过大错误（向后兼容）
+   * @param filename - 文件名
+   * @param size - 实际大小
+   * @param maxSize - 最大允许大小
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnifiedFileTooLargeError(
+    filename?: string,
+    size?: number,
+    maxSize?: number,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.fileTooLarge(filename, size, maxSize, context);
+  }
+
+  /**
+   * 创建统一不支持的文件类型错误（向后兼容）
+   * @param filename - 文件名
+   * @param fileType - 文件类型
+   * @param supportedTypes - 支持的文件类型列表
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnifiedUnsupportedFileTypeError(
+    filename?: string,
+    fileType?: string,
+    supportedTypes?: string[],
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.unsupportedFileType(
+      filename,
+      fileType,
+      supportedTypes,
+      context,
+    );
+  }
+
+  /**
+   * 创建统一未授权错误（向后兼容）
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnifiedUnauthorizedError(
+    message: string = 'Unauthorized access',
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.unauthorized(message, context);
+  }
+
+  /**
+   * 创建统一禁止访问错误（向后兼容）
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnifiedForbiddenError(
+    message: string = 'Access forbidden',
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.forbidden(message, context);
+  }
+
+  /**
+   * 创建统一未找到错误（向后兼容）
+   * @param resource - 资源名称
+   * @param resourceId - 资源ID
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static createUnifiedNotFoundError(
+    resource: string,
+    resourceId?: string,
+    context?: ErrorContext,
+  ): CoreError {
+    return CoreError.notFound(resource, resourceId, context);
+  }
+
+  // ==================== 事务错误方法 ====================
+
+  /**
+   * 从事务错误创建错误（向后兼容）
+   * @param error - 原始错误
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static fromTransactionError(error: Error, context?: ErrorContext): CoreError {
+    return CoreError.fromError(error, context, 'Transaction error occurred');
+  }
+
+  /**
+   * 从错误分类创建错误（向后兼容）
+   * @param category - 错误分类
+   * @param message - 错误消息
+   * @param context - 错误上下文
+   * @returns CoreError实例
+   */
+  static fromErrorCategory(
+    category: string,
+    message: string,
+    context?: ErrorContext,
+  ): CoreError {
+    // 将错误分类映射到错误类型
+    let errorType: ErrorType;
+    switch (category.toLowerCase()) {
+      case 'validation':
+        errorType = ErrorType.VALIDATION_ERROR;
+        break;
+      case 'database':
+        errorType = ErrorType.DATABASE_ERROR;
+        break;
+      case 'network':
+        errorType = ErrorType.NETWORK_ERROR;
+        break;
+      case 'infrastructure':
+        errorType = ErrorType.INFRASTRUCTURE_ERROR;
+        break;
+      case 'business':
+        errorType = ErrorType.BUSINESS_RULE_VIOLATION;
+        break;
+      default:
+        errorType = ErrorType.INTERNAL_ERROR;
+    }
+
+    return new CoreError(errorType, message, { context });
+  }
+
+  // ==================== 错误分析工具 ====================
+
+  /**
+   * 判断错误是否应该重试
+   * @param error - 错误对象
+   * @returns 是否应该重试
+   */
+  static shouldRetry(error: Error): boolean {
+    if (error instanceof CoreError) {
+      return error.isTemporary();
+    }
+
+    // 对于其他类型的错误，根据消息推断
+    const errorType = inferErrorTypeFromMessage(error.message);
+    return (
+      errorType === ErrorType.NETWORK_ERROR ||
+      errorType === ErrorType.DATABASE_ERROR ||
+      errorType === ErrorType.EXTERNAL_SERVICE_ERROR
+    );
+  }
+
+  /**
+   * 判断错误是否应该发送告警
+   * @param error - 错误对象
+   * @returns 是否应该发送告警
+   */
+  static shouldAlert(error: Error): boolean {
+    if (error instanceof CoreError) {
+      return error.shouldAlert;
+    }
+
+    // 对于其他类型的错误，根据消息推断
+    const errorType = inferErrorTypeFromMessage(error.message);
+    return (
+      errorType === ErrorType.CONFIGURATION_ERROR ||
+      errorType === ErrorType.INTERNAL_ERROR ||
+      errorType === ErrorType.DATABASE_ERROR
+    );
+  }
+
+  /**
+   * 获取错误的严重级别
+   * @param error - 错误对象
+   * @returns 错误严重级别
+   */
+  static getErrorSeverity(error: Error): string {
+    if (error instanceof CoreError) {
+      return error.severity;
+    }
+
+    // 对于其他类型的错误，根据消息推断
+    const errorType = inferErrorTypeFromMessage(error.message);
+    const config = getErrorTypeConfig(errorType);
+    return config.defaultSeverity;
+  }
+
+  /**
+   * 获取错误的恢复策略
+   * @param error - 错误对象
+   * @returns 错误恢复策略
+   */
+  static getRecoveryStrategy(error: Error): string {
+    if (error instanceof CoreError) {
+      return error.recoveryStrategy;
+    }
+
+    // 对于其他类型的错误，根据消息推断
+    const errorType = inferErrorTypeFromMessage(error.message);
+    const config = getErrorTypeConfig(errorType);
+    return config.defaultRecoveryStrategy;
+  }
+
+  /**
+   * 合并错误上下文
+   * @param baseContext - 基础上下文
+   * @param additionalContext - 附加上下文
+   * @returns 合并后的错误上下文
+   */
+  static mergeContext(
+    baseContext?: ErrorContext,
+    additionalContext?: ErrorContext,
+  ): ErrorContext | undefined {
+    if (!baseContext && !additionalContext) return undefined;
+    if (!baseContext) return additionalContext;
+    if (!additionalContext) return baseContext;
+
+    return { ...baseContext, ...additionalContext };
   }
 }
+
+// 向后兼容的别名
+export const SimplifiedErrorFactory = ErrorFactory;

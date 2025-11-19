@@ -1,8 +1,9 @@
-import { DataSource, FindOptionsWhere, Not } from 'typeorm';
+import { DataSource, FindOptionsWhere, Not, FindManyOptions } from 'typeorm';
 import {
   BaseRepository,
   PaginationOptions,
-  PaginatedResult,
+  PaginationResult,
+  QueryOptions,
 } from './BaseRepository.js';
 import { Collection } from '../entities/Collection.js';
 import { Logger } from '@logging/logger.js';
@@ -12,6 +13,7 @@ import { CollectionId } from '@domain/entities/types.js';
  * 集合Repository
  * 提供集合相关的数据库操作
  * 优化了查询性能和批量操作
+ * 使用统一的BaseRepository减少重复代码
  */
 export class CollectionRepository extends BaseRepository<Collection> {
   /**
@@ -30,19 +32,12 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async findByName(name: string): Promise<Collection | null> {
     try {
-      const result = await this.repository!.findOne({
-        where: {
-          name,
-          deleted: false,
-        } as FindOptionsWhere<Collection>,
-      });
-      return result || null;
+      const options: QueryOptions<Collection> = {
+        where: { name, deleted: false },
+      };
+      return await this.findOneBy(options.where as unknown as FindOptionsWhere<Collection>);
     } catch (error) {
-      this.logger.error(`根据名称查找集合失败`, {
-        name,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('根据名称查找集合', error, { name });
     }
   }
 
@@ -65,19 +60,12 @@ export class CollectionRepository extends BaseRepository<Collection> {
     collectionId: CollectionId,
   ): Promise<Collection | null> {
     try {
-      const result = await this.repository!.findOne({
-        where: {
-          collectionId,
-          deleted: false,
-        } as FindOptionsWhere<Collection>,
-      });
-      return result || null;
+      const options: QueryOptions<Collection> = {
+        where: { collectionId, deleted: false },
+      };
+      return await this.findOneBy(options.where as unknown as FindOptionsWhere<Collection>);
     } catch (error) {
-      this.logger.error(`根据集合ID查找集合失败`, {
-        collectionId,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('根据集合ID查找集合', error, { collectionId });
     }
   }
 
@@ -87,19 +75,13 @@ export class CollectionRepository extends BaseRepository<Collection> {
    */
   async findAllActive(): Promise<Collection[]> {
     try {
-      const results = await this.repository!.find({
-        where: {
-          deleted: false,
-          status: 'active',
-        } as FindOptionsWhere<Collection>,
+      const options: QueryOptions<Collection> = {
+        where: { deleted: false, status: 'active' },
         order: { created_at: 'DESC' },
-      });
-      return results;
+      };
+      return await this.findAll(options as unknown as FindManyOptions<Collection>);
     } catch (error) {
-      this.logger.error(`获取所有活跃集合失败`, {
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('获取所有活跃集合', error);
     }
   }
 
@@ -112,9 +94,8 @@ export class CollectionRepository extends BaseRepository<Collection> {
   async findWithPagination(
     paginationOptions: PaginationOptions = {},
     status?: 'active' | 'inactive' | 'archived',
-  ): Promise<PaginatedResult<Collection>> {
+  ): Promise<PaginationResult<Collection>> {
     try {
-      // 创建QueryBuilder而不是使用where条件对象
       const queryBuilder = this.createQueryBuilder('collection').where(
         'collection.deleted = :deleted',
         { deleted: false },
@@ -126,12 +107,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
 
       return await super.findWithPagination(paginationOptions, queryBuilder);
     } catch (error) {
-      this.logger.error(`分页获取集合失败`, {
-        paginationOptions,
-        status,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('分页获取集合', error, { paginationOptions, status });
     }
   }
 
@@ -144,7 +120,7 @@ export class CollectionRepository extends BaseRepository<Collection> {
   async findPaginated(
     page: number,
     limit: number,
-  ): Promise<PaginatedResult<Collection>> {
+  ): Promise<PaginationResult<Collection>> {
     const paginationOptions: PaginationOptions = { page, limit };
     return await this.findWithPagination(paginationOptions);
   }
@@ -199,15 +175,10 @@ export class CollectionRepository extends BaseRepository<Collection> {
         whereCondition.id = Not(excludeId);
       }
 
-      const count = await this.repository!.count({ where: whereCondition });
+      const count = await this.count(whereCondition);
       return count > 0;
     } catch (error) {
-      this.logger.error(`检查集合名称存在性失败`, {
-        name,
-        excludeId,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('检查集合名称存在性', error, { name, excludeId });
     }
   }
 
@@ -223,13 +194,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
         whereCondition.status = status;
       }
 
-      return await this.repository!.count({ where: whereCondition });
+      return await this.count(whereCondition);
     } catch (error) {
-      this.logger.error(`获取集合总数失败`, {
-        status,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('获取集合总数', error, { status });
     }
   }
 
@@ -250,15 +217,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
         queryBuilder.limit(limit);
       }
 
-      const results = await queryBuilder.getMany();
-      return results;
+      return await queryBuilder.getMany();
     } catch (error) {
-      this.logger.error(`根据前缀查找集合失败`, {
-        prefix,
-        limit,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('根据前缀查找集合', error, { prefix, limit });
     }
   }
 
@@ -279,15 +240,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
         queryBuilder.limit(limit);
       }
 
-      const results = await queryBuilder.getMany();
-      return results;
+      return await queryBuilder.getMany();
     } catch (error) {
-      this.logger.error(`根据后缀查找集合失败`, {
-        suffix,
-        limit,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('根据后缀查找集合', error, { suffix, limit });
     }
   }
 
@@ -328,15 +283,9 @@ export class CollectionRepository extends BaseRepository<Collection> {
 
       queryBuilder.orderBy('collection.created_at', 'DESC');
 
-      const results = await queryBuilder.getMany();
-      return results;
+      return await queryBuilder.getMany();
     } catch (error) {
-      this.logger.error(`模糊搜索集合失败`, {
-        searchText,
-        options,
-        error: (error as Error).message,
-      });
-      throw error;
+      this.handleError('模糊搜索集合', error, { searchText, options });
     }
   }
 

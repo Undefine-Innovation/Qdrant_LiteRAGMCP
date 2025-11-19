@@ -3,6 +3,7 @@
  * @description 配置项目的ESLint规则，包括TypeScript和JSDoc规则
  */
 const js = require("@eslint/js");
+const path = require('path');
 /**
  * TypeScript ESLint 配置
  * @description 提供TypeScript相关的ESLint规则
@@ -23,8 +24,12 @@ module.exports = tseslint.config(
         languageOptions: {
             // Ensure typescript-eslint parser can locate correct tsconfig for this package.
             parserOptions: {
-                tsconfigRootDir: __dirname,
-                project: ['./tsconfig.json'],
+                tsconfigRootDir: process.cwd(),
+                project: [
+                    // Resolve tsconfig paths to absolute locations so ESLint can find them
+                    path.resolve(__dirname, '..', 'packages', 'backend', 'tsconfig.json'),
+                    path.resolve(__dirname, 'tsconfig.json'),
+                ],
             },
             globals: {
                 console: "readonly",
@@ -81,9 +86,9 @@ module.exports = tseslint.config(
             "jsdoc/require-jsdoc": "off",
             
             // 建议：同时启用 JSDoc 内容完整性检查
-            "jsdoc/require-param": "off", // 开启参数要求
-            "jsdoc/require-returns": "off", // 开启返回值要求
-            "jsdoc/require-description": "off", // 开启描述要求
+            "jsdoc/require-param": "error", // 开启参数要求
+            "jsdoc/require-returns": "error", // 开启返回值要求
+            "jsdoc/require-description": "error", // 开启描述要求
         },
     }
 );

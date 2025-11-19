@@ -63,6 +63,8 @@ export interface Doc {
 
   // 向后兼容字段
   docId?: DocId; // 向后兼容，实际使用id字段
+  // Optional error message field used by some repositories
+  error_message?: string | null;
 }
 
 /** chunk_meta +（非持久化）回表得到的文本*/
@@ -152,6 +154,8 @@ export type UnifiedSearchResult = SearchResult;
 export interface DocumentChunk {
   content: string; // The text content of the chunk. / 文本块的内容�?
   titleChain?: string[]; // The hierarchy of titles leading to this chunk. / 指向此块的标题层次结构�?
+  wordCount?: number;
+  tokenCount?: number;
 }
 
 // 向后兼容：某些基础设施/处理器实现会在 DocumentChunk 中包含索引与标题字段
@@ -159,6 +163,12 @@ export interface DocumentChunk {
 export interface DocumentChunk {
   index?: number;
   title?: string;
+  // 向后兼容：一些实现会把这些字段加入到 chunk 对象里，设置为可选
+  chunkIndex?: number;
+  pointId?: PointId;
+  collectionId?: CollectionId;
+  wordCount?: number;
+  tokenCount?: number;
 }
 
 // ---------------------------------------------

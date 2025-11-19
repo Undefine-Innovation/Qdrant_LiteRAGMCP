@@ -25,6 +25,11 @@ export class ChunkTimeQueries extends BaseRepository<Chunk> {
 
   /**
    * 根据时间范围查找块
+   * @param fieldNameOrStartTime - 字段名或开始时间
+   * @param startTimeOrEndTime - 开始时间或结束时间
+   * @param endTimeOrOptions - 结束时间或查询选项
+   * @param options - 查询选项
+   * @returns 块数组
    */
   async findByTimeRange(
     fieldNameOrStartTime: string | number,

@@ -52,5 +52,30 @@ module.exports = (request, options) => {
     }
   }
 
+  // Handle utils directory specifically
+  if (isRelative && !fromNodeModules && request.includes('utils')) {
+    // If it's just 'utils', try utils/index.ts
+    if (request === '../utils' || request === './utils') {
+      const utilsIndexTs = request + '/index.ts';
+      try {
+        return resolveRequest(utilsIndexTs, options);
+      } catch {
+        // Fall back to original request
+        return resolveRequest(request, options);
+      }
+    }
+    
+    // If it's utils/something, try utils/something.ts
+    if (request.startsWith('../utils/') || request.startsWith('./utils/')) {
+      const utilsFileTs = request + '.ts';
+      try {
+        return resolveRequest(utilsFileTs, options);
+      } catch {
+        // Fall back to original request
+        return resolveRequest(request, options);
+      }
+    }
+  }
+
   return resolveRequest(request, options);
 };

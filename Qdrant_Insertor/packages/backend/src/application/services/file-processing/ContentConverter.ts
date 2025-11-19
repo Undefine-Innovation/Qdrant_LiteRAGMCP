@@ -1,32 +1,31 @@
-import { DocId } from '@domain/entities/types.js';
+import { Doc, DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/error.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { AppError } from '@api/contracts/Error.js';
+import { promises as fs } from 'fs';
+
+type StoredDoc = Pick<Doc, 'name' | 'key' | 'content'>;
 
 /**
- * 内容转换器
- * 负责将文档内容转换为不同格式
+ * 内容转换器。
+ * 负责提供 Markdown 转 HTML、PDF/Word 文本提取和通用内容读取的能力。
  */
 export class ContentConverter {
   private readonly CACHE_DIR = './file_cache';
 
   /**
-   * 创建内容转换器实例
-   * @param sqliteRepo SQLite 仓库实例
+   * 创建内容转换器实例。
+   * @param sqliteRepo SQLite 仓库实现
    */
   constructor(private readonly sqliteRepo: ISQLiteRepo) {
     this.ensureDirectoryExists(this.CACHE_DIR);
   }
 
   /**
-   * 将Markdown转换为HTML
-   * @param markdown - Markdown内容
-   * @returns HTML内容
+   * 将 Markdown 转换为 HTML。
+   * @param markdown Markdown 原始文本
+   * @returns 简单 HTML 片段
    */
   public async convertMarkdownToHtml(markdown: string): Promise<string> {
-    // 简单的Markdown到HTML转换
-    // 在实际项目中，应该使用专门的Markdown解析库如marked或markdown-it
     const convertedHtml = markdown
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -40,9 +39,7 @@ export class ContentConverter {
       .replace(/`([^`]*)`/gim, '<code>$1</code>')
       .replace(/```([^`]*)```/gims, '<pre><code>$1</code></pre>');
 
-    // 包装在基本的HTML结构中
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -62,43 +59,38 @@ export class ContentConverter {
   }
 
   /**
-   * 从PDF提取文本（简化实现）
-   * @param docId - 文档ID
-   * @returns 提取的文本
+   * 简化的 PDF 文本提取。
+   * @param docId 文档 ID
+   * @returns 预览文本
    */
   public async extractTextFromPdf(docId: DocId): Promise<string> {
-    // 在实际项目中，应该使用pdf-parse或类似的库
-    // 这里返回一个占位符
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    return `PDF文档预览：${doc?.name || '未知文档'}\n\n注意：PDF文本提取功能需要额外的库支持。`;
+    const doc = (await this.sqliteRepo.docs.getById(docId)) as StoredDoc | null;
+    const docName = doc?.name ?? '未知文档';
+    return `PDF文档预览：${docName}\n\n注意：PDF文本提取功能需要额外的库支持。`;
   }
 
   /**
-   * 从Word文档提取文本（简化实现）
-   * @param docId - 文档ID
-   * @returns 提取的文本
+   * 简化的 Word 文本提取。
+   * @param docId 文档 ID
+   * @returns 预览文本
    */
   public async extractTextFromWord(docId: DocId): Promise<string> {
-    // 在实际项目中，应该使用mammoth.js或类似的库
-    // 这里返回一个占位符
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    return `Word文档预览：${doc?.name || '未知文档'}\n\n注意：Word文档文本提取功能需要额外的库支持。`;
+    const doc = (await this.sqliteRepo.docs.getById(docId)) as StoredDoc | null;
+    const docName = doc?.name ?? '未知文档';
+    return `Word文档预览：${docName}\n\n注意：Word 文本提取功能需要额外的库支持。`;
   }
 
   /**
-   * 获取文档内容
-   * @param docId - 文档ID
-   * @returns 文档内容
+   * 读取文档内容。
+   * @param docId 文档 ID
+   * @returns 文本内容
    */
   public async getDocumentContent(docId: DocId): Promise<string> {
-    // 这里需要从数据库获取文档内容
-    // 由于当前的DocsTable没有直接返回content字段，我们需要特殊处理
-    const doc = await this.sqliteRepo.docs.getById(docId);
+    const doc = (await this.sqliteRepo.docs.getById(docId)) as StoredDoc | null;
     if (!doc) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
-    // 如果文档有key字段，尝试从文件系统读取
     if (doc.key && !doc.key.startsWith('uploaded_')) {
       try {
         return await fs.readFile(doc.key, 'utf-8');
@@ -107,13 +99,25 @@ export class ContentConverter {
       }
     }
 
-    // 返回默认内容或抛出错误
-    return doc.content || '';
+    const rawContent = doc.content;
+    if (typeof rawContent === 'string') {
+      return rawContent;
+    }
+    if (rawContent && typeof rawContent === 'object') {
+      if (Buffer.isBuffer(rawContent)) {
+        return (rawContent as Buffer).toString('utf-8');
+      }
+      if (ArrayBuffer.isView(rawContent)) {
+        return Buffer.from(rawContent as Uint8Array).toString('utf-8');
+      }
+    }
+
+    return '';
   }
 
   /**
-   * 确保目录存在
-   * @param dirPath - 目录路径
+   * 确保缓存目录存在。
+   * @param dirPath 目录路径
    */
   private async ensureDirectoryExists(dirPath: string): Promise<void> {
     try {

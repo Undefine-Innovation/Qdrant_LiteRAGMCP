@@ -15,7 +15,7 @@ import {
   TransactionOperationType,
 } from '@domain/repositories/ITransactionManager.js';
 import { Logger, EnhancedLogger, LogTag } from '@logging/logger.js';
-import { AppError } from '@api/contracts/error.js';
+import { AppError } from '@api/contracts/Error.js';
 import { CollectionAggregate } from '@domain/aggregates/index.js';
 import { ICollectionAggregateRepository } from '@domain/repositories/index.js';
 import { IEventPublisher } from '@domain/events/index.js';
@@ -265,13 +265,14 @@ export class CollectionService implements ICollectionService {
       }
     }
 
-    // 更新聚合
+    // 更新聚合（使用不可变操作）
+    let updatedAggregate = aggregate;
     if (name !== undefined && name !== aggregate.name) {
-      aggregate.updateName(name);
+      updatedAggregate = updatedAggregate.withName(name);
     }
 
     if (description !== undefined) {
-      aggregate.updateDescription(description);
+      updatedAggregate = updatedAggregate.withDescription(description);
     }
 
     // 验证聚合状态
@@ -287,7 +288,7 @@ export class CollectionService implements ICollectionService {
     }
 
     // 保存聚合（这会更新name和description）
-    await this.collectionRepository.save(aggregate);
+    await this.collectionRepository.save(updatedAggregate);
 
     collectionLogger?.debug('集合聚合已更新', undefined, {
       collectionId,
@@ -351,8 +352,8 @@ export class CollectionService implements ICollectionService {
     }
 
     // 发布领域事件
-    await this.eventPublisher.publishBatch(aggregate.getDomainEvents());
-    aggregate.clearDomainEvents();
+    await this.eventPublisher.publishBatch(updatedAggregate.getDomainEvents());
+    updatedAggregate.clearDomainEvents();
 
     collectionLogger?.debug('集合领域事件已发布', undefined, {
       collectionId,
@@ -373,13 +374,13 @@ export class CollectionService implements ICollectionService {
     });
 
     return {
-      id: aggregate.id,
-      collectionId: aggregate.id,
-      name: aggregate.name,
-      description: aggregate.description,
+      id: updatedAggregate.id,
+      collectionId: updatedAggregate.id,
+      name: updatedAggregate.name,
+      description: updatedAggregate.description,
       status: 'active' as const, // 默认状态
-      created_at: aggregate.createdAt,
-      updated_at: aggregate.updatedAt,
+      created_at: updatedAggregate.createdAt,
+      updated_at: updatedAggregate.updatedAt,
     };
   }
 

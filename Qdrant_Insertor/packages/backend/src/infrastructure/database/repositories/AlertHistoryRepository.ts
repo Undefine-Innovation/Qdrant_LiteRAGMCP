@@ -4,47 +4,49 @@ import { AlertHistory } from '../entities/index.js';
 import { BaseRepository } from './BaseRepository.js';
 
 /**
- * AlertHistory Repositoryʵ��
- * �̳�BaseRepository���ṩAlertHistory�ض������ݿ����
+ * AlertHistory 仓库实现
+ *
+ * 继承 BaseRepository，提供 AlertHistory 的数据库操作方法
  */
 export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
   /**
-   * ����AlertHistoryRepositoryʵ��
-   * @param dataSource TypeORM����Դ
-   * @param logger ��־��¼��
+   * 创建 AlertHistoryRepository 实例
+   * @param dataSource TypeORM 数据源
+   * @param logger 日志记录器
    */
   constructor(dataSource: DataSource, logger: Logger) {
     super(dataSource, AlertHistory, logger);
   }
 
   /**
-   * ���ݸ澯����ID��ȡ�澯��ʷ
-   * @param ruleId �澯����ID
-   * @param limit ��������
-   * @returns �澯��ʷ����
+   * 根据规则 ID 获取告警历史
+   * @param ruleId 规则 ID
+   * @param limit 返回条数上限
+   * @returns 告警历史列表
    */
   async findByRuleId(
     ruleId: string,
     limit: number = 100,
   ): Promise<AlertHistory[]> {
     try {
-      return await this.repository.find({
+      const repository = this.getRepository();
+      return await repository.find({
         where: { rule_id: ruleId },
         order: { created_at: 'DESC' },
         take: limit,
       });
     } catch (error) {
-      this.logger.error('���ݸ澯����ID��ȡ�澯��ʷʧ��', { error });
+      this.logger.error('根据规则 ID 获取告警历史失败', { error });
       throw error;
     }
   }
 
   /**
-   * ����ʱ�䷶Χ��ȡ�澯��ʷ
-   * @param fieldName ʱ���ֶ�
-   * @param startTime ��ʼʱ��
-   * @param endTime ����ʱ��
-   * @param options ��ѡ��ѯ����
+   * 按时间范围获取告警历史
+   * @param fieldName 时间字段名
+   * @param startTime 开始时间（时间戳）
+   * @param endTime 结束时间（时间戳）
+   * @param options 可选查询参数
    * @returns AlertHistory[]
    */
   async findByTimeRange(
@@ -61,10 +63,10 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
   }
 
   /**
-   * �Դ��� triggered_at �ֶβ�ѯ�澯��ʷ
-   * @param startTime ��ʼʱ��
-   * @param endTime ����ʱ��
-   * @param limit ��������
+   * 基于 `triggered_at` 字段查询告警历史
+   * @param startTime 开始时间（时间戳）
+   * @param endTime 结束时间（时间戳）
+   * @param limit 返回条数上限
    * @returns AlertHistory[]
    */
   async findByTriggeredAtRange(
@@ -79,9 +81,9 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
   }
 
   /**
-   * �������س̶Ȼ�ȡ�澯
-   * @param severity �����ȼ�
-   * @param limit ����
+   * 按严重级别获取告警
+   * @param severity 严重级别
+   * @param limit 返回条数上限
    * @returns AlertHistory[]
    */
   async findBySeverity(
@@ -89,21 +91,22 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
     limit: number = 100,
   ): Promise<AlertHistory[]> {
     try {
-      return await this.repository.find({
+      const repository = this.getRepository();
+      return await repository.find({
         where: { severity },
         order: { triggered_at: 'DESC' },
         take: limit,
       });
     } catch (error) {
-      this.logger.error('�������س̶Ȼ�ȡ�澯ʧ��', { error });
+      this.logger.error('按严重级别获取告警失败', { error });
       throw error;
     }
   }
 
   /**
-   * ����״̬��ȡ�澯
-   * @param status ״̬
-   * @param limit ����
+   * 按状态获取告警
+   * @param status 状态
+   * @param limit 返回条数上限
    * @returns AlertHistory[]
    */
   async findByStatus(
@@ -111,23 +114,24 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
     limit: number = 100,
   ): Promise<AlertHistory[]> {
     try {
-      return await this.repository.find({
+      const repository = this.getRepository();
+      return await repository.find({
         where: { status },
         order: { triggered_at: 'DESC' },
         take: limit,
       });
     } catch (error) {
-      this.logger.error('����״̬��ȡ�澯ʧ��', { error });
+      this.logger.error('按状态获取告警失败', { error });
       throw error;
     }
   }
 
   /**
-   * ���¸澯״̬
-   * @param id ����ID
-   * @param status ״̬
-   * @param resolvedAt ����ʱ��
-   * @returns �Ƿ����½�
+   * 更新单条告警状态
+   * @param id 告警 ID
+   * @param status 状态
+   * @param resolvedAt 解决时间（可选，时间戳）
+   * @returns 是否更新成功
    */
   async updateStatus(
     id: string,
@@ -141,19 +145,20 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
       if (resolvedAt) {
         updateData.resolved_at = resolvedAt;
       }
-      const result = await this.repository.update({ id }, updateData);
+      const repository = this.getRepository();
+      const result = await repository.update({ id }, updateData);
       return (result.affected || 0) > 0;
     } catch (error) {
-      this.logger.error('���¸澯״̬ʧ��', { error, id });
+      this.logger.error('更新告警状态失败', { error, id });
       throw error;
     }
   }
 
   /**
-   * �������¸澯״̬
-   * @param ids ����ID�б�
-   * @param status ״̬
-   * @returns ����������
+   * 批量更新告警状态
+   * @param ids 告警 ID 列表
+   * @param status 状态
+   * @returns 受影响的记录数
    */
   async updateStatusBatch(
     ids: string[],
@@ -163,21 +168,23 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
       if (ids.length === 0) {
         return 0;
       }
-      const result = await this.repository!.createQueryBuilder()
+      const repository = this.getRepository();
+      const result = await repository
+        .createQueryBuilder()
         .update(AlertHistory)
         .set({ status })
         .whereInIds(ids)
         .execute();
       return result.affected || 0;
     } catch (error) {
-      this.logger.error('�������¸澯״̬ʧ��', { error });
+      this.logger.error('批量更新告警状态失败', { error });
       throw error;
     }
   }
 
   /**
-   * ��ȡ�澯ͳ����Ϣ
-   * @returns ��Ϣͳ��
+   * 获取告警统计信息
+   * @returns 统计信息对象
    */
   async getAlertStats(): Promise<{
     total: number;
@@ -186,32 +193,35 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
     suppressed: number;
   }> {
     try {
-      const total = await this.repository.count();
-      const triggered = await this.repository.count({
+      const repository = this.getRepository();
+      const total = await repository.count();
+      const triggered = await repository.count({
         where: { status: 'triggered' },
       });
-      const resolved = await this.repository.count({
+      const resolved = await repository.count({
         where: { status: 'resolved' },
       });
-      const suppressed = await this.repository.count({
+      const suppressed = await repository.count({
         where: { status: 'suppressed' },
       });
       return { total, triggered, resolved, suppressed };
     } catch (error) {
-      this.logger.error('��ȡ�澯ͳ��ʧ��', { error });
+      this.logger.error('获取告警统计失败', { error });
       throw error;
     }
   }
 
   /**
-   * �����ѽ���ĸ澯ʷ������������
-   * @param daysOld �����쳣������
-   * @returns ɾ��������
+   * 清理已解决且早于指定天数的告警历史
+   * @param daysOld 天数，默认 30 天
+   * @returns 删除的记录数
    */
   async cleanupResolvedAlerts(daysOld: number = 30): Promise<number> {
     try {
       const beforeTime = Date.now() - daysOld * 24 * 60 * 60 * 1000;
-      const result = await this.repository!.createQueryBuilder()
+      const repository = this.getRepository();
+      const result = await repository
+        .createQueryBuilder()
         .delete()
         .from(AlertHistory)
         .where('status = :status AND triggered_at < :beforeTime', {
@@ -221,7 +231,7 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
         .execute();
       return result.affected || 0;
     } catch (error) {
-      this.logger.error('�����ѽ���ĸ澯ʧ��', { error });
+      this.logger.error('清理已解决告警失败', { error });
       throw error;
     }
   }

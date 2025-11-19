@@ -95,7 +95,7 @@ export class AlertServiceCore {
       // 获取最新指标值
       const latestMetric = this.sqliteRepo.systemMetrics.getLatestByName(
         rule.metricName,
-      );
+      ) as SystemMetric | null;
       if (!latestMetric) {
         this.logger.debug(`指标 ${rule.metricName} 没有数据，跳过告警检查`);
         return;
@@ -103,7 +103,7 @@ export class AlertServiceCore {
 
       // 评估告警条件
       const isTriggered = this.evaluateCondition(
-        latestMetric.metricValue ?? 0,
+        (latestMetric as SystemMetric).metricValue ?? 0,
         rule.conditionOperator,
         rule.thresholdValue,
       );
@@ -112,7 +112,7 @@ export class AlertServiceCore {
 
       if (isTriggered && !existingAlert) {
         // 触发新告警
-        await this.triggerAlert(rule, latestMetric);
+        await this.triggerAlert(rule, latestMetric as SystemMetric);
       } else if (!isTriggered && existingAlert) {
         // 解决告警
         await this.resolveAlert(rule.id);
@@ -171,7 +171,7 @@ export class AlertServiceCore {
       id: alertId,
       ruleId: rule.id,
       ruleName: rule.name,
-      metricValue: metric.metricValue ?? 0,
+      metricValue: (metric as SystemMetric).metricValue ?? 0,
       thresholdValue: rule.thresholdValue,
       severity: rule.severity,
       status: 'triggered',
@@ -183,7 +183,7 @@ export class AlertServiceCore {
     // 保存告警历史
     this.sqliteRepo.alertHistory.create({
       ruleId: rule.id,
-      metricValue: metric.metricValue ?? 0,
+      metricValue: (metric as SystemMetric).metricValue ?? 0,
       thresholdValue: rule.thresholdValue,
       severity: rule.severity,
       status: 'triggered',
@@ -203,7 +203,7 @@ export class AlertServiceCore {
     this.logger.warn(`告警触发: ${rule.name}`, {
       ruleId: rule.id,
       metricName: rule.metricName,
-      metricValue: metric.metricValue ?? 0,
+      metricValue: (metric as SystemMetric).metricValue ?? 0,
       threshold: rule.thresholdValue,
       severity: rule.severity,
     });
@@ -262,7 +262,7 @@ export class AlertServiceCore {
     }[rule.severity];
 
     let message = `告警: ${rule.name} (${severityText}严重程度)\n`;
-    message += `指标 ${rule.metricName} 的值${metric.metricValue ?? 0} ${operatorText} 阈值${rule.thresholdValue}`;
+    message += `指标 ${rule.metricName} 的值${(metric as SystemMetric).metricValue ?? 0} ${operatorText} 阈值${rule.thresholdValue}`;
 
     if (rule.description) {
       message += `\n描述: ${rule.description}`;

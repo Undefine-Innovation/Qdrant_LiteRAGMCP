@@ -13,7 +13,7 @@ import {
 import { IDocumentAggregateRepository } from '@domain/repositories/index.js';
 import { ImportService } from '../batch/ImportService.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
-import { AppError } from '@api/contracts/error.js';
+import { AppError } from '@api/contracts/Error.js';
 import { Logger, EnhancedLogger, LogTag } from '@logging/logger.js';
 import { IEventPublisher } from '@domain/events/index.js';
 import { DocumentAggregate } from '@domain/aggregates/index.js';

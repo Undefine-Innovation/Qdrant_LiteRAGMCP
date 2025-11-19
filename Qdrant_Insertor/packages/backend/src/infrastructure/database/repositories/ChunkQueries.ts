@@ -20,6 +20,14 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 根据文档ID查找块
+   * @param docId - 文档ID
+   * @param options - 查询选项
+   * @param options.status - 嵌入状态过滤
+   * @param options.syncStatus - 同步状态过滤
+   * @param options.limit - 结果数量限制
+   * @param options.orderBy - 排序字段
+   * @param options.includeContent - 是否包含内容字段
+   * @returns 块数组
    */
   async findByDocId(
     docId: DocId,
@@ -96,6 +104,14 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 根据集合ID查找块
+   * @param collectionId - 集合ID
+   * @param options - 查询选项
+   * @param options.status - 嵌入状态过滤
+   * @param options.syncStatus - 同步状态过滤
+   * @param options.limit - 结果数量限制
+   * @param options.orderBy - 排序字段
+   * @param options.includeContent - 是否包含内容字段
+   * @returns 块数组
    */
   async findByCollectionId(
     collectionId: CollectionId,
@@ -172,6 +188,11 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 根据点ID数组查找块
+   * @param pointIds - 点ID数组
+   * @param options - 查询选项
+   * @param options.includeContent - 是否包含内容字段
+   * @param options.orderBy - 排序字段
+   * @returns 块数组
    */
   async findByPointIds(
     pointIds: PointId[],
@@ -233,6 +254,10 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 根据点ID查找单个块
+   * @param pointId - 点ID
+   * @param options - 查询选项
+   * @param options.includeContent - 是否包含内容字段
+   * @returns 块对象或null
    */
   async findByPointId(
     pointId: PointId,
@@ -281,6 +306,14 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 分页获取块
+   * @param paginationOptions - 分页选项
+   * @param docId - 文档ID过滤
+   * @param collectionId - 集合ID过滤
+   * @param options - 查询选项
+   * @param options.status - 嵌入状态过滤
+   * @param options.syncStatus - 同步状态过滤
+   * @param options.includeContent - 是否包含内容字段
+   * @returns 分页结果
    */
   async findWithPagination(
     paginationOptions: PaginationOptions = {},
@@ -353,6 +386,14 @@ export class ChunkQueries extends BaseRepository<Chunk> {
 
   /**
    * 搜索块内容
+   * @param searchText - 搜索文本
+   * @param options - 搜索选项
+   * @param options.collectionId - 集合ID过滤
+   * @param options.docId - 文档ID过滤
+   * @param options.limit - 结果数量限制
+   * @param options.searchFields - 搜索字段
+   * @param options.includeContent - 是否包含内容字段
+   * @returns 块数组
    */
   async searchContent(
     searchText: string,

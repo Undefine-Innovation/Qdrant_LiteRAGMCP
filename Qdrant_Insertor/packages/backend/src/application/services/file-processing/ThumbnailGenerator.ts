@@ -1,6 +1,6 @@
-import { DocId } from '@domain/entities/types.js';
+import { Doc, DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/error.js';
+import { AppError } from '@api/contracts/Error.js';
 import { ThumbnailSize } from '@application/services/index.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -252,12 +252,12 @@ export class ThumbnailGenerator {
    * @returns 文件格式信息
    */
   private async detectFileFormat(docId: DocId) {
-    const doc = await this.sqliteRepo.docs.getById(docId);
+    const doc = (await this.sqliteRepo.docs.getById(docId)) as Doc | null;
     if (!doc) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
-    const mimeType: string = doc.mime || 'application/octet-stream';
+    const mimeType = doc.mime || 'application/octet-stream';
     const extension = path.extname(doc.name || '').toLowerCase();
 
     let category: 'text' | 'markdown' | 'pdf' | 'word' | 'unknown';

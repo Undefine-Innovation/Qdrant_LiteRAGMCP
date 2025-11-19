@@ -1,7 +1,7 @@
 // DocId and Doc imported below together
 import { Logger } from '@logging/logger.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/error.js';
+import { AppError } from '@api/contracts/Error.js';
 import {
   IFileProcessingService,
   FileFormatInfo,
@@ -20,7 +20,12 @@ import {
   FormatDetectionResult,
 } from '@infrastructure/external/FileFormatDetector.js';
 import path from 'path';
+import { promises as fs } from 'fs';
 import { IFileLoader } from '@application/services/file-processing/index.js';
+
+type StoredDoc = Omit<Doc, 'content'> & {
+  content?: string | Uint8Array | Buffer;
+};
 
 /**
  * 增强的文件处理服务
@@ -52,13 +57,16 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
    * @returns 文件格式信息
    */
   public async detectFileFormat(docId: DocId): Promise<FileFormatInfo> {
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    if (!doc) {
+    const docRecord = await this.sqliteRepo.docs.getById(docId);
+    if (!docRecord) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
+    const doc = this.ensureStoredDoc(docRecord, docId);
+
     // 获取文件内容
-    const loadedFile = await this.getLoadedFile(doc);
+    const storedDoc = this.ensureStoredDoc(doc, docId);
+    const loadedFile = await this.getLoadedFile(storedDoc);
 
     // 使用新的格式检测器
     const detectionResult =
@@ -67,7 +75,8 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     return {
       mimeType: detectionResult.mimeType || loadedFile.mimeType,
       extension:
-        detectionResult.extension || this.extractExtension(doc.name || ''),
+        detectionResult.extension ||
+        this.extractExtension(storedDoc.name || ''),
       category: this.convertCategoryToFileFormatInfo(detectionResult.category),
     };
   }
@@ -87,8 +96,8 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
-    // 获取文件内容
-    const loadedFile = await this.getLoadedFile(doc);
+    const storedDoc = this.ensureStoredDoc(doc, docId);
+    const loadedFile = await this.getLoadedFile(storedDoc);
 
     // 获取适合的处理器
     const processor =
@@ -110,12 +119,16 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       );
 
       return {
-        content: previewContent || (await this.generateDefaultPreview(loadedFile, format)).content,
+        content:
+          previewContent ||
+          (await this.generateDefaultPreview(loadedFile, format)).content,
         mimeType: this.getMimeTypeForFormat(format),
         format,
       };
     } catch (error) {
-      this.logger.error(`生成预览失败: ${doc.name}`, { error });
+      this.logger.error(`生成预览失败: ${storedDoc.name || 'unknown'}`, {
+        error,
+      });
       return this.generateDefaultPreview(loadedFile, format);
     }
   }
@@ -130,16 +143,15 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     docId: DocId,
     format: 'original' | 'html' | 'txt' = 'original',
   ): Promise<DownloadContent> {
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    if (!doc) {
+    const docRecord = await this.sqliteRepo.docs.getById(docId);
+    if (!docRecord) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
-    // 获取文件内容
+    const doc = this.ensureStoredDoc(docRecord, docId);
     const loadedFile = await this.getLoadedFile(doc);
 
     if (format === 'original') {
-      // 返回原始内容
       return {
         content: Buffer.from(loadedFile.content, 'utf-8'),
         mimeType: loadedFile.mimeType,
@@ -147,7 +159,6 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       };
     }
 
-    // 获取适合的处理器
     const processor =
       this.processorRegistry.getProcessorForFile?.(loadedFile) ||
       this.processorRegistry.getProcessor(
@@ -155,7 +166,6 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
         this.extractExtension(loadedFile.fileName),
       );
     if (!processor) {
-      // 如果没有处理器，返回文本格式
       return {
         content: loadedFile.content,
         mimeType: 'text/plain',
@@ -164,7 +174,6 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     }
 
     try {
-      // 使用处理器生成内容
       const content = await processor.generatePreview?.(
         loadedFile,
         format === 'html' ? 'html' : 'text',
@@ -178,9 +187,8 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
         filename: this.changeFileExtension(doc.name || 'document', format),
       };
     } catch (error) {
-      this.logger.error(`生成下载内容失败: ${doc.name}`, { error });
+      this.logger.error('生成下载内容失败: ' + (doc.name || 'unknown'), { error });
 
-      // 降级到文本格式
       return {
         content: loadedFile.content,
         mimeType: 'text/plain',
@@ -199,10 +207,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     docId: DocId,
     size: ThumbnailSize = { width: 200, height: 200 },
   ): Promise<string> {
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    if (!doc) {
+    const docRecord = await this.sqliteRepo.docs.getById(docId);
+    if (!docRecord) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
+
+    const doc = this.ensureStoredDoc(docRecord, docId);
 
     // 获取文件内容
     const loadedFile = await this.getLoadedFile(doc);
@@ -275,10 +285,12 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     chunks: Array<{ content: string; titleChain?: string[] }>;
     metadata: FileMetadata;
   }> {
-    const doc = await this.sqliteRepo.docs.getById(docId);
-    if (!doc) {
+    const docRecord = await this.sqliteRepo.docs.getById(docId);
+    if (!docRecord) {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
+
+    const doc = this.ensureStoredDoc(docRecord, docId);
 
     // 获取文件内容
     const loadedFile = await this.getLoadedFile(doc);
@@ -385,12 +397,19 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     return stats;
   }
 
+  private ensureStoredDoc(doc: unknown, docId: DocId): StoredDoc {
+    if (!doc || typeof doc !== 'object') {
+      throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
+    }
+    return doc as StoredDoc;
+  }
+
   /**
    * 获取已加载的文件对象
    * @param doc - 文档对象
    * @returns 已加载的文件对象
    */
-  private async getLoadedFile(doc: Doc): Promise<LoadedFile> {
+  private async getLoadedFile(doc: StoredDoc): Promise<LoadedFile> {
     // 如果文档有 key 字段且看起来像文件路径（非上传标识），尝试从文件系统读取
     const looksLikePath = (k: string | undefined): boolean => {
       if (!k) return false;
@@ -402,17 +421,24 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
       return false;
     };
 
-    if (doc.key && !doc.key.startsWith('uploaded_') && looksLikePath(doc.key)) {
+    if (
+      doc.key &&
+      !doc.key.startsWith('uploaded_') &&
+      looksLikePath(doc.key)
+    ) {
       try {
         const content = await this.fileLoader.load(doc.key);
         return {
           content: content.content,
           fileName: doc.name || 'unknown',
-          mimeType: doc.mime || content.mimeType || 'application/octet-stream',
+          mimeType:
+            doc.mime || content.mimeType || 'application/octet-stream',
           size: content.content.length,
         };
       } catch (error) {
-        this.logger.error(`从文件系统读取文件失败: ${doc.key}`, { error });
+        this.logger.error(`从文件系统读取文件失败: ${doc.key}`, {
+          error,
+        });
       }
     }
 
@@ -520,13 +546,13 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     loadedFile: LoadedFile,
     size: ThumbnailSize,
   ): string {
-    const extension = this.extractExtension(loadedFile.fileName);
+    const extension = this.extractExtension((loadedFile).fileName);
     const icon = this.getFileIcon(extension);
     const color = this.getFileColor(extension);
 
     const svg = `<svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="${color}"/>
-  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="${Math.min(size.width, size.height) / 4}" 
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="${Math.min(size.width, size.height) / 4}"
         text-anchor="middle" dy=".3em" fill="white" font-weight="bold">
     ${icon}
   </text>
@@ -551,9 +577,6 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     docId: DocId,
     size: ThumbnailSize,
   ): string {
-    const fs = require('fs/promises');
-    const path = require('path');
-
     const thumbnailDir = path.resolve(process.cwd(), 'thumbnails');
     const thumbnailPath = path.join(
       thumbnailDir,
@@ -587,9 +610,6 @@ export class EnhancedFileProcessingService implements IFileProcessingService {
     docId: DocId,
     size: ThumbnailSize,
   ): string {
-    const fs = require('fs/promises');
-    const path = require('path');
-
     const thumbnailDir = path.resolve(process.cwd(), 'thumbnails');
     const thumbnailPath = path.join(
       thumbnailDir,

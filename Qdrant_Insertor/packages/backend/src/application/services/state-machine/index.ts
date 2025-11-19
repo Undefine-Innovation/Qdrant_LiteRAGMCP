@@ -6,3 +6,6 @@
 
 /** 状态机服务 */
 export { StateMachineService } from './StateMachineService.js';
+
+/** 增强的状态机服务 */
+export { EnhancedStateMachineService } from './EnhancedStateMachineService.js';

@@ -48,7 +48,7 @@ export enum ErrorCode {
  * @description 统一的错误处理类，包含错误码、HTTP状态码和详细信息
  */
 export class AppError extends Error {
-  public readonly code: ErrorCode;
+  public readonly code: ErrorCode | string;
   public readonly httpStatus: number;
 
   public readonly details?: Record<string, unknown>;
@@ -61,7 +61,7 @@ export class AppError extends Error {
    * @param {Record<string, unknown>} [details] - 错误详细信息
    */
   constructor(
-    code: ErrorCode,
+    code: ErrorCode | string,
     message: string,
     httpStatus: number = 500,
 

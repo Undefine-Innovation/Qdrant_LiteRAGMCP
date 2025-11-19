@@ -8,11 +8,22 @@ import { PersistentSyncStateMachine } from '../sync/index.js';
  * 表示系统组件的健康状态信息，包含状态、检查时间和性能指标。
  * 用于监控服务中健康状态数据的类型安全处理。
  */
+type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+
 interface HealthComponent {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: HealthStatus;
   lastCheck: string;
   message?: string;
   responseTime?: number;
+}
+
+interface SystemHealthRecord {
+  component: string;
+  status: HealthStatus;
+  lastCheck: number;
+  responseTimeMs?: number | null;
+  errorMessage?: string | null;
+  details?: string | Record<string, unknown> | null;
 }
 
 /**
@@ -47,12 +58,12 @@ export class MonitoringServiceCore {
    * @returns {系统健康状态对象} 返回系统整体健康状态
    */
   public async getSystemHealth(): Promise<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
+    status: HealthStatus;
     lastCheck: number;
     components: Record<
       string,
       {
-        status: 'healthy' | 'degraded' | 'unhealthy';
+        status: HealthStatus;
         lastCheck: string;
         message?: string;
         responseTime?: number;
@@ -87,26 +98,25 @@ export class MonitoringServiceCore {
    */
   public async getComponentHealth(component: string): Promise<{
     component: string;
-    status: 'healthy' | 'degraded' | 'unhealthy';
+    status: HealthStatus;
     lastCheck: number;
     responseTimeMs?: number;
     errorMessage?: string;
     details?: Record<string, string | number | boolean>;
   } | null> {
     try {
-      const health =
-        await this.sqliteRepo.systemHealth.getByComponent(component);
+      const health = (await this.sqliteRepo.systemHealth.getByComponent(
+        component,
+      )) as SystemHealthRecord | null;
       if (!health) return null;
 
       return {
         component: health.component,
         status: health.status,
         lastCheck: health.lastCheck,
-        responseTimeMs: health.responseTimeMs,
-        errorMessage: health.errorMessage,
-        details: this.parseDetails(
-          health.details as string | Record<string, unknown> | null,
-        ),
+        responseTimeMs: health.responseTimeMs ?? undefined,
+        errorMessage: health.errorMessage ?? undefined,
+        details: this.parseDetails(health.details),
       };
     } catch (error) {
       this.logger.warn('获取组件健康状态失败', {
@@ -124,7 +134,7 @@ export class MonitoringServiceCore {
   public async getAllComponentHealth(): Promise<
     Array<{
       component: string;
-      status: 'healthy' | 'degraded' | 'unhealthy';
+      status: HealthStatus;
       lastCheck: number;
       responseTimeMs?: number;
       errorMessage?: string;
@@ -132,17 +142,20 @@ export class MonitoringServiceCore {
     }>
   > {
     try {
-      const healthList = await this.sqliteRepo.systemHealth.getAll();
-      return (healthList as unknown[]).map((health: unknown) => {
-        const h = health as Record<string, unknown>;
-        const detailsRaw = h.details as string | Record<string, unknown> | null;
+      const healthList = (await this.sqliteRepo.systemHealth.getAll()) as
+        | SystemHealthRecord[]
+        | null;
+      if (!healthList) {
+        return [];
+      }
+      return healthList.map((health) => {
         return {
-          component: h.component as string,
-          status: h.status as 'healthy' | 'degraded' | 'unhealthy',
-          lastCheck: h.lastCheck as number,
-          responseTimeMs: h.responseTimeMs as number | undefined,
-          errorMessage: h.errorMessage as string | undefined,
-          details: this.parseDetails(detailsRaw),
+          component: health.component,
+          status: health.status,
+          lastCheck: health.lastCheck,
+          responseTimeMs: health.responseTimeMs ?? undefined,
+          errorMessage: health.errorMessage ?? undefined,
+          details: this.parseDetails(health.details),
         };
       });
     } catch (error) {
@@ -160,7 +173,7 @@ export class MonitoringServiceCore {
   public async getUnhealthyComponents(): Promise<
     Array<{
       component: string;
-      status: 'healthy' | 'degraded' | 'unhealthy';
+      status: HealthStatus;
       lastCheck: number;
       responseTimeMs?: number;
       errorMessage?: string;
@@ -169,17 +182,17 @@ export class MonitoringServiceCore {
   > {
     try {
       const healthList =
-        await this.sqliteRepo.systemHealth.getUnhealthyComponents();
-      return (healthList as unknown[]).map((health: unknown) => {
-        const h = health as Record<string, unknown>;
-        const detailsRaw = h.details as string | Record<string, unknown> | null;
+        ((await this.sqliteRepo.systemHealth.getUnhealthyComponents()) as
+          | SystemHealthRecord[]
+          | null) ?? [];
+      return healthList.map((health) => {
         return {
-          component: h.component as string,
-          status: h.status as 'healthy' | 'degraded' | 'unhealthy',
-          lastCheck: h.lastCheck as number,
-          responseTimeMs: h.responseTimeMs as number | undefined,
-          errorMessage: h.errorMessage as string | undefined,
-          details: this.parseDetails(detailsRaw),
+          component: health.component,
+          status: health.status,
+          lastCheck: health.lastCheck,
+          responseTimeMs: health.responseTimeMs ?? undefined,
+          errorMessage: health.errorMessage ?? undefined,
+          details: this.parseDetails(health.details),
         };
       });
     } catch (error) {
@@ -240,7 +253,15 @@ export class MonitoringServiceCore {
         defaultStartTime,
         defaultEndTime,
         limit,
-      );
+      ) as Array<{
+        id: string;
+        metricName: string;
+        metricValue: number;
+        metricUnit?: string;
+        tags?: Record<string, string | number>;
+        timestamp: number;
+        createdAt: number;
+      }>;
     } catch (error) {
       this.logger.warn('获取指标数据失败', {
         metricName,

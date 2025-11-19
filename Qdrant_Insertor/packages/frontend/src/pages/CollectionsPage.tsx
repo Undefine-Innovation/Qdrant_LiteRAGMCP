@@ -28,7 +28,8 @@ const CollectionsPage = () => {
 
   // 获取集合列表
   const { state: collectionsState, execute: loadCollections } = useApi(
-    () => collectionsApi.getCollections(paginationParams as PaginationQueryParams),
+    () =>
+      collectionsApi.getCollections(paginationParams as PaginationQueryParams),
     {
       maxRetries: 3,
       retryDelay: 1000,

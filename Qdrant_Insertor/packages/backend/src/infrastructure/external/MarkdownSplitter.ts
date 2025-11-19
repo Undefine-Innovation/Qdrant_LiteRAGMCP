@@ -3,6 +3,11 @@ import { DocumentChunk, SplitOptions } from '@domain/entities/types.js';
 import { SplitterOptions } from '@domain/interfaces/splitter.js';
 
 /**
+ * @deprecated 请使用 UnifiedMarkdownSplitter 替代
+ * 这个实现已被 UnifiedMarkdownSplitter 合并和取代
+ */
+
+/**
  * 标题事件类型
  */
 type HeadingEvt = { index: number; level: number; text: string };
@@ -94,6 +99,7 @@ function buildTitleTracker(md: string) {
 }
 
 /**
+ * @deprecated 请使用 UnifiedMarkdownSplitter 替代
  * 一个基于Markdown 标题分割文档的分割器
  * 每个标题及其后面的内容都会成为一个块
  * A splitter that divides a Markdown document based on its headings.
@@ -109,7 +115,10 @@ export class MarkdownSplitter implements ISplitter {
     private readonly options: SplitOptions = { strategy: 'markdown_headings' },
   ) {}
 
-  /** 返回默认选项，兼容策略注册要求 */
+  /**
+   * 返回默认选项，兼容策略注册要求
+   * @returns {Record<string, unknown>} 默认选项
+   */
   public getDefaultOptions(): Record<string, unknown> {
     return { strategy: this.options.strategy };
   }
@@ -173,6 +182,9 @@ export class MarkdownSplitter implements ISplitter {
 
   /**
    * 兼容域层的 splitText 接口，返回字符串数组
+   * @param text 要分割的文本
+   * @param options 分割选项
+   * @returns 字符串数组
    */
   public async splitText(
     text: string,

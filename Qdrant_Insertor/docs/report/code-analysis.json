@@ -1,0 +1,855 @@
+{
+  "timestamp": "2025-11-15T09:02:04.236Z",
+  "summary": {
+    "totalFiles": 549,
+    "totalLines": 151510,
+    "totalCodeLines": 106015,
+    "totalCommentLines": 28566,
+    "totalEmptyLines": 16929,
+    "largestFile": {
+      "path": "packages\\backend\\__tests__\\unit\\infrastructure\\ChunkRepository.test.ts",
+      "lines": 1414,
+      "codeLines": 1101,
+      "size": 43301
+    },
+    "averageFileSize": 276
+  },
+  "byDirectory": {
+    "packages\\backend\\src\\api\\contracts": {
+      "files": 9,
+      "lines": 1323,
+      "codeLines": 846,
+      "commentLines": 376,
+      "emptyLines": 101
+    },
+    "packages\\backend\\src\\api": {
+      "files": 2,
+      "lines": 375,
+      "codeLines": 305,
+      "commentLines": 39,
+      "emptyLines": 31
+    },
+    "packages\\backend\\src\\api\\middleware": {
+      "files": 3,
+      "lines": 330,
+      "codeLines": 240,
+      "commentLines": 60,
+      "emptyLines": 30
+    },
+    "packages\\backend\\src\\api\\routes": {
+      "files": 14,
+      "lines": 3945,
+      "codeLines": 2696,
+      "commentLines": 897,
+      "emptyLines": 352
+    },
+    "packages\\backend\\src\\api\\swagger": {
+      "files": 1,
+      "lines": 287,
+      "codeLines": 241,
+      "commentLines": 24,
+      "emptyLines": 22
+    },
+    "packages/backend/src": {
+      "files": 3,
+      "lines": 554,
+      "codeLines": 402,
+      "commentLines": 92,
+      "emptyLines": 60
+    },
+    "packages\\backend\\src\\application": {
+      "files": 1,
+      "lines": 14,
+      "codeLines": 3,
+      "commentLines": 7,
+      "emptyLines": 4
+    },
+    "packages\\backend\\src\\application\\orchestration\\core": {
+      "files": 3,
+      "lines": 252,
+      "codeLines": 112,
+      "commentLines": 102,
+      "emptyLines": 38
+    },
+    "packages\\backend\\src\\application\\orchestration": {
+      "files": 1,
+      "lines": 14,
+      "codeLines": 3,
+      "commentLines": 7,
+      "emptyLines": 4
+    },
+    "packages\\backend\\src\\application\\orchestration\\schemas": {
+      "files": 1,
+      "lines": 373,
+      "codeLines": 267,
+      "commentLines": 72,
+      "emptyLines": 34
+    },
+    "packages\\backend\\src\\application\\orchestration\\steps": {
+      "files": 7,
+      "lines": 947,
+      "codeLines": 599,
+      "commentLines": 230,
+      "emptyLines": 118
+    },
+    "packages\\backend\\src\\application\\services\\alerting": {
+      "files": 5,
+      "lines": 1349,
+      "codeLines": 844,
+      "commentLines": 389,
+      "emptyLines": 116
+    },
+    "packages\\backend\\src\\application\\services\\api": {
+      "files": 5,
+      "lines": 1051,
+      "codeLines": 739,
+      "commentLines": 225,
+      "emptyLines": 87
+    },
+    "packages\\backend\\src\\application\\services\\batch": {
+      "files": 10,
+      "lines": 2300,
+      "codeLines": 1662,
+      "commentLines": 390,
+      "emptyLines": 248
+    },
+    "packages\\backend\\src\\application\\services\\core": {
+      "files": 5,
+      "lines": 1454,
+      "codeLines": 996,
+      "commentLines": 299,
+      "emptyLines": 159
+    },
+    "packages\\backend\\src\\application\\services\\file-processing": {
+      "files": 11,
+      "lines": 1902,
+      "codeLines": 1155,
+      "commentLines": 559,
+      "emptyLines": 188
+    },
+    "packages\\backend\\src\\application\\services": {
+      "files": 9,
+      "lines": 890,
+      "codeLines": 375,
+      "commentLines": 417,
+      "emptyLines": 98
+    },
+    "packages\\backend\\src\\application\\services\\monitoring": {
+      "files": 5,
+      "lines": 2353,
+      "codeLines": 1757,
+      "commentLines": 374,
+      "emptyLines": 222
+    },
+    "packages\\backend\\src\\application\\services\\scraping": {
+      "files": 2,
+      "lines": 907,
+      "codeLines": 669,
+      "commentLines": 189,
+      "emptyLines": 49
+    },
+    "packages\\backend\\src\\application\\services\\state-machine": {
+      "files": 3,
+      "lines": 619,
+      "codeLines": 326,
+      "commentLines": 224,
+      "emptyLines": 69
+    },
+    "packages\\backend\\src\\application\\services\\sync": {
+      "files": 7,
+      "lines": 1448,
+      "codeLines": 899,
+      "commentLines": 392,
+      "emptyLines": 157
+    },
+    "packages\\backend\\src\\application\\services\\system": {
+      "files": 2,
+      "lines": 182,
+      "codeLines": 130,
+      "commentLines": 33,
+      "emptyLines": 19
+    },
+    "packages\\backend\\src\\application\\use-cases": {
+      "files": 3,
+      "lines": 230,
+      "codeLines": 117,
+      "commentLines": 86,
+      "emptyLines": 27
+    },
+    "packages\\backend\\src\\domain\\aggregates": {
+      "files": 6,
+      "lines": 2449,
+      "codeLines": 1399,
+      "commentLines": 772,
+      "emptyLines": 278
+    },
+    "packages\\backend\\src\\domain\\constants": {
+      "files": 2,
+      "lines": 49,
+      "codeLines": 18,
+      "commentLines": 25,
+      "emptyLines": 6
+    },
+    "packages\\backend\\src\\domain\\entities": {
+      "files": 8,
+      "lines": 2213,
+      "codeLines": 1081,
+      "commentLines": 906,
+      "emptyLines": 226
+    },
+    "packages\\backend\\src\\domain\\errors": {
+      "files": 6,
+      "lines": 3086,
+      "codeLines": 1888,
+      "commentLines": 858,
+      "emptyLines": 340
+    },
+    "packages\\backend\\src\\domain\\events": {
+      "files": 9,
+      "lines": 4254,
+      "codeLines": 2414,
+      "commentLines": 1391,
+      "emptyLines": 449
+    },
+    "packages\\backend\\src\\domain": {
+      "files": 2,
+      "lines": 170,
+      "codeLines": 106,
+      "commentLines": 42,
+      "emptyLines": 22
+    },
+    "packages\\backend\\src\\domain\\interfaces": {
+      "files": 7,
+      "lines": 781,
+      "codeLines": 277,
+      "commentLines": 419,
+      "emptyLines": 85
+    },
+    "packages\\backend\\src\\domain\\interfaces\\use-cases": {
+      "files": 2,
+      "lines": 72,
+      "codeLines": 18,
+      "commentLines": 42,
+      "emptyLines": 12
+    },
+    "packages\\backend\\src\\domain\\repositories": {
+      "files": 11,
+      "lines": 1744,
+      "codeLines": 619,
+      "commentLines": 915,
+      "emptyLines": 210
+    },
+    "packages\\backend\\src\\domain\\services": {
+      "files": 11,
+      "lines": 4218,
+      "codeLines": 2584,
+      "commentLines": 1177,
+      "emptyLines": 457
+    },
+    "packages\\backend\\src\\domain\\state-machine": {
+      "files": 10,
+      "lines": 4200,
+      "codeLines": 2716,
+      "commentLines": 1071,
+      "emptyLines": 413
+    },
+    "packages\\backend\\src\\domain\\sync": {
+      "files": 7,
+      "lines": 1661,
+      "codeLines": 1021,
+      "commentLines": 491,
+      "emptyLines": 149
+    },
+    "packages\\backend\\src\\domain\\utils": {
+      "files": 2,
+      "lines": 98,
+      "codeLines": 40,
+      "commentLines": 48,
+      "emptyLines": 10
+    },
+    "packages\\backend\\src\\domain\\value-objects": {
+      "files": 8,
+      "lines": 1201,
+      "codeLines": 606,
+      "commentLines": 446,
+      "emptyLines": 149
+    },
+    "packages\\backend\\src\\generated": {
+      "files": 5,
+      "lines": 389,
+      "codeLines": 289,
+      "commentLines": 48,
+      "emptyLines": 52
+    },
+    "packages\\backend\\src\\infrastructure\\cache": {
+      "files": 3,
+      "lines": 1182,
+      "codeLines": 688,
+      "commentLines": 369,
+      "emptyLines": 125
+    },
+    "packages\\backend\\src\\infrastructure\\config": {
+      "files": 2,
+      "lines": 306,
+      "codeLines": 249,
+      "commentLines": 43,
+      "emptyLines": 14
+    },
+    "packages\\backend\\src\\infrastructure\\database\\adapters": {
+      "files": 12,
+      "lines": 5639,
+      "codeLines": 3744,
+      "commentLines": 1316,
+      "emptyLines": 579
+    },
+    "packages\\backend\\src\\infrastructure\\database\\adapters\\sqlite": {
+      "files": 4,
+      "lines": 828,
+      "codeLines": 769,
+      "commentLines": 0,
+      "emptyLines": 59
+    },
+    "packages\\backend\\src\\infrastructure\\database\\cache": {
+      "files": 1,
+      "lines": 17,
+      "codeLines": 8,
+      "commentLines": 7,
+      "emptyLines": 2
+    },
+    "packages\\backend\\src\\infrastructure\\database": {
+      "files": 5,
+      "lines": 958,
+      "codeLines": 628,
+      "commentLines": 236,
+      "emptyLines": 94
+    },
+    "packages\\backend\\src\\infrastructure\\database\\entities": {
+      "files": 14,
+      "lines": 3203,
+      "codeLines": 1807,
+      "commentLines": 1091,
+      "emptyLines": 305
+    },
+    "packages\\backend\\src\\infrastructure\\database\\migrations": {
+      "files": 3,
+      "lines": 864,
+      "codeLines": 643,
+      "commentLines": 118,
+      "emptyLines": 103
+    },
+    "packages\\backend\\src\\infrastructure\\database\\monitoring": {
+      "files": 1,
+      "lines": 592,
+      "codeLines": 412,
+      "commentLines": 110,
+      "emptyLines": 70
+    },
+    "packages\\backend\\src\\infrastructure\\database\\repositories": {
+      "files": 37,
+      "lines": 12806,
+      "codeLines": 9025,
+      "commentLines": 2626,
+      "emptyLines": 1155
+    },
+    "packages\\backend\\src\\infrastructure\\database\\repositories\\sqlite": {
+      "files": 3,
+      "lines": 582,
+      "codeLines": 513,
+      "commentLines": 3,
+      "emptyLines": 66
+    },
+    "packages\\backend\\src\\infrastructure\\database\\repositories\\__mocks__": {
+      "files": 1,
+      "lines": 99,
+      "codeLines": 74,
+      "commentLines": 7,
+      "emptyLines": 18
+    },
+    "packages\\backend\\src\\infrastructure\\di": {
+      "files": 2,
+      "lines": 625,
+      "codeLines": 477,
+      "commentLines": 81,
+      "emptyLines": 67
+    },
+    "packages\\backend\\src\\infrastructure\\errors": {
+      "files": 9,
+      "lines": 1331,
+      "codeLines": 979,
+      "commentLines": 220,
+      "emptyLines": 132
+    },
+    "packages\\backend\\src\\infrastructure\\external": {
+      "files": 11,
+      "lines": 2565,
+      "codeLines": 1717,
+      "commentLines": 585,
+      "emptyLines": 263
+    },
+    "packages\\backend\\src\\infrastructure\\external\\processors": {
+      "files": 3,
+      "lines": 1443,
+      "codeLines": 1005,
+      "commentLines": 293,
+      "emptyLines": 145
+    },
+    "packages\\backend\\src\\infrastructure": {
+      "files": 1,
+      "lines": 53,
+      "codeLines": 16,
+      "commentLines": 20,
+      "emptyLines": 17
+    },
+    "packages\\backend\\src\\infrastructure\\lifecycle": {
+      "files": 2,
+      "lines": 43,
+      "codeLines": 21,
+      "commentLines": 14,
+      "emptyLines": 8
+    },
+    "packages\\backend\\src\\infrastructure\\logging": {
+      "files": 4,
+      "lines": 693,
+      "codeLines": 402,
+      "commentLines": 224,
+      "emptyLines": 67
+    },
+    "packages\\backend\\src\\infrastructure\\monitoring": {
+      "files": 2,
+      "lines": 753,
+      "codeLines": 489,
+      "commentLines": 173,
+      "emptyLines": 91
+    },
+    "packages\\backend\\src\\infrastructure\\persistence": {
+      "files": 5,
+      "lines": 540,
+      "codeLines": 285,
+      "commentLines": 177,
+      "emptyLines": 78
+    },
+    "packages\\backend\\src\\infrastructure\\repositories": {
+      "files": 3,
+      "lines": 742,
+      "codeLines": 573,
+      "commentLines": 97,
+      "emptyLines": 72
+    },
+    "packages\\backend\\src\\infrastructure\\scheduling": {
+      "files": 2,
+      "lines": 93,
+      "codeLines": 53,
+      "commentLines": 28,
+      "emptyLines": 12
+    },
+    "packages\\backend\\src\\infrastructure\\sqlite\\dao": {
+      "files": 1,
+      "lines": 103,
+      "codeLines": 66,
+      "commentLines": 29,
+      "emptyLines": 8
+    },
+    "packages\\backend\\src\\infrastructure\\sqlite": {
+      "files": 1,
+      "lines": 7,
+      "codeLines": 1,
+      "commentLines": 4,
+      "emptyLines": 2
+    },
+    "packages\\backend\\src\\infrastructure\\state-machine": {
+      "files": 3,
+      "lines": 789,
+      "codeLines": 516,
+      "commentLines": 184,
+      "emptyLines": 89
+    },
+    "packages\\backend\\src\\infrastructure\\strategies": {
+      "files": 2,
+      "lines": 255,
+      "codeLines": 106,
+      "commentLines": 118,
+      "emptyLines": 31
+    },
+    "packages\\backend\\src\\infrastructure\\transactions": {
+      "files": 13,
+      "lines": 4502,
+      "codeLines": 3274,
+      "commentLines": 811,
+      "emptyLines": 417
+    },
+    "packages\\backend\\src\\middlewares": {
+      "files": 3,
+      "lines": 495,
+      "codeLines": 323,
+      "commentLines": 122,
+      "emptyLines": 50
+    },
+    "packages\\backend\\src\\utils": {
+      "files": 1,
+      "lines": 141,
+      "codeLines": 84,
+      "commentLines": 42,
+      "emptyLines": 15
+    },
+    "packages/frontend/src": {
+      "files": 3,
+      "lines": 112,
+      "codeLines": 90,
+      "commentLines": 8,
+      "emptyLines": 14
+    },
+    "packages\\frontend\\src\\components": {
+      "files": 40,
+      "lines": 7375,
+      "codeLines": 6336,
+      "commentLines": 448,
+      "emptyLines": 591
+    },
+    "packages\\frontend\\src\\components\\monitoring": {
+      "files": 5,
+      "lines": 835,
+      "codeLines": 779,
+      "commentLines": 0,
+      "emptyLines": 56
+    },
+    "packages\\frontend\\src\\hooks": {
+      "files": 6,
+      "lines": 1033,
+      "codeLines": 777,
+      "commentLines": 129,
+      "emptyLines": 127
+    },
+    "packages\\frontend\\src\\pages": {
+      "files": 7,
+      "lines": 2014,
+      "codeLines": 1795,
+      "commentLines": 80,
+      "emptyLines": 139
+    },
+    "packages\\frontend\\src\\services": {
+      "files": 10,
+      "lines": 1370,
+      "codeLines": 984,
+      "commentLines": 271,
+      "emptyLines": 115
+    },
+    "packages\\frontend\\src\\stores": {
+      "files": 1,
+      "lines": 368,
+      "codeLines": 294,
+      "commentLines": 40,
+      "emptyLines": 34
+    },
+    "packages\\frontend\\src\\types": {
+      "files": 3,
+      "lines": 803,
+      "codeLines": 509,
+      "commentLines": 215,
+      "emptyLines": 79
+    },
+    "packages\\frontend\\src\\utils": {
+      "files": 7,
+      "lines": 1475,
+      "codeLines": 1007,
+      "commentLines": 310,
+      "emptyLines": 158
+    },
+    "packages\\backend\\__tests__\\e2e\\performance": {
+      "files": 12,
+      "lines": 3025,
+      "codeLines": 2418,
+      "commentLines": 164,
+      "emptyLines": 443
+    },
+    "packages\\backend\\__tests__\\e2e\\user-workflows": {
+      "files": 1,
+      "lines": 79,
+      "codeLines": 59,
+      "commentLines": 6,
+      "emptyLines": 14
+    },
+    "packages\\backend\\__tests__\\integration\\api": {
+      "files": 23,
+      "lines": 8404,
+      "codeLines": 6203,
+      "commentLines": 1014,
+      "emptyLines": 1187
+    },
+    "packages\\backend\\__tests__\\integration\\database": {
+      "files": 3,
+      "lines": 1606,
+      "codeLines": 1257,
+      "commentLines": 112,
+      "emptyLines": 237
+    },
+    "packages\\backend\\__tests__\\integration": {
+      "files": 7,
+      "lines": 2953,
+      "codeLines": 2172,
+      "commentLines": 433,
+      "emptyLines": 348
+    },
+    "packages\\backend\\__tests__\\integration\\domain": {
+      "files": 5,
+      "lines": 2690,
+      "codeLines": 1987,
+      "commentLines": 347,
+      "emptyLines": 356
+    },
+    "packages\\backend\\__tests__\\integration\\infrastructure": {
+      "files": 12,
+      "lines": 3068,
+      "codeLines": 2398,
+      "commentLines": 241,
+      "emptyLines": 429
+    },
+    "packages/backend/__tests__": {
+      "files": 1,
+      "lines": 34,
+      "codeLines": 21,
+      "commentLines": 8,
+      "emptyLines": 5
+    },
+    "packages\\backend\\__tests__\\unit\\api": {
+      "files": 1,
+      "lines": 403,
+      "codeLines": 337,
+      "commentLines": 2,
+      "emptyLines": 64
+    },
+    "packages\\backend\\__tests__\\unit\\database\\adapters": {
+      "files": 5,
+      "lines": 3025,
+      "codeLines": 2465,
+      "commentLines": 60,
+      "emptyLines": 500
+    },
+    "packages\\backend\\__tests__\\unit\\database": {
+      "files": 2,
+      "lines": 873,
+      "codeLines": 722,
+      "commentLines": 11,
+      "emptyLines": 140
+    },
+    "packages\\backend\\__tests__\\unit\\domain": {
+      "files": 14,
+      "lines": 6535,
+      "codeLines": 5181,
+      "commentLines": 363,
+      "emptyLines": 991
+    },
+    "packages\\backend\\__tests__\\unit\\infrastructure": {
+      "files": 8,
+      "lines": 5758,
+      "codeLines": 4510,
+      "commentLines": 429,
+      "emptyLines": 819
+    },
+    "packages\\backend\\__tests__\\unit\\middlewares": {
+      "files": 1,
+      "lines": 525,
+      "codeLines": 423,
+      "commentLines": 9,
+      "emptyLines": 93
+    },
+    "packages\\frontend\\__tests__\\e2e": {
+      "files": 8,
+      "lines": 4603,
+      "codeLines": 3431,
+      "commentLines": 470,
+      "emptyLines": 702
+    },
+    "packages\\frontend\\__tests__\\e2e\\mocks": {
+      "files": 1,
+      "lines": 128,
+      "codeLines": 107,
+      "commentLines": 16,
+      "emptyLines": 5
+    },
+    "packages\\frontend\\__tests__\\e2e\\utils": {
+      "files": 1,
+      "lines": 483,
+      "codeLines": 347,
+      "commentLines": 98,
+      "emptyLines": 38
+    }
+  },
+  "byExtension": {
+    ".ts": {
+      "files": 490,
+      "lines": 137041,
+      "codeLines": 93924
+    },
+    ".tsx": {
+      "files": 58,
+      "lines": 14268,
+      "codeLines": 11955
+    },
+    ".js": {
+      "files": 1,
+      "lines": 201,
+      "codeLines": 136
+    }
+  },
+  "largeFiles": [
+    {
+      "path": "packages\\backend\\__tests__\\unit\\infrastructure\\ChunkRepository.test.ts",
+      "lines": 1414,
+      "codeLines": 1101,
+      "size": 43301
+    },
+    {
+      "path": "packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts",
+      "lines": 1219,
+      "codeLines": 929,
+      "size": 37193
+    },
+    {
+      "path": "packages\\backend\\src\\domain\\errors\\ErrorFactory.ts",
+      "lines": 1124,
+      "codeLines": 723,
+      "size": 35155
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\transactions\\TransactionErrorHandler.ts",
+      "lines": 1027,
+      "codeLines": 720,
+      "size": 28060
+    },
+    {
+      "path": "packages\\backend\\src\\application\\services\\monitoring\\MonitoringService.ts",
+      "lines": 1009,
+      "codeLines": 757,
+      "size": 30811
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\database\\adapters\\TypeORMRepositoryAdapter.ts",
+      "lines": 964,
+      "codeLines": 714,
+      "size": 27118
+    },
+    {
+      "path": "packages\\backend\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts",
+      "lines": 921,
+      "codeLines": 706,
+      "size": 25846
+    },
+    {
+      "path": "packages\\backend\\__tests__\\unit\\infrastructure\\CollectionRepository.test.ts",
+      "lines": 920,
+      "codeLines": 694,
+      "size": 28513
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\database\\repositories\\DocumentAggregateRepository.ts",
+      "lines": 903,
+      "codeLines": 648,
+      "size": 26415
+    },
+    {
+      "path": "packages\\backend\\src\\application\\services\\scraping\\ScrapeService.ts",
+      "lines": 898,
+      "codeLines": 668,
+      "size": 29184
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\database\\repositories\\PostgreSQLRepositoryComponents.ts",
+      "lines": 852,
+      "codeLines": 634,
+      "size": 24832
+    },
+    {
+      "path": "packages\\backend\\__tests__\\integration\\setup.ts",
+      "lines": 841,
+      "codeLines": 638,
+      "size": 27400
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\database\\repositories\\TypeORMRepository.ts",
+      "lines": 840,
+      "codeLines": 585,
+      "size": 25511
+    },
+    {
+      "path": "packages\\backend\\src\\infrastructure\\database\\adapters\\AdapterFactory.ts",
+      "lines": 821,
+      "codeLines": 564,
+      "size": 23193
+    },
+    {
+      "path": "packages\\backend\\__tests__\\integration\\infrastructure\\health-check.test.ts",
+      "lines": 797,
+      "codeLines": 605,
+      "size": 26913
+    },
+    {
+      "path": "packages\\backend\\__tests__\\unit\\database\\adapters\\PostgreSQLRepositoryAdapter.test.ts",
+      "lines": 791,
+      "codeLines": 655,
+      "size": 22524
+    },
+    {
+      "path": "packages\\backend\\src\\application\\services\\file-processing\\EnhancedFileProcessingService.ts",
+      "lines": 780,
+      "codeLines": 561,
+      "size": 22754
+    },
+    {
+      "path": "packages\\backend\\src\\domain\\events\\DomainEvents.ts",
+      "lines": 778,
+      "codeLines": 454,
+      "size": 20473
+    },
+    {
+      "path": "packages\\backend\\src\\domain\\events\\EventHandlers.ts",
+      "lines": 776,
+      "codeLines": 391,
+      "size": 20148
+    },
+    {
+      "path": "packages\\frontend\\__tests__\\e2e\\collection-management.test.tsx",
+      "lines": 776,
+      "codeLines": 580,
+      "size": 23827
+    }
+  ],
+  "testFiles": {
+    "count": 106,
+    "lines": 44330
+  },
+  "codeFiles": {
+    "count": 443,
+    "lines": 107180
+  },
+  "recommendations": [
+    {
+      "type": "large_files",
+      "severity": "high",
+      "count": 13,
+      "description": "发现 13 个大文件（超过 828 行）",
+      "suggestion": "考虑将大文件拆分为更小的模块，提高代码可维护性",
+      "files": [
+        "packages\\backend\\__tests__\\unit\\infrastructure\\ChunkRepository.test.ts",
+        "packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts",
+        "packages\\backend\\src\\domain\\errors\\ErrorFactory.ts",
+        "packages\\backend\\src\\infrastructure\\transactions\\TransactionErrorHandler.ts",
+        "packages\\backend\\src\\application\\services\\monitoring\\MonitoringService.ts",
+        "packages\\backend\\src\\infrastructure\\database\\adapters\\TypeORMRepositoryAdapter.ts",
+        "packages\\backend\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts",
+        "packages\\backend\\__tests__\\unit\\infrastructure\\CollectionRepository.test.ts",
+        "packages\\backend\\src\\infrastructure\\database\\repositories\\DocumentAggregateRepository.ts",
+        "packages\\backend\\src\\application\\services\\scraping\\ScrapeService.ts",
+        "packages\\backend\\src\\infrastructure\\database\\repositories\\PostgreSQLRepositoryComponents.ts",
+        "packages\\backend\\__tests__\\integration\\setup.ts",
+        "packages\\backend\\src\\infrastructure\\database\\repositories\\TypeORMRepository.ts"
+      ]
+    },
+    {
+      "type": "complexity",
+      "severity": "high",
+      "avgLines": "276.0",
+      "description": "平均文件大小过大 (276.0 行)",
+      "suggestion": "重构大文件，遵循单一职责原则"
+    }
+  ]
+}

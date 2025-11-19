@@ -3,12 +3,16 @@
  * 导出所有路由定义
  */
 
-export * from './batch.js';
-export * from './collections.js';
-export * from './common.js';
-export * from './documents.js';
-export * from './graph.js';
-export * from './monitoring.js';
-export * from './preview.js';
-export * from './scrape.js';
-export * from './search.js';
+export * from './Batch.js';
+export * from './CollectionManagementRoutes.js';
+export * from './Common.js';
+export * from './DocumentUploadRoutes.js';
+export * from './DocumentManagementRoutes.js';
+export * from './DocumentChunkRoutes.js';
+export * from './Graph.js';
+export * from './Monitoring.js';
+export * from './Preview.js';
+export * from './RateLimit.js';
+export * from './ScrapeResultRoutes.js';
+export * from './ScrapeTaskRoutes.js';
+export * from './Search.js';

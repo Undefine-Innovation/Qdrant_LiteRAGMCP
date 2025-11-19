@@ -358,10 +358,15 @@ describe('AggregateFactory', () => {
         collectionId,
         'Test Collection',
       );
-      aggregate.addDocument(docId, 'test-doc', 'Test content');
+      // 创建新的聚合实例而不是修改常量
+      const newAggregate = aggregate.withDocument(
+        docId,
+        'test-doc',
+        'Test content',
+      );
 
       // Act
-      const result = AggregateFactory.validateCollectionAggregate(aggregate);
+      const result = AggregateFactory.validateCollectionAggregate(newAggregate);
 
       // Assert
       expect(result.isValid).toBe(true);

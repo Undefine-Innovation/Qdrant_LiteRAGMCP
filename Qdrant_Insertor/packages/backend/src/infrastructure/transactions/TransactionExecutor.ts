@@ -11,7 +11,7 @@ import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { CollectionId } from '@domain/entities/types.js';
 import { TransactionOperations } from '@infrastructure/transactions/TransactionOperations.js';
 import { TransactionSavepoints } from '@infrastructure/transactions/TransactionSavepoints.js';
-import { TransactionErrorHandler } from '@infrastructure/transactions/TransactionErrorHandler.js';
+// 移除对已删除的TransactionErrorHandler的引用
 
 /**
  * 事务执行器
@@ -23,7 +23,6 @@ export class TransactionExecutor {
     private readonly qdrantRepo: IQdrantRepo,
     private readonly operationsHandler: TransactionOperations,
     private readonly savepointsHandler: TransactionSavepoints,
-    private readonly errorHandler: TransactionErrorHandler,
   ) {}
 
   /**
@@ -254,9 +253,20 @@ export class TransactionExecutor {
    * 删除集合的事务方法
    * @param collectionId 集合ID
    * @param collections 集合表操作对象
+   * @param collections.getById 根据ID获取集合的方法
+   * @param collections.delete 删除集合的方法
+   * @param collections.chunkMeta 块元数据操作对象
+   * @param collections.chunkMeta.deleteByCollectionId 根据集合ID删除块元数据的方法
+   * @param collections.chunksFts5 FTS5块操作对象
+   * @param collections.chunksFts5.deleteByCollectionId 根据集合ID删除FTS5块的方法
+   * @param collections.docs 文档操作对象
+   * @param collections.docs.listByCollection 根据集合ID列出文档的方法
+   * @param collections.docs.hardDelete 硬删除文档的方法
+   * @param collections.listAll 列出所有集合的方法
    * @param executeInTransaction 在事务中执行函数的方法
    * @param executeOperation 执行操作的方法
    * @param getQueryRunner 获取QueryRunner的方法
+   * @returns Promise<void>
    */
   async deleteCollectionInTransaction(
     collectionId: CollectionId,

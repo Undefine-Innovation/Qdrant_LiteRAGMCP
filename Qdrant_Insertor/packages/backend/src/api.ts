@@ -11,17 +11,21 @@ import { MonitoringApiService } from '@application/services/api/index.js';
 import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
 import { IScrapeService } from '@domain/entities/index.js';
 import { IImportAndIndexUseCase } from '@application/use-cases/index.js';
-import { Logger } from '@infrastructure/logging/index.js';
+import type { Logger } from '@infrastructure/logging/logger.js';
 import {
   createGraphRoutes,
-  createCollectionRoutes,
-  createDocumentRoutes,
+  createCollectionManagementRoutes,
+  createDocumentUploadRoutes,
+  createDocumentManagementRoutes,
+  createDocumentChunkRoutes,
   createBatchRoutes,
   createSearchRoutes,
-  createScrapeRoutes,
+  createScrapeTaskRoutes,
+  createScrapeResultRoutes,
   createPreviewRoutes,
   createCommonRoutes,
   createMonitoringApiRoutes,
+  createRateLimitRoutes,
 } from '@api/routes/index.js';
 
 /**
@@ -47,6 +51,7 @@ interface ApiServices {
     | MonitoringApiService
     | undefined;
   typeormRepo: Record<string, unknown>; // TypeORMRepository will be imported dynamically
+  rateLimitStrategy?: import('@domain/interfaces/IRateLimiter.js').IRateLimitStrategy;
 }
 
 /**
@@ -65,8 +70,7 @@ export { createGraphRoutes };
 export type { ApiServices };
 
 /**
- * @function createApiRouter
- * @description 创建并配置Express API路由器
+ * 创建并配置Express API路由器
  * @param {ApiServices} services - 包含所有必要应用服务实例的对象
  * @returns {express.Router} 配置好的 Express 路由实例
  */
@@ -76,18 +80,27 @@ export function createApiRouter(services: ApiServices): express.Router {
   // 注册批量处理路由 (必须在 documents 和 collections 路由之前注册，避免被参数化路由拦截)
   router.use(createBatchRoutes(services.batchService));
 
-  // 注册集合管理路由 (已包含 /collections 前缀)
-  router.use(createCollectionRoutes(services.collectionService));
+  // 注册集合管理路由
+  router.use(createCollectionManagementRoutes(services.collectionService));
 
-  // 注册文档管理路由 (已包含 /docs 前缀)
+  // 注册文档上传路由
   router.use(
-    createDocumentRoutes(
-      services.importService,
+    createDocumentUploadRoutes(
       services.collectionService,
-      services.documentService,
       services.importAndIndexUseCase,
     ),
   );
+
+  // 注册文档管理路由
+  router.use(
+    createDocumentManagementRoutes(
+      services.importService,
+      services.documentService,
+    ),
+  );
+
+  // 注册文档块路由
+  router.use(createDocumentChunkRoutes(services.documentService));
 
   // 注册搜索路由 (添加 /search 前缀)
   router.use(
@@ -95,8 +108,17 @@ export function createApiRouter(services: ApiServices): express.Router {
     createSearchRoutes(services.searchService, services.logger),
   );
 
-  // 注册爬虫路由 (已包含 /scrape 前缀)
-  router.use(createScrapeRoutes(services.scrapeService, services.logger));
+  // 注册爬虫任务路由 (已包含 /scrape/task 前缀)
+  router.use(
+    '/scrape/task',
+    createScrapeTaskRoutes(services.scrapeService, services.logger),
+  );
+
+  // 注册爬虫结果路由 (已包含 /scrape/result 前缀)
+  router.use(
+    '/scrape/result',
+    createScrapeResultRoutes(services.scrapeService, services.logger),
+  );
 
   // 注册预览路由 (已包含 /preview 前缀)
   router.use(createPreviewRoutes(services.fileProcessingService));
@@ -109,6 +131,14 @@ export function createApiRouter(services: ApiServices): express.Router {
     router.use(
       '/monitoring',
       createMonitoringApiRoutes(services.monitoringApiService),
+    );
+  }
+
+  // 注册限流管理路由 (添加 /rate-limit 前缀)
+  if (services.rateLimitStrategy) {
+    router.use(
+      '/rate-limit',
+      createRateLimitRoutes(services.rateLimitStrategy, services.logger),
     );
   }
 

@@ -4,6 +4,13 @@ import { PersistentSyncStateMachine } from '../sync/index.js';
 import { MonitoringServiceCore } from './MonitoringServiceCore.js';
 import { HealthCheckService } from './HealthCheckService.js';
 import { MetricsService } from './MetricsService.js';
+import { MonitoringAlerts } from './MonitoringAlerts.js';
+import {
+  MonitoringMetrics,
+  MetricRecord,
+  AggregatedMetricSummary,
+} from './MonitoringMetrics.js';
+import { MonitoringDashboard } from './MonitoringDashboard.js';
 import {
   IMonitoringService,
   AlertRule,
@@ -29,6 +36,9 @@ export class MonitoringService implements IMonitoringService {
   private readonly core: MonitoringServiceCore;
   private readonly healthCheck: HealthCheckService;
   private readonly metrics: MetricsService;
+  private readonly alertsManager: MonitoringAlerts;
+  private readonly metricsManager: MonitoringMetrics;
+  private readonly dashboardManager: MonitoringDashboard;
 
   /**
    * 创建监控服务实例
@@ -49,6 +59,18 @@ export class MonitoringService implements IMonitoringService {
     );
     // 注意：MetricsService 需要具体的 SQLiteRepo 实例，这里需要类型适配
     this.metrics = new MetricsService(sqliteRepo, logger);
+    this.alertsManager = new MonitoringAlerts(
+      () => (this as unknown as { dataSource?: DataSource }).dataSource,
+      logger,
+    );
+    this.metricsManager = new MonitoringMetrics(
+      () => (this as unknown as { dataSource?: DataSource }).dataSource,
+      logger,
+    );
+    this.dashboardManager = new MonitoringDashboard(
+      () => (this as unknown as { dataSource?: DataSource }).dataSource,
+      logger,
+    );
   }
 
   /**
@@ -56,6 +78,7 @@ export class MonitoringService implements IMonitoringService {
    * @param dataSource 数据源
    * @param syncStateMachine 同步状态机
    * @param logger 日志记录器
+   * @returns {MonitoringService} 返回创建的MonitoringService实例
    */
   static createForTesting(
     dataSource: DataSource,
@@ -69,16 +92,23 @@ export class MonitoringService implements IMonitoringService {
     );
     // 为测试环境添加直接数据库访问
     (service as unknown as { dataSource?: DataSource }).dataSource = dataSource;
-    (service as unknown as { metrics?: MetricsService }).metrics = MetricsService.createForTesting(
-      dataSource,
-      logger,
-    );
-    (service as unknown as { healthCheck?: HealthCheckService }).healthCheck = new HealthCheckService(
-      {} as ISQLiteRepo,
-      syncStateMachine,
-      logger,
-    );
-    ((service as unknown as { healthCheck?: HealthCheckService }).healthCheck as unknown as { dataSource?: DataSource }).dataSource = dataSource;
+    (service as unknown as { metrics?: MetricsService }).metrics =
+      MetricsService.createForTesting(dataSource, logger);
+    (service as unknown as { healthCheck?: HealthCheckService }).healthCheck =
+      new HealthCheckService({} as ISQLiteRepo, syncStateMachine, logger);
+    (
+      (service as unknown as { healthCheck?: HealthCheckService })
+        .healthCheck as unknown as { dataSource?: DataSource }
+    ).dataSource = dataSource;
+    // 初始化新拆分出的管理器，使用测试 dataSource
+    (service as unknown as { alertsManager?: MonitoringAlerts }).alertsManager =
+      new MonitoringAlerts(() => dataSource, logger);
+    (
+      service as unknown as { metricsManager?: MonitoringMetrics }
+    ).metricsManager = new MonitoringMetrics(() => dataSource, logger);
+    (
+      service as unknown as { dashboardManager?: MonitoringDashboard }
+    ).dashboardManager = new MonitoringDashboard(() => dataSource, logger);
     return service;
   }
 
@@ -92,7 +122,7 @@ export class MonitoringService implements IMonitoringService {
 
   /**
    * 执行系统健康检查
-   * @returns {Promise<void>} 返回健康检查结果
+   * @returns Promise<void>
    */
   public async performHealthCheck(): Promise<void> {
     return this.healthCheck.performHealthCheck();
@@ -204,18 +234,13 @@ export class MonitoringService implements IMonitoringService {
     startTime?: number,
     endTime?: number,
     limit?: number,
-  ): Promise<
-    Array<{
-      id: string;
-      metricName: string;
-      metricValue: number;
-      metricUnit?: string;
-      tags?: Record<string, string | number>;
-      timestamp: number;
-      createdAt: number;
-    }>
-  > {
-    return this.core.getMetrics(metricName, startTime, endTime, limit);
+  ): Promise<MetricRecord[]> {
+    return this.metricsManager.getMetrics(
+      metricName,
+      startTime,
+      endTime,
+      limit,
+    );
   }
 
   /**
@@ -223,16 +248,10 @@ export class MonitoringService implements IMonitoringService {
    * @param metricName 指标名称
    * @returns {指标对象 | null} 返回最新指标值
    */
-  public async getLatestMetric(metricName: string): Promise<{
-    id: string;
-    metricName: string;
-    metricValue: number;
-    metricUnit?: string;
-    tags?: Record<string, string | number>;
-    timestamp: number;
-    createdAt: number;
-  } | null> {
-    return this.core.getLatestMetric(metricName);
+  public async getLatestMetric(
+    metricName: string,
+  ): Promise<MetricRecord | null> {
+    return this.metricsManager.getLatestMetric(metricName);
   }
 
   /**
@@ -240,21 +259,10 @@ export class MonitoringService implements IMonitoringService {
    * @param metricNames 指标名称数组
    * @returns {指标对象记录} 返回多个指标的最新值
    */
-  public async getLatestMetrics(metricNames: string[]): Promise<
-    Record<
-      string,
-      {
-        id: string;
-        metricName: string;
-        metricValue: number;
-        metricUnit?: string;
-        tags?: Record<string, string | number>;
-        timestamp: number;
-        createdAt: number;
-      } | null
-    >
-  > {
-    return this.core.getLatestMetrics(metricNames);
+  public async getLatestMetrics(
+    metricNames: string[],
+  ): Promise<Record<string, MetricRecord | null>> {
+    return this.metricsManager.getLatestMetrics(metricNames);
   }
 
   /**
@@ -270,14 +278,8 @@ export class MonitoringService implements IMonitoringService {
     startTime?: number,
     endTime?: number,
     aggregationType: 'avg' | 'min' | 'max' | 'sum' = 'avg',
-  ): Promise<{
-    min: number;
-    max: number;
-    avg: number;
-    sum: number;
-    count: number;
-  }> {
-    return this.core.getAggregatedMetrics(
+  ): Promise<AggregatedMetricSummary> {
+    return this.metricsManager.getAggregatedMetrics(
       metricName,
       startTime,
       endTime,
@@ -290,7 +292,7 @@ export class MonitoringService implements IMonitoringService {
    * @returns {string[]} 返回所有指标名称
    */
   public async getAllMetricNames(): Promise<string[]> {
-    return this.core.getAllMetricNames();
+    return this.metricsManager.getAllMetricNames();
   }
 
   /**
@@ -304,14 +306,8 @@ export class MonitoringService implements IMonitoringService {
     metricName: string,
     startTime?: number,
     endTime?: number,
-  ): Promise<{
-    min: number;
-    max: number;
-    avg: number;
-    sum: number;
-    count: number;
-  }> {
-    return this.core.getMetricStats(metricName, startTime, endTime);
+  ): Promise<AggregatedMetricSummary> {
+    return this.metricsManager.getMetricStats(metricName, startTime, endTime);
   }
 
   /**
@@ -325,672 +321,122 @@ export class MonitoringService implements IMonitoringService {
 
   /**
    * 创建告警规则
+   * @param rule - 告警规则配置（不包含id）
+   * @returns Promise<AlertRule>
    */
   public async createAlertRule(
     rule: Omit<AlertRule, 'id'>,
   ): Promise<AlertRule> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertRulesRepository = dataSource.getRepository(AlertRules);
-
-      const alertRule = new AlertRules();
-      alertRule.name = rule.name;
-      alertRule.metric_name = rule.metricName;
-      alertRule.condition_operator = rule.conditionOperator as
-        | '>'
-        | '<'
-        | '>='
-        | '<='
-        | '=='
-        | '!='
-        | 'in'
-        | 'not_in';
-      alertRule.threshold_value = rule.thresholdValue;
-      alertRule.severity = rule.severity;
-      alertRule.is_active = rule.enabled;
-
-      const savedRule = await alertRulesRepository.save(alertRule);
-
-      return {
-        id: savedRule.id,
-        name: savedRule.name,
-        condition: rule.condition || rule.conditionOperator,
-        threshold: rule.thresholdValue || rule.threshold,
-        enabled: savedRule.is_active,
-        metricName: savedRule.metric_name,
-        conditionOperator: savedRule.condition_operator,
-        thresholdValue: savedRule.threshold_value,
-        severity: savedRule.severity,
-      };
-    } catch (error) {
-      this.logger.error('创建告警规则失败', { error, rule });
-      throw error;
-    }
+    return this.alertsManager.createAlertRule(rule);
   }
 
   /**
    * 更新告警规则
+   * @param id - 告警规则ID
+   * @param updates - 要更新的字段
+   * @returns Promise<AlertRule>
    */
   public async updateAlertRule(
     id: string,
     updates: Partial<AlertRule>,
   ): Promise<AlertRule> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertRulesRepository = dataSource.getRepository(AlertRules);
-
-      const rule = await alertRulesRepository.findOne({ where: { id } });
-      if (!rule) {
-        throw new Error(`告警规则不存在: ${id}`);
-      }
-
-      if (updates.thresholdValue !== undefined) {
-        rule.threshold_value = updates.thresholdValue;
-      }
-      if (updates.enabled !== undefined) {
-        rule.is_active = updates.enabled;
-      }
-      if (updates.severity !== undefined) {
-        rule.severity = updates.severity;
-      }
-
-      const savedRule = await alertRulesRepository.save(rule);
-
-      return {
-        id: savedRule.id,
-        name: savedRule.name,
-        condition: updates.condition || rule.condition_operator,
-        threshold: updates.thresholdValue || rule.threshold_value,
-        enabled: savedRule.is_active,
-        metricName: savedRule.metric_name,
-        conditionOperator: savedRule.condition_operator,
-        thresholdValue: savedRule.threshold_value,
-        severity: savedRule.severity,
-      };
-    } catch (error) {
-      this.logger.error('更新告警规则失败', { error, id, updates });
-      throw error;
-    }
+    return this.alertsManager.updateAlertRule(id, updates);
   }
 
   /**
    * 删除告警规则
+   * @param id - 告警规则ID
+   * @returns Promise<void>
    */
   public async deleteAlertRule(id: string): Promise<void> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertRulesRepository = dataSource.getRepository(AlertRules);
-      await alertRulesRepository.delete(id);
-    } catch (error) {
-      this.logger.error('删除告警规则失败', { error, id });
-      throw error;
-    }
+    return this.alertsManager.deleteAlertRule(id);
   }
 
   /**
    * 获取所有告警规则
+   * @returns Promise<AlertRule[]>
    */
   public async getAllAlertRules(): Promise<AlertRule[]> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertRulesRepository = dataSource.getRepository(AlertRules);
-      const rules = await alertRulesRepository.find();
-
-      return rules.map((rule) => ({
-        id: rule.id,
-        name: rule.name,
-        condition: rule.condition_operator,
-        threshold: rule.threshold_value,
-        enabled: rule.is_active,
-        metricName: rule.metric_name,
-        conditionOperator: rule.condition_operator,
-        thresholdValue: rule.threshold_value,
-        severity: rule.severity,
-      }));
-    } catch (error) {
-      this.logger.error('获取告警规则失败', { error });
-      return [];
-    }
+    return this.alertsManager.getAllAlertRules();
   }
 
   /**
    * 处理告警
+   * @returns Promise<AlertHistoryItem[]>
    */
   public async processAlerts(): Promise<AlertHistoryItem[]> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertRulesRepository = dataSource.getRepository(AlertRules);
-      const alertHistoryRepository = dataSource.getRepository(AlertHistory);
-      const systemMetricsRepository = dataSource.getRepository(SystemMetrics);
-
-      const activeRules = await alertRulesRepository
-        .createQueryBuilder('rule')
-        .where('rule.is_active = :isActive', { isActive: true })
-        .getMany();
-
-      const triggeredAlerts: AlertHistoryItem[] = [];
-
-      for (const rule of activeRules) {
-        // 获取最新的指标值
-        const latestMetric = await systemMetricsRepository
-          .createQueryBuilder('metric')
-          .where('metric.metric_name = :metricName', {
-            metricName: rule.metric_name,
-          })
-          .orderBy('metric.timestamp', 'DESC')
-          .getOne();
-
-        if (latestMetric) {
-          const shouldTrigger = this.evaluateCondition(
-            latestMetric.metric_value,
-            rule.condition_operator,
-            rule.threshold_value,
-          );
-
-          if (shouldTrigger) {
-            const alertHistory = new AlertHistory();
-            alertHistory.rule_id = rule.id;
-            alertHistory.metric_value = latestMetric.metric_value;
-            alertHistory.threshold_value = rule.threshold_value;
-            alertHistory.severity = rule.severity;
-            alertHistory.status = 'triggered';
-            alertHistory.message = `${rule.name}: ${rule.metric_name} is ${latestMetric.metric_value} (threshold: ${rule.threshold_value})`;
-            alertHistory.triggered_at = Date.now();
-
-            const savedAlert = await alertHistoryRepository.save(alertHistory);
-
-            triggeredAlerts.push({
-              id: savedAlert.id,
-              ruleId: rule.id,
-              ruleName: rule.name,
-              status: 'triggered',
-              severity: rule.severity,
-              metricValue: latestMetric.metric_value,
-              message: alertHistory.message,
-              triggeredAt: new Date(savedAlert.triggered_at),
-            });
-          }
-        }
-      }
-
-      return triggeredAlerts;
-    } catch (error) {
-      this.logger.error('处理告警失败', { error });
-      return [];
-    }
+    return this.alertsManager.processAlerts();
   }
 
   /**
    * 解决告警
+   * @param id - 告警ID
+   * @param options - 解决选项
+   * @param options.message - 解决消息
+   * @returns Promise<AlertHistoryItem>
    */
   public async resolveAlert(
     id: string,
     options?: { message?: string },
   ): Promise<AlertHistoryItem> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertHistoryRepository = dataSource.getRepository(AlertHistory);
-
-      const alert = await alertHistoryRepository.findOne({ where: { id } });
-      if (!alert) {
-        throw new Error(`告警不存在: ${id}`);
-      }
-
-      alert.status = 'resolved';
-      alert.resolved_at = Date.now();
-      if (options?.message) {
-        alert.message = options.message;
-      }
-
-      const savedAlert = await alertHistoryRepository.save(alert);
-
-      return {
-        id: savedAlert.id,
-        ruleId: savedAlert.rule_id,
-        ruleName: '', // 需要关联查询
-        status: 'resolved',
-        severity: savedAlert.severity,
-        metricValue: savedAlert.metric_value,
-        message: savedAlert.message,
-        triggeredAt: new Date(savedAlert.triggered_at),
-        resolvedAt: savedAlert.resolved_at
-          ? new Date(savedAlert.resolved_at)
-          : undefined,
-      };
-    } catch (error) {
-      this.logger.error('解决告警失败', { error, id });
-      throw error;
-    }
+    return this.alertsManager.resolveAlert(id, options);
   }
 
   /**
    * 获取告警历史
+   * @param options - 查询选项
+   * @returns Promise<AlertHistoryItem[]>
    */
   public async getAlertHistory(
     options: AlertHistoryOptions,
   ): Promise<AlertHistoryItem[]> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const alertHistoryRepository = dataSource.getRepository(AlertHistory);
-
-      const alerts = await alertHistoryRepository
-        .createQueryBuilder('alert')
-        .where('alert.triggered_at >= :startTime', {
-          startTime: options.startTime.getTime(),
-        })
-        .andWhere('alert.triggered_at <= :endTime', {
-          endTime: options.endTime.getTime(),
-        })
-        .orderBy('alert.triggered_at', 'DESC')
-        .getMany();
-
-      return alerts.map((alert) => ({
-        id: alert.id,
-        ruleId: alert.rule_id,
-        ruleName: '', // 需要关联查询
-        status: alert.status,
-        severity: alert.severity,
-        metricValue: alert.metric_value,
-        message: alert.message,
-        triggeredAt: new Date(alert.triggered_at),
-        resolvedAt: alert.resolved_at ? new Date(alert.resolved_at) : undefined,
-      }));
-    } catch (error) {
-      this.logger.error('获取告警历史失败', { error });
-      return [];
-    }
+    return this.alertsManager.getAlertHistory(options);
   }
 
   /**
    * 获取仪表板数据
+   * @returns Promise<DashboardData>
    */
   public async getDashboardData(): Promise<DashboardData> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const systemHealthRepository = dataSource.getRepository(SystemHealth);
-      const systemMetricsRepository = dataSource.getRepository(SystemMetrics);
-      const alertHistoryRepository = dataSource.getRepository(AlertHistory);
-
-      // 获取健康状态
-      const healthRecords = await systemHealthRepository
-        .createQueryBuilder('health')
-        .getMany();
-      const overallHealth = this.calculateOverallHealth(healthRecords);
-
-      // 获取最新指标
-      const latestMetrics = await this.getLatestMetricsData(
-        systemMetricsRepository,
-      );
-
-      // 获取活跃告警
-      const activeAlerts = await alertHistoryRepository.find({
-        where: { status: 'triggered' },
-        order: { triggered_at: 'DESC' },
-        take: 10,
-      });
-
-      return {
-        overallHealth,
-        components: healthRecords.map((record) => ({
-          component: record.component,
-          status: record.status,
-          message: record.errorMessage,
-          lastCheck: new Date(record.lastCheck),
-          responseTimeMs: record.responseTimeMs,
-        })),
-        metrics: latestMetrics,
-        activeAlerts: activeAlerts.map((alert) => ({
-          id: alert.id,
-          ruleId: alert.rule_id,
-          ruleName: '', // 需要关联查询
-          status: alert.status,
-          severity: alert.severity,
-          metricValue: alert.metric_value,
-          message: alert.message,
-          triggeredAt: new Date(alert.triggered_at),
-        })),
-      };
-    } catch (error) {
-      this.logger.error('获取仪表板数据失败', { error });
-      return {
-        overallHealth: 'unhealthy',
-        components: [],
-        metrics: {},
-        activeAlerts: [],
-      };
-    }
+    return this.dashboardManager.getDashboardData();
   }
 
   /**
    * 获取系统概览
+   * @returns Promise<SystemOverview>
    */
   public async getSystemOverview(): Promise<SystemOverview> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const systemHealthRepository = dataSource.getRepository(SystemHealth);
-      const systemMetricsRepository = dataSource.getRepository(SystemMetrics);
-
-      // 获取健康状态
-      const healthRecords = await systemHealthRepository.find();
-      const healthStatus = this.calculateOverallHealth(healthRecords);
-
-      // 获取系统指标
-      const uptimeMetric = await systemMetricsRepository.findOne({
-        where: { metric_name: 'uptime' },
-        order: { timestamp: 'DESC' },
-      });
-
-      const requestRateMetric = await systemMetricsRepository.findOne({
-        where: { metric_name: 'request_rate' },
-        order: { timestamp: 'DESC' },
-      });
-
-      const errorRateMetric = await systemMetricsRepository.findOne({
-        where: { metric_name: 'error_rate' },
-        order: { timestamp: 'DESC' },
-      });
-
-      return {
-        healthStatus,
-        uptime: uptimeMetric?.metric_value || 0,
-        requestRate: requestRateMetric?.metric_value || 0,
-        errorRate: errorRateMetric?.metric_value || 0,
-        componentCount: healthRecords.length,
-        healthyComponents: healthRecords.filter((r) => r.status === 'healthy')
-          .length,
-        unhealthyComponents: healthRecords.filter(
-          (r) => r.status === 'unhealthy',
-        ).length,
-      };
-    } catch (error) {
-      this.logger.error('获取系统概览失败', { error });
-      return {
-        healthStatus: 'unhealthy',
-        uptime: 0,
-        requestRate: 0,
-        errorRate: 0,
-        componentCount: 0,
-        healthyComponents: 0,
-        unhealthyComponents: 0,
-      };
-    }
+    return this.dashboardManager.getSystemOverview();
   }
 
   /**
    * 获取性能统计
+   * @param metricName - 指标名称
+   * @param tags - 指标标签
+   * @returns Promise<PerformanceStats>
    */
   public async getPerformanceStats(
     metricName: string,
     tags?: Record<string, string | number>,
   ): Promise<PerformanceStats> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const systemMetricsRepository = dataSource.getRepository(SystemMetrics);
-
-      const metrics = await systemMetricsRepository.find({
-        where: { metric_name: metricName },
-        order: { timestamp: 'DESC' },
-        take: 1000,
-      });
-
-      if (metrics.length === 0) {
-        return { average: 0, min: 0, max: 0, p95: 0, p99: 0 };
-      }
-
-      const values = metrics.map((m) => m.metric_value);
-      values.sort((a, b) => a - b);
-
-      const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-      const min = values[0];
-      const max = values[values.length - 1];
-
-      // 计算百分位数的辅助函数
-      const getPercentile = (percentile: number): number => {
-        if (values.length === 0) return 0;
-        if (values.length === 1) return values[0];
-
-        const index = (percentile / 100) * (values.length - 1);
-        const lowerIndex = Math.floor(index);
-        const upperIndex = Math.ceil(index);
-        const weight = index - lowerIndex;
-
-        if (lowerIndex === upperIndex) {
-          return values[lowerIndex];
-        }
-
-        // 线性插值
-        const lowerValue = values[lowerIndex];
-        const upperValue = values[upperIndex];
-        return lowerValue + (upperValue - lowerValue) * weight;
-      };
-
-      const p95 = getPercentile(95);
-      const p99 = getPercentile(99);
-
-      return { average, min, max, p95, p99 };
-    } catch (error) {
-      this.logger.error('获取性能统计失败', { error, metricName });
-      return { average: 0, min: 0, max: 0, p95: 0, p99: 0 };
-    }
+    return this.metricsManager.getPerformanceStats(metricName);
   }
 
   /**
    * 检测性能异常
+   * @param metricName - 指标名称
+   * @param options - 异常检测选项
+   * @returns Promise<PerformanceAnomaly[]>
    */
   public async detectPerformanceAnomalies(
     metricName: string,
     options: AnomalyDetectionOptions,
   ): Promise<PerformanceAnomaly[]> {
-    try {
-      const dataSource = (this as { dataSource?: DataSource }).dataSource as DataSource;
-      if (!dataSource) {
-        throw new Error('数据源未初始化');
-      }
-
-      const systemMetricsRepository = dataSource.getRepository(SystemMetrics);
-
-      const timeWindowStart = Date.now() - options.timeWindow;
-
-      const metrics = await systemMetricsRepository
-        .createQueryBuilder('metric')
-        .where('metric.metric_name = :metricName', { metricName })
-        .andWhere('metric.timestamp >= :timeWindowStart', { timeWindowStart })
-        .orderBy('metric.timestamp', 'ASC')
-        .getMany();
-
-      if (metrics.length < 10) {
-        return [];
-      }
-
-      const anomalies: PerformanceAnomaly[] = [];
-
-      // 使用更智能的方法来检测异常
-      // 尝试使用时间分段方法：使用早期数据作为基准，检测后期数据是否异常
-      if (metrics.length >= 10) {
-        // 将数据分为前后两部分，用前一部分作为基准
-        const splitIndex = Math.floor(metrics.length / 2);
-        const baselineMetrics = metrics.slice(0, splitIndex);
-        const checkMetrics = metrics.slice(splitIndex);
-
-        if (baselineMetrics.length > 0) {
-          const baselineValues = baselineMetrics.map((m) => m.metric_value);
-          const baselineMean =
-            baselineValues.reduce((sum, val) => sum + val, 0) /
-            baselineValues.length;
-          const baselineStdDev = Math.sqrt(
-            baselineValues.reduce(
-              (sum, val) => sum + Math.pow(val - baselineMean, 2),
-              0,
-            ) / baselineValues.length,
-          );
-
-          // 使用基准数据的统计量来检测所有数据中的异常
-          const baselineThreshold =
-            baselineMean + options.threshold * baselineStdDev;
-
-          for (const metric of metrics) {
-            // 检测是否显著偏离基准
-            if (metric.metric_value > baselineThreshold) {
-              const severity =
-                metric.metric_value > baselineThreshold * 1.5
-                  ? 'high'
-                  : metric.metric_value > baselineThreshold * 1.2
-                    ? 'medium'
-                    : 'low';
-
-              anomalies.push({
-                value: metric.metric_value,
-                timestamp: new Date(metric.timestamp),
-                severity,
-              });
-            }
-          }
-        }
-      } else {
-        // 如果数据点不足，使用原始方法
-        const values = metrics.map((m) => m.metric_value);
-        const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-        const variance =
-          values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) /
-          values.length;
-        const stdDev = Math.sqrt(variance);
-        const threshold = mean + options.threshold * stdDev;
-
-        for (const metric of metrics) {
-          if (metric.metric_value > threshold) {
-            const severity =
-              metric.metric_value > threshold * 1.5
-                ? 'high'
-                : metric.metric_value > threshold * 1.2
-                  ? 'medium'
-                  : 'low';
-
-            anomalies.push({
-              value: metric.metric_value,
-              timestamp: new Date(metric.timestamp),
-              severity,
-            });
-          }
-        }
-      }
-
-      return anomalies;
-    } catch (error) {
-      this.logger.error('检测性能异常失败', { error, metricName });
-      return [];
-    }
+    return this.metricsManager.detectPerformanceAnomalies(metricName, options);
   }
 
   /**
    * 评估条件
    */
-  private evaluateCondition(
-    value: number,
-    operator: string,
-    threshold: number,
-  ): boolean {
-    switch (operator) {
-      case '>':
-        return value > threshold;
-      case '<':
-        return value < threshold;
-      case '>=':
-        return value >= threshold;
-      case '<=':
-        return value <= threshold;
-      case '==':
-        return value === threshold;
-      case '!=':
-        return value !== threshold;
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * 计算整体健康状态
-   */
-  private calculateOverallHealth(
-    healthRecords: SystemHealth[],
-  ): 'healthy' | 'degraded' | 'unhealthy' {
-    if (healthRecords.length === 0) {
-      return 'unhealthy';
-    }
-
-    const statuses = healthRecords.map((r) => r.status);
-
-    if (statuses.includes('unhealthy')) {
-      return 'unhealthy';
-    }
-
-    if (statuses.includes('degraded')) {
-      return 'degraded';
-    }
-
-    return 'healthy';
-  }
-
-  /**
-   * 获取最新指标数据
-   */
-  private async getLatestMetricsData(
-    systemMetricsRepository: { findOne: (options: { where: { metric_name: string }; order: { timestamp: 'DESC' } }) => Promise<{ metric_value: number } | null> },
-  ): Promise<Record<string, number>> {
-    const metrics: Record<string, number> = {};
-
-    const metricNames = ['cpu_usage', 'memory_usage', 'request_count'];
-
-    for (const name of metricNames) {
-      const metric = await systemMetricsRepository.findOne({
-        where: { metric_name: name },
-        order: { timestamp: 'DESC' },
-      });
-
-      if (metric) {
-        metrics[name] = metric.metric_value;
-      }
-    }
-
-    return metrics;
-  }
+  // helper logic moved to MonitoringAlerts/MonitoringMetrics/MonitoringDashboard
 }

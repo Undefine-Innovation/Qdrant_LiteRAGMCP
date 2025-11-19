@@ -9,10 +9,7 @@ import {
 import { TransactionContext } from '@infrastructure/transactions/TransactionContext.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { CollectionId } from '@domain/entities/types.js';
-import {
-  TransactionErrorHandler,
-  TransactionError,
-} from '@infrastructure/transactions/TransactionErrorHandler.js';
+import { CoreError } from '@domain/errors/CoreError.js';
 import { TransactionOperations } from '@infrastructure/transactions/TransactionOperations.js';
 import { TransactionRollback } from '@infrastructure/transactions/TransactionRollback.js';
 import { TransactionSavepoints } from '@infrastructure/transactions/TransactionSavepoints.js';
@@ -44,7 +41,7 @@ export class TypeORMTransactionManager implements ITransactionManager {
     private readonly qdrantRepo: IQdrantRepo,
     private readonly logger: Logger,
   ) {
-    const errorHandler = new TransactionErrorHandler(logger, dataSource);
+    // 使用简化的错误处理，不再需要单独的错误处理器
     const operationsHandler = new TransactionOperations(
       dataSource,
       qdrantRepo,
@@ -57,14 +54,13 @@ export class TypeORMTransactionManager implements ITransactionManager {
     );
     const cleanupHandler = new TransactionCleanup(logger);
 
-    this.lifecycle = new TransactionLifecycle(dataSource, logger, errorHandler);
+    this.lifecycle = new TransactionLifecycle(dataSource, logger);
     this.stateManager = new TransactionStateManager(logger, cleanupHandler);
     this.executor = new TransactionExecutor(
       logger,
       qdrantRepo,
       operationsHandler,
       savepointsHandler,
-      errorHandler,
     );
   }
 
@@ -100,12 +96,17 @@ export class TypeORMTransactionManager implements ITransactionManager {
   ): Promise<TransactionContext> {
     const parentContext = this.activeTransactions.get(parentTransactionId);
     if (!parentContext) {
-      throw TransactionError.transactionNotFound(parentTransactionId);
+      throw CoreError.notFound(`Transaction ${parentTransactionId}`, {
+        transactionId: parentTransactionId,
+      });
     }
 
     const parentQueryRunner = this.queryRunners.get(parentTransactionId);
     if (!parentQueryRunner) {
-      throw TransactionError.queryRunnerNotFound(parentTransactionId);
+      throw CoreError.notFound(
+        `QueryRunner for transaction ${parentTransactionId}`,
+        { transactionId: parentTransactionId },
+      );
     }
 
     const context = await this.lifecycle.beginNestedTransaction(
@@ -131,12 +132,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   async commit(transactionId: string): Promise<void> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     try {
@@ -167,12 +172,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   async rollback(transactionId: string): Promise<void> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     try {
@@ -198,12 +207,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   ): Promise<void> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     await this.executor.executeOperation(
@@ -278,12 +291,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   ): Promise<string> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     return await this.executor.createSavepoint(
@@ -306,12 +323,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   ): Promise<void> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     await this.executor.rollbackToSavepoint(
@@ -333,12 +354,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
   ): Promise<void> {
     const context = this.activeTransactions.get(transactionId);
     if (!context) {
-      throw TransactionError.transactionNotFound(transactionId);
+      throw CoreError.notFound(`Transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     const queryRunner = this.queryRunners.get(transactionId);
     if (!queryRunner) {
-      throw TransactionError.queryRunnerNotFound(transactionId);
+      throw CoreError.notFound(`QueryRunner for transaction ${transactionId}`, {
+        transactionId,
+      });
     }
 
     await this.executor.releaseSavepoint(
@@ -430,6 +455,16 @@ export class TypeORMTransactionManager implements ITransactionManager {
    * 删除集合的事务方法
    * @param collectionId 集合ID
    * @param collections 集合表操作对象
+   * @param collections.getById 获取集合的方法
+   * @param collections.delete 删除集合的方法
+   * @param collections.chunkMeta 块元数据操作对象
+   * @param collections.chunkMeta.deleteByCollectionId 根据集合ID删除块元数据的方法
+   * @param collections.chunksFts5 FTS5块操作对象
+   * @param collections.chunksFts5.deleteByCollectionId 根据集合ID删除FTS5块的方法
+   * @param collections.docs 文档操作对象
+   * @param collections.docs.listByCollection 根据集合ID列出文档的方法
+   * @param collections.docs.hardDelete 硬删除文档的方法
+   * @param collections.listAll 列出所有集合的方法
    * @returns Promise<void>
    */
   async deleteCollectionInTransaction(

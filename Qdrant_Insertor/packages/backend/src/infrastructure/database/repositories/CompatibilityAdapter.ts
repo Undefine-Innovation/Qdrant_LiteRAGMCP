@@ -123,9 +123,8 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 创建后的集合
    */
   async create(collection: unknown): Promise<unknown> {
-     
     // Legacy adapter requires explicit casting for compatibility
-    return await this.repository.create(collection as any);
+    return await this.repository.create(collection as Record<string, unknown>);
   }
 
   /**
@@ -135,11 +134,10 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
    * @returns 更新后的集合
    */
   async update(id: CollectionId, data: unknown): Promise<unknown> {
-     
     // Legacy adapter requires explicit casting for compatibility
     return await this.repository.update(
       { id } as Record<string, unknown>,
-      data as any,
+      data as Record<string, unknown>,
     );
   }
 
@@ -153,7 +151,7 @@ export class CollectionRepositoryAdapter implements CollectionsTable {
       string,
       unknown
     >);
-    return !!result;
+    return result !== undefined;
   }
 
   /**
@@ -262,9 +260,8 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 创建的文档
    */
   async create(doc: unknown): Promise<unknown> {
-     
     // Legacy adapter requires explicit casting for compatibility
-    return await this.repository.create(doc as any);
+    return await this.repository.create(doc as Record<string, unknown>);
   }
 
   /**
@@ -274,11 +271,10 @@ export class DocRepositoryAdapter implements DocsTable {
    * @returns 更新后的文档
    */
   async update(id: DocId, data: unknown): Promise<unknown> {
-     
     // Legacy adapter requires explicit casting for compatibility
     return await this.repository.update(
       { id } as Record<string, unknown>,
-      data as any,
+      data as Record<string, unknown>,
     );
   }
 
@@ -292,7 +288,7 @@ export class DocRepositoryAdapter implements DocsTable {
       string,
       unknown
     >);
-    return !!result;
+    return result !== undefined;
   }
 
   /**
@@ -350,7 +346,7 @@ export class DocRepositoryAdapter implements DocsTable {
       string,
       unknown
     >);
-    return !!result;
+    return result !== undefined;
   }
 
   /**

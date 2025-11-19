@@ -96,9 +96,19 @@ export * from './DefaultStreamFileLoader.js';
 export * from './FileFormatDetector.js';
 export * from './FileProcessorRegistry.js';
 export * from './LocalFileLoader.js';
+// 导出统一的Markdown分割器（推荐使用）
+export * from './UnifiedMarkdownSplitter.js';
+// 导出语义分块器
+export * from './SemanticSplitter.js';
+
+// 导出旧的分割器实现（已废弃，保持向后兼容）
+// @deprecated 请使用 UnifiedMarkdownSplitter 替代
 export * from './MarkdownSplitter.js';
+// @deprecated 请使用 UnifiedMarkdownSplitter 替代
 export * from './MarkdownSplitterAdapter.js';
 export * from './OpenAIEmbeddingProvider.js';
+export * from './OpenAICompatibleLLMService.js';
+export * from './LLMServiceFactory.js';
 export * from './WebCrawler.js';
 
 // 处理器实现

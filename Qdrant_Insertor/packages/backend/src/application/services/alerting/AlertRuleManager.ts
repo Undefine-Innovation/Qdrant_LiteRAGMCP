@@ -28,7 +28,7 @@ export class AlertRuleManager {
     rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<string> {
     try {
-      return await this.sqliteRepo.alertRules.create(rule);
+      return (await this.sqliteRepo.alertRules.create(rule)) as string;
     } catch (error) {
       this.logger.error('创建告警规则失败', {
         error: error instanceof Error ? error.message : String(error),
@@ -48,7 +48,7 @@ export class AlertRuleManager {
     updates: Partial<AlertRule>,
   ): Promise<boolean> {
     try {
-      return await this.sqliteRepo.alertRules.update(id, updates);
+      return (await this.sqliteRepo.alertRules.update(id, updates)) as boolean;
     } catch (error) {
       this.logger.error('更新告警规则失败', {
         error: error instanceof Error ? error.message : String(error),
@@ -82,7 +82,7 @@ export class AlertRuleManager {
    */
   public async getAlertRule(id: string): Promise<AlertRule | null> {
     try {
-      return await this.sqliteRepo.alertRules.getById(id);
+      return (await this.sqliteRepo.alertRules.getById(id)) as AlertRule | null;
     } catch (error) {
       this.logger.warn('获取告警规则失败', {
         error: error instanceof Error ? error.message : String(error),
@@ -99,7 +99,9 @@ export class AlertRuleManager {
    */
   public async getAllAlertRules(activeOnly?: boolean): Promise<AlertRule[]> {
     try {
-      return await this.sqliteRepo.alertRules.getAll(activeOnly);
+      return (await this.sqliteRepo.alertRules.getAll(
+        activeOnly ? { activeOnly: true } : undefined,
+      )) as AlertRule[];
     } catch (error) {
       this.logger.warn('获取告警规则失败，返回空列表', {
         error: error instanceof Error ? error.message : String(error),
@@ -114,7 +116,7 @@ export class AlertRuleManager {
    */
   public async getAllActiveRules(): Promise<AlertRule[]> {
     try {
-      return await this.sqliteRepo.alertRules.getAll(true);
+      return (await this.sqliteRepo.alertRules.getAll({})) as AlertRule[];
     } catch (error) {
       this.logger.warn('获取活跃告警规则失败，返回空列表', {
         error: error instanceof Error ? error.message : String(error),
@@ -130,7 +132,9 @@ export class AlertRuleManager {
    */
   public async getAlertRulesCount(activeOnly?: boolean): Promise<number> {
     try {
-      return await this.sqliteRepo.alertRules.getCount(activeOnly);
+      return (await this.sqliteRepo.alertRules.getCount(
+        activeOnly ? { active: true } : undefined,
+      )) as number;
     } catch (error) {
       this.logger.warn('获取告警规则总数失败，返回 0', {
         error: error instanceof Error ? error.message : String(error),
@@ -161,7 +165,7 @@ export class AlertRuleManager {
       sort,
       order,
       activeOnly,
-    );
+    ) as AlertRule[];
   }
 
   /**

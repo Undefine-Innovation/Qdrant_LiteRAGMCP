@@ -7,13 +7,13 @@
 export * from './routes/index.js';
 
 // 中间件
-export * from './middleware/index.js';
+export * from './middleware/Index.js';
 
 // API契约
 export * from './contracts/index.js';
 
 // 监控API
-export * from './monitoring.js';
+export * from './Monitoring.js';
 
 // Swagger配置
-export * from './swagger/swagger-config.js';
+// export * from './swagger/swagger-config.js'; // 暂时注释

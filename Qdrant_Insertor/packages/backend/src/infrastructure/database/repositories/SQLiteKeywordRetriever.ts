@@ -61,7 +61,11 @@ export class SQLiteKeywordRetriever {
    * @param chunksTable 块表访问器
    * @param logger 日志记录器
    */
-  constructor(chunksFts5Table: FtsTableInterface, chunksTable: ChunkTableInterface, logger: LoggerInterface) {
+  constructor(
+    chunksFts5Table: FtsTableInterface,
+    chunksTable: ChunkTableInterface,
+    logger: LoggerInterface,
+  ) {
     this.logger = logger;
     this.chunksFts5Table = chunksFts5Table;
     this.chunksTable = chunksTable;
@@ -80,9 +84,9 @@ export class SQLiteKeywordRetriever {
       : this.chunksFts5Table.search(query, '', limit + offset);
 
     const paginatedResults = ftsResults.slice(offset);
-    const pointIds = paginatedResults.map(result => result.pointId);
+    const pointIds = paginatedResults.map((result) => result.pointId);
     const chunks = this.chunksTable.getByPointIds(pointIds);
-    const chunkMap = new Map(chunks.map(chunk => [chunk.pointId, chunk]));
+    const chunkMap = new Map(chunks.map((chunk) => [chunk.pointId, chunk]));
 
     const results: ChunkData[] = [];
     for (const ftsResult of paginatedResults) {
@@ -121,7 +125,7 @@ export class SQLiteKeywordRetriever {
    * @param data 要索引的数据数组
    */
   async createIndexBatch(data: ChunkData[]): Promise<void> {
-    const ftsData: FtsResult[] = data.map(item => ({
+    const ftsData: FtsResult[] = data.map((item) => ({
       pointId: item.pointId,
       docId: item.docId,
       collectionId: item.collectionId,

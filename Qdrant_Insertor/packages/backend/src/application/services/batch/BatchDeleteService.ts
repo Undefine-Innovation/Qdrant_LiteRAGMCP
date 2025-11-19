@@ -251,6 +251,8 @@ export class BatchDeleteService {
    * 批量删除块（通过 pointId 列表）
    * 说明：在测试环境中，测试数据库由 tests/setup 初始化为全局 __TEST_DATASOURCE。
    * 这里直接使用全局测试数据源删除 chunk 记录以满足集成测试的期望（避免引入跨层依赖）。
+   * @param chunkPointIds - 要删除的块pointId列表
+   * @returns 批量删除结果
    */
   async batchDeleteChunks(
     chunkPointIds: string[],

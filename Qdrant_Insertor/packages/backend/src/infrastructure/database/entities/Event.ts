@@ -213,6 +213,7 @@ export class Event extends BaseEntity {
   /**
    * 创建时间别名
    * 为了兼容代码中的 createdAt 引用
+   * @returns {number} 创建时间戳
    */
   get createdAt(): number {
     return this.created_at;
@@ -225,6 +226,7 @@ export class Event extends BaseEntity {
   /**
    * 更新时间别名
    * 为了兼容代码中的 updatedAt 引用
+   * @returns {number} 更新时间戳
    */
   get updatedAt(): number {
     return this.updated_at;

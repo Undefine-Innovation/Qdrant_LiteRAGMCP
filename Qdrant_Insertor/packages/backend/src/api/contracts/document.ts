@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CollectionIdParamsSchema } from './collection.js';
+import { CollectionIdParamsSchema } from './Collection.js';
 
 /**
  * 用于文档上传的Schema

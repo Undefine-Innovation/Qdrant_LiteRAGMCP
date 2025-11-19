@@ -2,6 +2,7 @@ import { Logger } from '@logging/logger.js';
 import { ISplitter } from '@domain/interfaces/splitter.js';
 import { IEmbeddingProvider } from '@domain/interfaces/embedding.js';
 import { IKeywordRetriever } from '@domain/repositories/IKeywordRetriever.js';
+import { ILLMService } from '@domain/interfaces/llm.js';
 
 /**
  * 融合策略接口
@@ -51,6 +52,7 @@ export class StrategyRegistry {
   private retrievers = new Map<string, IKeywordRetriever>();
   private fusions = new Map<string, IFusionStrategy>();
   private reranks = new Map<string, IRerankStrategy>();
+  private llms = new Map<string, ILLMService>();
 
   /**
    * 创建 StrategyRegistry 实例
@@ -223,6 +225,39 @@ export class StrategyRegistry {
     return Array.from(this.reranks.keys());
   }
 
+  // ============ LLM ============
+
+  /**
+   * 注册LLM服务
+   * @param key 服务键名
+   * @param llm LLM服务实例
+   */
+  registerLLM(key: string, llm: ILLMService): void {
+    this.llms.set(key, llm);
+    this.logger.debug(`已注册 LLMService: ${key}`);
+  }
+
+  /**
+   * 获取LLM服务
+   * @param key 服务键名
+   * @returns LLM服务实例
+   */
+  getLLM(key: string): ILLMService {
+    const llm = this.llms.get(key);
+    if (!llm) {
+      throw new Error(`LLMService '${key}' 未注册`);
+    }
+    return llm;
+  }
+
+  /**
+   * 列出所有LLM服务
+   * @returns 所有已注册的LLM服务键名列表
+   */
+  listLLMs(): string[] {
+    return Array.from(this.llms.keys());
+  }
+
   // ============ 元信息 ============
 
   /**
@@ -235,6 +270,7 @@ export class StrategyRegistry {
     retrievers: string[];
     fusions: string[];
     reranks: string[];
+    llms: string[];
   } {
     return {
       splitters: this.listSplitters(),
@@ -242,6 +278,7 @@ export class StrategyRegistry {
       retrievers: this.listRetrievers(),
       fusions: this.listFusions(),
       reranks: this.listReranks(),
+      llms: this.listLLMs(),
     };
   }
 }

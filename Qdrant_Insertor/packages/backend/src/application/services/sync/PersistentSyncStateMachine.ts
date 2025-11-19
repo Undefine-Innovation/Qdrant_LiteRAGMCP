@@ -30,7 +30,7 @@ export class PersistentSyncStateMachine {
     private readonly logger: Logger,
   ) {
     // 需要类型转换，因为SyncJobManager需要SQLiteRepo而不是ISQLiteRepo
-    this.syncJobManager = new SyncJobManager(sqliteRepo as ISQLiteRepo, logger);
+    this.syncJobManager = new SyncJobManager(sqliteRepo, logger);
     this.documentProcessor = new DocumentSyncProcessor(
       sqliteRepo,
       qdrantRepo,
@@ -77,7 +77,14 @@ export class PersistentSyncStateMachine {
       for (const status of statuses) {
         try {
           const jobs = await this.sqliteRepo.syncJobs.getByStatus(status);
-          unfinishedJobs.push(...jobs);
+          unfinishedJobs.push(
+            ...(jobs as Array<{
+              docId: string;
+              status: string;
+              createdAt: number;
+              updatedAt: number;
+            }>),
+          );
         } catch (error) {
           this.logger.warn(`查询状态 ${status} 的同步作业失败`, {
             error: error instanceof Error ? error.message : String(error),

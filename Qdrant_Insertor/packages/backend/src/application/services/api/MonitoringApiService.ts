@@ -20,7 +20,7 @@ import {
   UpdateNotificationChannelRequest,
   TestNotificationRequest,
   TestNotificationResponse,
-} from '@api/contracts/monitoring.js';
+} from '@api/contracts/Monitoring.js';
 import { MonitoringApiServiceCore } from './MonitoringApiServiceCore.js';
 import { AlertApiService } from './AlertApiService.js';
 import { NotificationApiService } from './NotificationApiService.js';

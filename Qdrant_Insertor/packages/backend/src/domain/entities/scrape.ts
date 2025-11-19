@@ -32,6 +32,8 @@ export interface ScrapeConfig {
   maxDepth?: number;
   /** 是否跟随外部链接 */
   followLinks?: boolean;
+  /** 页面扫描期间等待时间(毫秒,默认基于系统配置) */
+  waitTime?: number;
   /** 选择器配置 */
   selectors?: {
     title?: string;

@@ -3,15 +3,15 @@ import { z } from 'zod';
 import { DocId } from '@domain/entities/types.js';
 import { IFileProcessingService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
-import { DocIdParamsSchema } from '@api/contracts/document.js';
+import { DocIdParamsSchema } from '@api/contracts/Document.js';
 import {
   DocumentPreviewQuerySchema,
   DocumentDownloadQuerySchema,
   DocumentThumbnailQuerySchema,
   DocumentPreviewResponseSchema,
   FileFormatInfoResponseSchema,
-} from '@api/contracts/preview.js';
-import { AppError } from '@api/contracts/error.js';
+} from '@api/contracts/Preview.js';
+import { AppError } from '@api/contracts/Error.js';
 
 /**
  * 创建文档预览与下载相关的API路由

@@ -23,6 +23,9 @@ export class ChunkTransactionHelpers extends BaseRepository<Chunk> {
 
   /**
    * 批量创建块（带事务管理器）
+   * @param chunks - 要创建的块数据数组
+   * @param manager - 持久化管理器
+   * @returns 创建的块数组
    */
   async createBatchWithManager(
     chunks: Partial<Chunk>[],
@@ -52,6 +55,9 @@ export class ChunkTransactionHelpers extends BaseRepository<Chunk> {
 
   /**
    * 根据文档ID删除块（带事务管理器）
+   * @param docId - 文档ID
+   * @param manager - 删除管理器
+   * @returns 删除的块数量
    */
   async deleteByDocIdWithManager(
     docId: DocId,

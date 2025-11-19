@@ -78,12 +78,12 @@ module.exports = tseslint.config(
                     ]
                 }
             ],
-            "jsdoc/require-jsdoc": "off",
+            "jsdoc/require-jsdoc": "warn",
             
             // 建议：同时启用 JSDoc 内容完整性检查
-            "jsdoc/require-param": "off", // 开启参数要求
-            "jsdoc/require-returns": "off", // 开启返回值要求
-            "jsdoc/require-description": "off", // 开启描述要求
+            "jsdoc/require-param": "warn", // 开启参数要求
+            "jsdoc/require-returns": "warn", // 开启返回值要求
+            "jsdoc/require-description": "warn", // 开启描述要求
         },
     },
     // 为测试文件禁用严格的类型检查

@@ -417,6 +417,11 @@ export class SyncJobStatusMapper {
    * @param status 数据库状态
    * @returns 是否有效
    */
+  /**
+   * 检查是否为有效的数据库状态
+   * @param status 要检查的状态字符串
+   * @returns 如果是有效的数据库状态则返回true
+   */
   public static isValidDbStatus(status: string): status is DbSyncJobStatus {
     return Object.values(DbSyncJobStatus).includes(status as DbSyncJobStatus);
   }
@@ -425,6 +430,8 @@ export class SyncJobStatusMapper {
    * 规范化任意字符串为数据库状态（小写枚举）
    * 接受历史/大写/混合格式的输入并返回标准的 DbSyncJobStatus 或 undefined
    * 这样可以逐步兼容仓库中使用的不同大小写常量，并把转换逻辑集中在这里
+   * @param status - 要规范化的状态字符串
+   * @returns 规范化的数据库状态或undefined
    */
   public static normalizeDbStatusString(
     status?: string | null,

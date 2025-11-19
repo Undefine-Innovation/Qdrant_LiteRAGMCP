@@ -20,9 +20,29 @@ import { IKeywordRetriever } from '@domain/repositories/IKeywordRetriever.js'; /
 import {
   parsePaginationQuery,
   createPaginatedResponse,
-} from '../../../utils/pagination.js';
+} from '../../../utils/Pagination.js';
 import { ISearchDomainService } from '@domain/services/index.js';
 import { IDocumentAggregateRepository } from '@domain/repositories/index.js';
+
+type QdrantSearchResponse =
+  | SearchResult[]
+  | {
+      results?: SearchResult[];
+    }
+  | undefined;
+
+type SqliteDocSummary = {
+  docId?: string;
+  id?: string;
+  content?: string;
+  name?: string;
+};
+
+type DocsRepositoryWithCollectionLookup = {
+  findByCollectionId?: (
+    collectionId: CollectionId,
+  ) => Promise<SqliteDocSummary[]> | SqliteDocSummary[];
+};
 
 /**
  * 搜索服务实现类
@@ -56,6 +76,8 @@ export class SearchService implements ISearchService {
    * @param collectionId 集合ID
    * @param queryVector 查询向量
    * @param options 搜索选项
+   * @param options.limit 结果数量限制
+   * @param options.scoreThreshold 分数阈值
    * @returns 搜索结果
    */
   public async vectorSearch(
@@ -70,16 +92,19 @@ export class SearchService implements ISearchService {
     );
 
     try {
-      const result = await this.qdrantRepo.search(collectionId, {
+      const raw = await this.qdrantRepo.search(collectionId, {
         vector: queryVector,
         limit,
+        scoreThreshold,
       });
 
+      const resultArray = this.normalizeSearchResults(raw);
+
       this.logger.info(
-        `Found ${result.length || 0} results for vector search.`,
+        `Found ${resultArray.length || 0} results for vector search.`,
       );
 
-      return result;
+      return resultArray;
     } catch (err) {
       this.logger.error(
         `An error occurred during vector search in collection "${collectionId}":`,
@@ -114,13 +139,26 @@ export class SearchService implements ISearchService {
         return [];
       }
 
-      // 获取集合中的所有文档 (暂时返回空数组，等待实现真实的数据访问)
-      // TODO: 实现真实的文档查询逻辑
-      const docs: UniversalSearchResult[] = [];
+      // ��ʵ�֣���ѯ sqlite �е��ĵ��б�������һ����С�Ľ���ṹ
+      const docs = await this.fetchDocsByCollection(collectionId);
 
-      this.logger.info(`Found ${docs.length} documents for keyword search.`);
+      const mapped: SearchResult[] = docs.map((docRecord, index) => {
+        const identifier = this.resolveDocIdentifier(docRecord);
+        return {
+          pointId: `${identifier}_kw_${index}` as PointId,
+          docId: identifier as DocId,
+          chunkIndex: 0,
+          content: docRecord.content ?? '',
+          collectionId,
+          title: docRecord.name,
+          score: 1,
+        };
+      });
 
-      return docs;
+
+      this.logger.info(`Found ${mapped.length} documents for keyword search.`);
+
+      return mapped;
     } catch (err) {
       this.logger.error(
         `An error occurred during keyword search for "${keyword}" in collection "${collectionId}":`,
@@ -140,6 +178,8 @@ export class SearchService implements ISearchService {
    * @param queryVector 查询向量
    * @param keyword 关键词
    * @param weights 权重配置
+   * @param weights.vectorWeight 向量搜索权重
+   * @param weights.keywordWeight 关键词搜索权重
    * @returns 搜索结果
    */
   public async hybridSearch(
@@ -155,11 +195,13 @@ export class SearchService implements ISearchService {
     );
 
     try {
-      // 执行向量搜索
-      const vectorResult = await this.qdrantRepo.search(collectionId, {
+      // 执行向量搜索（对接 vectorSearch 的同样逻辑以保持一致性）
+      const rawVector = await this.qdrantRepo.search(collectionId, {
         vector: queryVector,
         limit: 10,
       });
+
+      const vectorResult = this.normalizeSearchResults(rawVector);
 
       // 执行关键词搜索 (暂时注释掉，因为keywordRetriever的接口不匹配)
       // const keywordResult = await this.keywordRetriever?.search(keyword) || [];
@@ -364,6 +406,7 @@ export class SearchService implements ISearchService {
    * @param query 搜索查询字符串
    * @param collectionId 集合ID
    * @param options 搜索选项
+   * @param options.limit 结果数量限制
    * @returns {Promise<RetrievalResultDTO[]>} 返回搜索结果列表
    */
   public async search(
@@ -372,5 +415,46 @@ export class SearchService implements ISearchService {
     options: { limit?: number } = {},
   ): Promise<RetrievalResultDTO[]> {
     return this.searchText(query, collectionId, options);
+  }
+
+  /**
+   * ��sqlite docs�ֿ��л�ȡָ�����ϵ��ĵ��б�
+   * @param collectionId ����ID
+   * @returns ��ȡ����ĵ�
+   */
+  private async fetchDocsByCollection(
+    collectionId: CollectionId,
+  ): Promise<SqliteDocSummary[]> {
+    const repo = this.sqliteRepo.docs as DocsRepositoryWithCollectionLookup;
+    if (!repo.findByCollectionId) {
+      return [];
+    }
+
+    const result = await repo.findByCollectionId(collectionId);
+    return Array.isArray(result) ? result : [];
+  }
+
+  /**
+   * ȷ�������ĵ���ʶ
+   * @param docRecord sqlite�ĵ���¼
+   * @returns �ĵ�ID���ַ���
+   */
+  private resolveDocIdentifier(docRecord: SqliteDocSummary): string {
+    return docRecord.docId ?? docRecord.id ?? 'unknown';
+  }
+
+  /**
+   * ��һ����������
+   * @param response Qdrant��ѯ���
+   * @returns ��һ��������
+   */
+  private normalizeSearchResults(
+    response: QdrantSearchResponse,
+  ): UniversalSearchResult[] {
+    if (!response) {
+      return [];
+    }
+
+    return Array.isArray(response) ? response : response.results ?? [];
   }
 }

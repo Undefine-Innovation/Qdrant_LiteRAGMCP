@@ -2,10 +2,8 @@ import { DataSource, QueryRunner, TransactionNotStartedError } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { TransactionStatus } from '@domain/repositories/ITransactionManager.js';
 import { TransactionContext } from '@infrastructure/transactions/TransactionContext.js';
-import {
-  TransactionErrorHandler,
-  TransactionError,
-} from '@infrastructure/transactions/TransactionErrorHandler.js';
+// 移除对已删除的TransactionErrorHandler的引用
+import { CoreError } from '@domain/errors/CoreError.js';
 
 /**
  * 事务生命周期管理器
@@ -15,7 +13,6 @@ export class TransactionLifecycle {
   constructor(
     private readonly dataSource: DataSource,
     private readonly logger: Logger,
-    private readonly errorHandler: TransactionErrorHandler,
   ) {}
 
   /**
@@ -56,16 +53,16 @@ export class TransactionLifecycle {
       });
 
       // 记录性能指标
-      this.errorHandler.logPerformanceMetrics(
-        context.transactionId,
-        'beginTransaction',
-        Date.now() - startTime,
-        { metadata },
-      );
+      this.logger.debug('Transaction begin performance metrics', {
+        transactionId: context.transactionId,
+        operation: 'beginTransaction',
+        durationMs: Date.now() - startTime,
+        context: { metadata },
+      });
 
       return { context, queryRunner };
     } catch (error) {
-      const transactionError = this.errorHandler.handleError(error as Error, {
+      const transactionError = CoreError.fromError(error as Error, {
         additionalContext: { operation: 'beginTransaction', metadata },
       });
       throw transactionError;
@@ -146,21 +143,20 @@ export class TransactionLifecycle {
       });
 
       // 记录性能指标
-      this.errorHandler.logPerformanceMetrics(
-        context.transactionId,
-        'beginNestedTransaction',
-        Date.now() - startTime,
-        {
+      this.logger.debug('Nested transaction begin performance metrics', {
+        transactionId: context.transactionId,
+        operation: 'beginNestedTransaction',
+        durationMs: Date.now() - startTime,
+        context: {
           parentTransactionId,
           savepointName,
           metadata,
         },
-      );
+      });
 
       return context;
     } catch (error) {
-      const transactionError = this.errorHandler.handleError(error as Error, {
-        transactionId: parentTransactionId,
+      const transactionError = CoreError.fromError(error as Error, {
         additionalContext: {
           operation: 'beginNestedTransaction',
           parentTransactionId,
@@ -188,10 +184,12 @@ export class TransactionLifecycle {
         context.status !== TransactionStatus.PENDING &&
         context.status !== TransactionStatus.ACTIVE
       ) {
-        throw TransactionError.invalidTransactionState(
-          context.transactionId,
-          context.status,
-          TransactionStatus.ACTIVE,
+        throw CoreError.internal(
+          `Transaction ${context.transactionId} is not in a valid state for commit. Current state: ${context.status}`,
+          {
+            transactionId: context.transactionId,
+            currentState: context.status,
+          },
         );
       }
 
@@ -201,10 +199,12 @@ export class TransactionLifecycle {
       if (context.isRootTransaction) {
         // 如果事务尚未真正启动（beginTransaction 未被 awaited），视为非法提交
         if (!(context as unknown as Record<string, unknown>)._started) {
-          throw TransactionError.invalidTransactionState(
-            context.transactionId,
-            context.status,
-            TransactionStatus.ACTIVE,
+          throw CoreError.internal(
+            `Transaction ${context.transactionId} was not properly started`,
+            {
+              transactionId: context.transactionId,
+              currentState: context.status,
+            },
           );
         }
 
@@ -218,15 +218,15 @@ export class TransactionLifecycle {
       }
 
       // 记录状态变更
-      this.errorHandler.logStateTransition(
-        context.transactionId,
-        previousStatus,
-        TransactionStatus.COMMITTED,
-        {
+      this.logger.debug('Transaction state transition', {
+        transactionId: context.transactionId,
+        fromState: previousStatus,
+        toState: TransactionStatus.COMMITTED,
+        context: {
           isRootTransaction: context.isRootTransaction,
           operationsCount: context.operations.length,
         },
-      );
+      });
 
       context.status = TransactionStatus.COMMITTED;
       (context as unknown as Record<string, unknown>).completedAt = new Date();
@@ -241,28 +241,21 @@ export class TransactionLifecycle {
       }
 
       // 记录性能指标
-      this.errorHandler.logPerformanceMetrics(
-        context.transactionId,
-        'commit',
-        Date.now() - startTime,
-        {
+      this.logger.debug('Transaction commit performance metrics', {
+        transactionId: context.transactionId,
+        operation: 'commit',
+        durationMs: Date.now() - startTime,
+        context: {
           isRootTransaction: context.isRootTransaction,
           operationsCount: context.operations.length,
         },
-      );
+      });
     } catch (error) {
-      const transactionError = this.errorHandler.handleError(error as Error, {
-        transactionId: context.transactionId,
+      const transactionError = CoreError.fromError(error as Error, {
         additionalContext: { operation: 'commit' },
       });
 
       // 更新事务状态为失败
-      this.errorHandler.logStateTransition(
-        context.transactionId,
-        context.status,
-        TransactionStatus.FAILED,
-        { reason: 'commit_failed' },
-      );
       context.status = TransactionStatus.FAILED;
 
       throw transactionError;
@@ -361,15 +354,15 @@ export class TransactionLifecycle {
       }
 
       // 记录状态变更
-      this.errorHandler.logStateTransition(
-        context.transactionId,
-        context.status,
-        TransactionStatus.ROLLED_BACK,
-        {
+      this.logger.debug('Transaction state transition', {
+        transactionId: context.transactionId,
+        fromState: context.status,
+        toState: TransactionStatus.ROLLED_BACK,
+        context: {
           isRootTransaction: context.isRootTransaction,
           operationsCount: context.operations.length,
         },
-      );
+      });
 
       context.status = TransactionStatus.ROLLED_BACK;
       (context as unknown as Record<string, unknown>).completedAt = new Date();
@@ -380,28 +373,21 @@ export class TransactionLifecycle {
       });
 
       // 记录性能指标
-      this.errorHandler.logPerformanceMetrics(
-        context.transactionId,
-        'rollback',
-        Date.now() - startTime,
-        {
+      this.logger.debug('Transaction rollback performance metrics', {
+        transactionId: context.transactionId,
+        operation: 'rollback',
+        durationMs: Date.now() - startTime,
+        context: {
           isRootTransaction: context.isRootTransaction,
           operationsCount: context.operations.length,
         },
-      );
+      });
     } catch (error) {
-      const transactionError = this.errorHandler.handleError(error as Error, {
-        transactionId: context.transactionId,
+      const transactionError = CoreError.fromError(error as Error, {
         additionalContext: { operation: 'rollback' },
       });
 
       // 更新事务状态为失败
-      this.errorHandler.logStateTransition(
-        context.transactionId,
-        context.status,
-        TransactionStatus.FAILED,
-        { reason: 'rollback_failed' },
-      );
       context.status = TransactionStatus.FAILED;
 
       throw transactionError;

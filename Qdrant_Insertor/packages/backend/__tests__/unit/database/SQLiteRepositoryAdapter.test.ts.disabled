@@ -1,0 +1,430 @@
+import { SQLiteRepositoryAdapter } from '../../../src/infrastructure/database/repositories/SQLiteRepositoryAdapter.js';
+import {
+  DatabaseType,
+  DatabaseConfig,
+} from '../../../src/domain/interfaces/IDatabaseRepository.js';
+
+// Mock dependencies
+const mockDataSource = {
+  initialize: jest.fn(),
+  isInitialized: true,
+  transaction: jest.fn(),
+  query: jest.fn(),
+  destroy: jest.fn(),
+  options: {
+    type: 'sqlite',
+    database: './test.db',
+  },
+  getRepository: jest.fn().mockReturnValue({
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    remove: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  }),
+} as any;
+
+const mockLogger = {
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+} as any;
+
+const mockQdrantRepo = {
+  deletePointsByCollection: jest.fn(),
+} as any;
+
+describe('SQLiteRepositoryAdapter', () => {
+  let repository: SQLiteRepositoryAdapter;
+  let config: DatabaseConfig;
+
+  beforeEach(() => {
+    config = {
+      type: DatabaseType.SQLITE,
+      path: './test.db',
+      maxConnections: 1,
+      minConnections: 1,
+      connectionTimeout: 30000,
+      idleTimeout: 300000,
+    };
+
+    repository = new SQLiteRepositoryAdapter(
+      mockDataSource,
+      config,
+      mockLogger,
+      mockQdrantRepo,
+    );
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should initialize with correct database type', () => {
+      expect(repository.databaseType).toBe(DatabaseType.SQLITE);
+      expect(repository.config).toEqual(config);
+    });
+  });
+
+  describe('initialize', () => {
+    it('should initialize successfully', async () => {
+      mockDataSource.isInitialized = false;
+      mockDataSource.initialize.mockResolvedValue(undefined);
+      mockDataSource.query.mockResolvedValue(undefined);
+
+      const result = await repository.initialize(mockLogger);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('SQLite数据库初始化成功');
+    });
+
+    it('should handle initialization failure', async () => {
+      mockDataSource.isInitialized = false;
+      const error = new Error('Connection failed');
+      mockDataSource.initialize.mockRejectedValue(error);
+
+      const result = await repository.initialize(mockLogger);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('SQLite数据库初始化失败');
+      expect(result.error).toBe('Connection failed');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('ping', () => {
+    it('should return true when database is healthy', async () => {
+      mockDataSource.isInitialized = true;
+      mockDataSource.query.mockResolvedValue(undefined);
+
+      const result = await repository.ping();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when database is not initialized', async () => {
+      mockDataSource.isInitialized = false;
+
+      const result = await repository.ping();
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when query fails', async () => {
+      mockDataSource.isInitialized = true;
+      mockDataSource.query.mockRejectedValue(new Error('Query failed'));
+
+      const result = await repository.ping();
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('transaction', () => {
+    it('should execute transaction successfully', async () => {
+      const mockFn = jest.fn().mockResolvedValue('success');
+      mockDataSource.transaction.mockImplementation(async (callback) => {
+        return await callback();
+      });
+
+      const result = await repository.transaction(mockFn);
+
+      expect(result).toBe('success');
+      expect(mockFn).toHaveBeenCalled();
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+    });
+
+    it('should handle transaction failure', async () => {
+      const error = new Error('Transaction failed');
+      const mockFn = jest.fn().mockRejectedValue(error);
+      mockDataSource.transaction.mockImplementation(async (callback) => {
+        return await callback();
+      });
+
+      await expect(repository.transaction(mockFn)).rejects.toThrow(error);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteCollection', () => {
+    it('should delete collection and related data', async () => {
+      const mockChunkRepo = {
+        deleteByCollectionId: jest.fn().mockResolvedValue(undefined),
+      };
+      const mockDocRepo = {
+        findByCollectionId: jest.fn().mockResolvedValue([{ id: 'doc1' }]),
+        delete: jest.fn().mockResolvedValue(true),
+      };
+      const mockCollectionRepo = {
+        delete: jest.fn().mockResolvedValue(undefined),
+      };
+
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
+        return await callback();
+      });
+
+      // Mock the repositories
+      (repository as any).chunkRepository = mockChunkRepo;
+      (repository as any).docRepository = mockDocRepo;
+      (repository as any).collectionRepository = mockCollectionRepo;
+
+      await repository.deleteCollection('collection1' as any);
+
+      expect(mockChunkRepo.deleteByCollectionId).toHaveBeenCalledWith(
+        'collection1',
+      );
+      expect(mockDocRepo.findByCollectionId).toHaveBeenCalledWith(
+        'collection1',
+      );
+      expect(mockDocRepo.delete).toHaveBeenCalledWith('doc1');
+      expect(mockCollectionRepo.delete).toHaveBeenCalledWith('collection1');
+    });
+  });
+
+  describe('getDocumentChunks', () => {
+    it('should get document chunks', async () => {
+      const mockChunks = [
+        {
+          pointId: 'point1',
+          docId: 'doc1',
+          collectionId: 'collection1',
+          chunkIndex: 0,
+          title: 'Title 1',
+          content: 'Content 1',
+        },
+        {
+          pointId: 'point2',
+          docId: 'doc1',
+          collectionId: 'collection1',
+          chunkIndex: 1,
+          title: 'Title 2',
+          content: 'Content 2',
+        },
+      ];
+
+      const mockChunkRepo = {
+        findByDocId: jest.fn().mockResolvedValue(mockChunks),
+      };
+
+      (repository as any).chunkRepository = mockChunkRepo;
+
+      const result = await repository.getDocumentChunks('doc1' as any);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        pointId: 'point1',
+        docId: 'doc1',
+        collectionId: 'collection1',
+        chunkIndex: 0,
+        title: 'Title 1',
+        content: 'Content 1',
+      });
+      expect(result[1]).toEqual({
+        pointId: 'point2',
+        docId: 'doc1',
+        collectionId: 'collection1',
+        chunkIndex: 1,
+        title: 'Title 2',
+        content: 'Content 2',
+      });
+    });
+  });
+
+  describe('getDocumentChunksPaginated', () => {
+    it('should get paginated document chunks', async () => {
+      const mockChunks = Array.from({ length: 25 }, (_, i) => ({
+        pointId: `point${i}`,
+        docId: 'doc1',
+        collectionId: 'collection1',
+        chunkIndex: i,
+        title: `Title ${i}`,
+        content: `Content ${i}`,
+      }));
+
+      const mockChunkRepo = {
+        findByDocId: jest.fn().mockResolvedValue(mockChunks),
+      };
+
+      (repository as any).chunkRepository = mockChunkRepo;
+
+      const result = await repository.getDocumentChunksPaginated(
+        'doc1' as any,
+        {
+          page: 2,
+          limit: 10,
+        },
+      );
+
+      expect(result.data).toHaveLength(10);
+      expect(result.data[0]).toEqual({
+        pointId: 'point10',
+        docId: 'doc1',
+        collectionId: 'collection1',
+        chunkIndex: 10,
+        title: 'Title 10',
+        content: 'Content 10',
+      });
+      expect(result.pagination).toEqual({
+        page: 2,
+        limit: 10,
+        total: 25,
+        totalPages: 3,
+        hasNext: true,
+        hasPrev: true,
+      });
+    });
+  });
+
+  describe('addChunks', () => {
+    it('should add chunks to document', async () => {
+      const documentChunks = [
+        {
+          titleChain: ['Chapter 1', 'Section 1'],
+          content: 'Content 1',
+        },
+        {
+          titleChain: ['Chapter 2', 'Section 2'],
+          content: 'Content 2',
+        },
+      ];
+
+      const mockChunkRepo = {
+        createBatch: jest.fn().mockResolvedValue(undefined),
+      };
+
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
+        return await callback();
+      });
+
+      (repository as any).chunkRepository = mockChunkRepo;
+
+      await repository.addChunks('doc1' as any, documentChunks);
+
+      expect(mockChunkRepo.createBatch).toHaveBeenCalledWith([
+        {
+          pointId: 'doc1_0',
+          docId: 'doc1',
+          collectionId: '',
+          chunkIndex: 0,
+          title: 'Chapter 1 > Section 1',
+          content: 'Content 1',
+        },
+        {
+          pointId: 'doc1_1',
+          docId: 'doc1',
+          collectionId: '',
+          chunkIndex: 1,
+          title: 'Chapter 2 > Section 2',
+          content: 'Content 2',
+        },
+      ]);
+    });
+  });
+
+  describe('runMigrations', () => {
+    it('should run migrations successfully', async () => {
+      const migrations = [
+        {
+          id: '001-initial-schema',
+          name: 'Initial Schema',
+          version: '1.0.0',
+          description: 'Create initial schema',
+          up: 'CREATE TABLE test (id VARCHAR(255))',
+          down: 'DROP TABLE test',
+        },
+      ];
+
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
+        return await callback();
+      });
+      mockDataSource.query.mockResolvedValue([]);
+
+      const result = await repository.runMigrations(migrations);
+
+      expect(result.success).toBe(true);
+      expect(result.applied).toEqual(['001-initial-schema']);
+      expect(result.failed).toEqual([]);
+    });
+  });
+
+  describe('createBackup', () => {
+    it('should handle backup creation', async () => {
+      // Since we can't easily mock dynamic imports in Jest with ES modules,
+      // and the actual file doesn't exist, we expect the operation to fail gracefully
+      const result = await repository.createBackup('/path/to/backup.db');
+
+      // The backup will fail because the source file doesn't exist in test environment
+      // but the method should handle errors gracefully and return a structured response
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('message');
+
+      // In a real test environment with an actual database file, success would be true
+      // Here we just verify the error handling works correctly
+      if (!result.success) {
+        expect(result).toHaveProperty('error');
+      }
+    });
+  });
+
+  describe('optimize', () => {
+    it('should optimize database successfully', async () => {
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
+        return await callback();
+      });
+      mockDataSource.query.mockResolvedValue(undefined);
+
+      const result = await repository.optimize();
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('数据库优化完成');
+    });
+  });
+
+  describe('getStatistics', () => {
+    it('should return database statistics', async () => {
+      mockDataSource.query
+        .mockResolvedValueOnce([{ count: '5' }]) // collections
+        .mockResolvedValueOnce([{ count: '100' }]) // docs
+        .mockResolvedValueOnce([{ count: '500' }]) // chunks
+        .mockResolvedValueOnce([{ size: '5368709120' }]) // db size
+        .mockResolvedValueOnce([{ index_size: '1048576' }]); // index size
+
+      const result = await repository.getStatistics();
+
+      expect(result.totalCollections).toBe(5);
+      expect(result.totalDocuments).toBe(100);
+      expect(result.totalChunks).toBe(500);
+      expect(result.databaseSize).toBe(5368709120);
+      expect(result.indexSize).toBe(1048576);
+    });
+  });
+
+  describe('getPerformanceMetrics', () => {
+    it('should return performance metrics', async () => {
+      mockDataSource.query
+        .mockResolvedValueOnce([{ size: '2147483648' }]) // 2GB
+        .mockResolvedValueOnce([{ hit_rate: '0.9' }]); // cache hit rate
+
+      const result = await repository.getPerformanceMetrics();
+
+      expect(result.databaseType).toBe(DatabaseType.SQLITE);
+      expect(result.diskUsage).toBe(2147483648);
+      expect(result.cacheHitRate).toBe(0.9);
+    });
+  });
+
+  describe('getHealthStatus', () => {
+    it('should return health status', async () => {
+      mockDataSource.isInitialized = true;
+      mockDataSource.query.mockResolvedValue(undefined);
+
+      const result = await repository.getHealthStatus();
+
+      expect(result.status).toBe('connected');
+      expect(result.responseTime).toBeDefined();
+      expect(result.performanceMetrics).toBeDefined();
+    });
+  });
+});

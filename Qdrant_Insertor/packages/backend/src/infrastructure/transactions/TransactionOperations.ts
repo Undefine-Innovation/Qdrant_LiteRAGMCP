@@ -6,7 +6,17 @@ import {
 } from '@domain/repositories/ITransactionManager.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { CollectionId, DocId, PointId } from '@domain/entities/types.js';
-import { TransactionError, TransactionErrorType } from '@infrastructure/transactions/TransactionErrorHandler.js';
+import { CoreError } from '@domain/errors/CoreError.js';
+import type { ErrorContext } from '@domain/errors/index.js';
+
+const buildTransactionContext = (
+  transactionId: string,
+  operation: TransactionOperation,
+): ErrorContext => ({
+  transactionId,
+  operation: operation.type,
+  operationDetails: operation,
+});
 
 /**
  * 事务操作处理器
@@ -51,10 +61,9 @@ export class TransactionOperations {
           queryRunner,
         );
       default:
-        throw new TransactionError(
-          TransactionErrorType.OPERATION_EXECUTION_FAILED,
+        throw CoreError.infrastructure(
           `Unsupported operation target: ${operation.target}`,
-          { transactionId, operation },
+          buildTransactionContext(transactionId, operation),
         );
     }
   }
@@ -94,10 +103,9 @@ export class TransactionOperations {
           );
 
           if (existingCollection) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
+            throw CoreError.conflict(
               `Collection ${collectionId} already exists`,
-              { transactionId, operation },
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -147,10 +155,9 @@ export class TransactionOperations {
           }
 
           if (!originalCollection) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Collection ${collectionId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Collection ${collectionId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -206,10 +213,9 @@ export class TransactionOperations {
           }
 
           if (!originalCollection) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Collection ${collectionId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Collection ${collectionId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -235,11 +241,13 @@ export class TransactionOperations {
           }
 
           // 确保删除操作成功
-          if (deleteResult && (deleteResult as { affected?: number }).affected === 0) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
+          if (
+            deleteResult &&
+            (deleteResult as { affected?: number }).affected === 0
+          ) {
+            throw CoreError.notFound(
               `Collection ${collectionId} not found or already deleted`,
-              { transactionId, operation },
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -258,10 +266,9 @@ export class TransactionOperations {
         }
 
         default:
-          throw new TransactionError(
-            TransactionErrorType.OPERATION_EXECUTION_FAILED,
+          throw CoreError.internal(
             `Unsupported collection operation type: ${type}`,
-            { transactionId, operation },
+            buildTransactionContext(transactionId, operation),
           );
       }
     } catch (error) {
@@ -311,10 +318,9 @@ export class TransactionOperations {
           });
 
           if (existingDoc) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
+            throw CoreError.conflict(
               `Document with key ${docData.key} already exists`,
-              { transactionId, operation },
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -363,10 +369,9 @@ export class TransactionOperations {
           });
 
           if (!originalDoc) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Document ${docId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Document ${docId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -416,10 +421,9 @@ export class TransactionOperations {
           });
 
           if (!originalDoc) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Document ${docId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Document ${docId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -432,11 +436,13 @@ export class TransactionOperations {
           await this.qdrantRepo.deletePointsByDoc(docId);
 
           // 确保删除操作成功
-          if (deleteResult && (deleteResult as { affected?: number }).affected === 0) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Document ${docId} not found or already deleted`,
-              { transactionId, operation },
+          if (
+            deleteResult &&
+            (deleteResult as { affected?: number }).affected === 0
+          ) {
+            throw CoreError.notFound(
+              `Document ${docId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -455,10 +461,9 @@ export class TransactionOperations {
         }
 
         default:
-          throw new TransactionError(
-            TransactionErrorType.OPERATION_EXECUTION_FAILED,
+          throw CoreError.internal(
             `Unsupported document operation type: ${type}`,
-            { transactionId, operation },
+            buildTransactionContext(transactionId, operation),
           );
       }
     } catch (error) {
@@ -504,10 +509,9 @@ export class TransactionOperations {
           });
 
           if (existingChunk) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
+            throw CoreError.conflict(
               `Chunk ${pointId} already exists`,
-              { transactionId, operation },
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -553,10 +557,9 @@ export class TransactionOperations {
           });
 
           if (!originalChunk) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Chunk ${pointId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Chunk ${pointId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -605,10 +608,9 @@ export class TransactionOperations {
           });
 
           if (!originalChunk) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Chunk ${pointId} not found`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Chunk ${pointId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -625,10 +627,9 @@ export class TransactionOperations {
 
           // 确保删除操作成功
           if (deleteResult.affected === 0) {
-            throw new TransactionError(
-              TransactionErrorType.OPERATION_EXECUTION_FAILED,
-              `Chunk ${pointId} not found or already deleted`,
-              { transactionId, operation },
+            throw CoreError.notFound(
+              `Chunk ${pointId}`,
+              buildTransactionContext(transactionId, operation),
             );
           }
 
@@ -647,10 +648,9 @@ export class TransactionOperations {
         }
 
         default:
-          throw new TransactionError(
-            TransactionErrorType.OPERATION_EXECUTION_FAILED,
+          throw CoreError.internal(
             `Unsupported chunk operation type: ${type}`,
-            { transactionId, operation },
+            buildTransactionContext(transactionId, operation),
           );
       }
     } catch (error) {

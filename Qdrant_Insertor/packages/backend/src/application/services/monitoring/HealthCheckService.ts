@@ -1,12 +1,8 @@
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { Logger } from '@logging/logger.js';
-import {
-  SystemMetric,
-  HealthStatus,
-  HealthStatusValues,
-} from '@infrastructure/sqlite/dao/index.js';
-import { SyncJobStatus } from '@domain/sync/types.js';
-import { PersistentSyncStateMachine } from '../sync/index.js';
+import { HealthStatus, HealthStatusValues } from '@infrastructure/sqlite/dao/index.js';
+import { SyncStatus, SimplifiedSyncService } from '../sync/index.js';
+import { SyncTask } from '@domain/sync/SimplifiedSyncStateMachine.js';
 import {
   IHealthCheckService,
   ComponentHealth,
@@ -25,16 +21,19 @@ export class HealthCheckService implements IHealthCheckService {
    * @param sqliteRepo SQLite 仓库实例
    * @param syncStateMachine 持久化同步状态机实例
    * @param logger 日志记录器
+   * @param dataSource 可选的数据源实例（用于测试环境）
    */
   constructor(
     private readonly sqliteRepo: ISQLiteRepo,
-    private readonly syncStateMachine: PersistentSyncStateMachine,
+    private readonly syncStateMachine: SimplifiedSyncService,
     private readonly logger: Logger,
     private readonly dataSource?: DataSource,
   ) {}
 
   /**
    * 执行系统健康检查
+    *
+    * @returns {Promise<void>} 完成时返回空
    */
   public async performHealthCheck(): Promise<void> {
     const startTime = Date.now();
@@ -62,6 +61,8 @@ export class HealthCheckService implements IHealthCheckService {
 
   /**
    * 检查数据库健康状况
+    *
+    * @returns {Promise<void>} 完成时返回空
    */
   private async checkDatabaseHealth(): Promise<void> {
     const startTime = Date.now();
@@ -102,6 +103,8 @@ export class HealthCheckService implements IHealthCheckService {
 
   /**
    * 检查Qdrant健康状况
+    *
+    * @returns {Promise<void>} 完成时返回空
    */
   private async checkQdrantHealth(): Promise<void> {
     const startTime = Date.now();
@@ -154,6 +157,8 @@ export class HealthCheckService implements IHealthCheckService {
 
   /**
    * 检查同步状态机健康状况
+    *
+    * @returns {Promise<void>} 完成时返回空
    */
   private async checkSyncStateMachineHealth(): Promise<void> {
     const startTime = Date.now();
@@ -162,23 +167,24 @@ export class HealthCheckService implements IHealthCheckService {
 
     try {
       // 使用现有的方法获取统计信息
-      const allJobs = this.syncStateMachine.getAllSyncJobs();
+      const allJobs: SyncTask[] = this.syncStateMachine.getAllSyncTasks();
+      const successRate =
+        allJobs.filter((job) => job.status === SyncStatus.SYNCED).length /
+        Math.max(allJobs.length, 1);
+      const byStatus = allJobs.reduce<
+        Partial<Record<SyncStatus, number>>
+      >((acc, job) => {
+        acc[job.status] = (acc[job.status] ?? 0) + 1;
+        return acc;
+      }, {});
       const stats = {
         total: allJobs.length,
-        successRate:
-          allJobs.filter((job) => job.status === SyncJobStatus.SYNCED).length /
-          Math.max(allJobs.length, 1),
+        successRate,
         avgDuration: 0, // SyncJob接口没有durationMs字段，暂时设为0
-        byStatus: allJobs.reduce(
-          (acc, job) => {
-            acc[job.status] = (acc[job.status] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
+        byStatus,
       };
       const activeRetryCount = this.syncStateMachine.getSyncJobCountByStatus(
-        SyncJobStatus.RETRYING,
+        SyncStatus.RETRYING,
       );
 
       // 如果失败率过高，标记为降级
@@ -239,6 +245,8 @@ export class HealthCheckService implements IHealthCheckService {
 
   /**
    * 检查系统资源
+    *
+    * @returns {Promise<void>} 完成时返回空
    */
   private async checkSystemResources(): Promise<void> {
     const startTime = Date.now();
@@ -323,6 +331,7 @@ export class HealthCheckService implements IHealthCheckService {
    * @param value
    * @param unit
    * @param tags
+    * @returns {Promise<void>} 完成时返回空
    */
   private async recordMetric(
     metricName: string,
@@ -353,35 +362,28 @@ export class HealthCheckService implements IHealthCheckService {
   public async getSystemHealth(): Promise<SystemHealthStatus> {
     try {
       // 获取所有组件健康状态
-      let componentHealthRecords: SystemHealth[];
+      let componentHealthRecords: StoredSystemHealthRecord[] = [];
 
       // 检查是否有直接数据源访问（测试环境）
       if (this.dataSource) {
-        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
+        const systemHealthRepository =
+          this.dataSource.getRepository(SystemHealth);
         componentHealthRecords = await systemHealthRepository.find();
       } else {
-        componentHealthRecords = await this.sqliteRepo.systemHealth.getAll();
+        const storedRecords = (await this.sqliteRepo.systemHealth.getAll()) as
+          | StoredSystemHealthRecord[]
+          | undefined;
+        componentHealthRecords = storedRecords ?? [];
       }
 
       // 转换为返回格式
-      const components = componentHealthRecords.map((record: SystemHealth) => ({
-        component: record.component || 'unknown',
-        status: record.status,
-        message: record.errorMessage || (record as { message?: string }).message,
-        lastCheck: new Date(record.lastCheck),
-        responseTimeMs: record.responseTimeMs,
-        details: record.details
-          ? typeof record.details === 'string'
-            ? JSON.parse(record.details as string)
-            : record.details
-          : undefined,
-      }));
+      const components = componentHealthRecords.map((record) =>
+        this.mapComponentHealth(record),
+      );
 
       // 计算整体健康状态
       let overall: HealthStatus = HealthStatusValues.HEALTHY;
-      const statuses = components.map(
-        (c: { status: HealthStatus | string }) => c.status as HealthStatus,
-      );
+      const statuses = components.map((c) => c.status);
 
       if (statuses.includes(HealthStatusValues.UNHEALTHY)) {
         overall = HealthStatusValues.UNHEALTHY;
@@ -406,6 +408,10 @@ export class HealthCheckService implements IHealthCheckService {
    * 更新组件健康状态
    * @param component 组件名称
    * @param status 健康状态更新
+   * @param status.status 健康状态值
+   * @param status.message 可选的状态消息
+   * @param status.details 可选的详细信息
+    * @returns {Promise<void>} 完成时返回空
    */
   public async updateComponentHealth(
     component: string,
@@ -418,7 +424,8 @@ export class HealthCheckService implements IHealthCheckService {
     try {
       // 检查是否有直接数据源访问（测试环境）
       if (this.dataSource) {
-        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
+        const systemHealthRepository =
+          this.dataSource.getRepository(SystemHealth);
 
         // 查找现有记录
         const existingRecord = await systemHealthRepository.findOne({
@@ -474,50 +481,85 @@ export class HealthCheckService implements IHealthCheckService {
   ): Promise<ComponentHealth | null> {
     try {
       // 检查是否有直接数据源访问（测试环境）
-      let healthRecord: SystemHealth | null;
+      let healthRecord: StoredSystemHealthRecord | null = null;
 
       if (this.dataSource) {
-        const systemHealthRepository = this.dataSource.getRepository(SystemHealth);
-        healthRecord = await systemHealthRepository.findOne({
+        const systemHealthRepository =
+          this.dataSource.getRepository(SystemHealth);
+        const record = await systemHealthRepository.findOne({
           where: { component },
         });
+        healthRecord = record ?? null;
       } else {
-        healthRecord =
-          await this.sqliteRepo.systemHealth.getByComponent(component);
+        const record = (await this.sqliteRepo.systemHealth.getByComponent(
+          component,
+        )) as StoredSystemHealthRecord | null | undefined;
+        healthRecord = record ?? null;
       }
 
       if (!healthRecord) {
         return {
           component,
-          status: 'unknown' as HealthStatus,
+          status: HealthStatusValues.UNHEALTHY,
           message: 'Component not found',
           lastCheck: new Date(),
         };
       }
 
-      return {
-        component: healthRecord.component || component,
-        status: healthRecord.status,
-        message: healthRecord.errorMessage,
-        lastCheck: new Date(healthRecord.lastCheck),
-        responseTimeMs: healthRecord.responseTimeMs,
-        details: healthRecord.details
-          ? typeof healthRecord.details === 'string'
-            ? JSON.parse(healthRecord.details)
-            : healthRecord.details
-          : undefined,
-      };
+      return this.mapComponentHealth(healthRecord);
     } catch (error) {
       this.logger.error(`检查组件健康状态失败: ${component}`, { error });
       return null;
     }
   }
 
+  private mapComponentHealth(
+    record: StoredSystemHealthRecord,
+  ): ComponentHealth {
+    return {
+      component: record.component ?? 'unknown',
+      status: record.status,
+      message: record.errorMessage ?? record.message ?? undefined,
+      lastCheck: new Date(record.lastCheck),
+      responseTimeMs: record.responseTimeMs ?? undefined,
+      details: this.parseDetails(record.details),
+    };
+  }
+
+  private parseDetails(
+    details: string | Record<string, unknown> | null | undefined,
+  ): Record<string, unknown> | undefined {
+    if (!details) {
+      return undefined;
+    }
+    if (typeof details === 'string') {
+      try {
+        return JSON.parse(details) as Record<string, unknown>;
+      } catch {
+        return undefined;
+      }
+    }
+    return details;
+  }
+
   /**
    * 停止健康检查服务
+    *
+    * @returns {void}
    */
   public stop(): void {
     // 清理资源
     this.logger.info('HealthCheckService 已停止');
   }
 }
+
+type StoredSystemHealthRecord = {
+  component?: string | null;
+  status: HealthStatus | 'unknown';
+  lastCheck: number;
+  responseTimeMs?: number | null;
+  errorMessage?: string | null;
+  message?: string | null;
+  details?: string | Record<string, unknown> | null;
+};
+

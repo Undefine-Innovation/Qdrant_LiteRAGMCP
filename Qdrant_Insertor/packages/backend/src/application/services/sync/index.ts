@@ -4,14 +4,21 @@
  * 提供系统同步状态机相关的服务，包括同步处理、作业管理和错误处理
  */
 
-/** 同步状态机 */
-export { SyncStateMachine } from './SyncStateMachine.js';
+/** 简化的同步服务 - 替换复杂的状态机实现 */
+export { SimplifiedSyncService } from './SimplifiedSyncService.js';
 
-/** 持久化同步状态机 - 已移除持久化实现，使用内存实现作为兼容导出 */
-export { SyncStateMachine as PersistentSyncStateMachine } from './SyncStateMachine.js';
+/** 简化的同步状态机 */
+export {
+  SimplifiedSyncStateMachine,
+  SyncStatus,
+} from '@domain/sync/SimplifiedSyncStateMachine.js';
 
-/** 同步状态机核心 */
-export { SyncStateMachineCore } from './SyncStateMachineCore.js';
+/** 保持向后兼容性的导出 - 使用简化实现 */
+export { SimplifiedSyncService as SyncStateMachine } from './SimplifiedSyncService.js';
+export { SimplifiedSyncService as PersistentSyncStateMachine } from './SimplifiedSyncService.js';
+
+/** 同步状态机核心 - 保持向后兼容 */
+export { SimplifiedSyncStateMachine as SyncStateMachineCore } from '@domain/sync/SimplifiedSyncStateMachine.js';
 
 /** 同步作业管理器 */
 export { SyncJobManager } from './SyncJobManager.js';

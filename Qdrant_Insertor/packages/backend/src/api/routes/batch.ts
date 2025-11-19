@@ -13,8 +13,8 @@ import {
   BatchOperationQuerySchema,
   BatchOperationProgressSchema,
   BatchOperationListQuerySchema,
-} from '@api/contracts/batch.js';
-import { AppError } from '@api/contracts/error.js';
+} from '@api/contracts/Batch.js';
+import { AppError } from '@api/contracts/Error.js';
 import { DocId, CollectionId } from '@domain/entities/types.js';
 import {
   FILE_CONSTANTS,

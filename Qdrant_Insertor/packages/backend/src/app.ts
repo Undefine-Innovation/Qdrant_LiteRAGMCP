@@ -6,15 +6,16 @@ import {
 } from './infrastructure/logging/logger.js';
 import { AppConfig } from './infrastructure/config/config.js';
 import { DataSource } from 'typeorm';
-import { createApiRouter, ApiServices } from './api.js';
-import { errorHandler } from './api/middleware/error-handler.js';
-import { dbConnectionCheck } from './api/middleware/db-connection-check.js';
+import { createApiRouter, ApiServices } from './Api.js';
+import { errorHandler } from './api/middleware/ErrorHandler.js';
+import { dbConnectionCheck } from './api/middleware/DbConnectionCheck.js';
 import {
   loggingMiddleware,
   errorLoggingMiddleware,
   performanceMiddleware,
   LoggedRequest,
 } from './middlewares/logging.js';
+import { createSimpleRateLimitMiddleware } from './middlewares/rateLimit.js';
 import { ImportService } from './application/services/batch/index.js';
 import { SearchService } from './application/services/core/index.js';
 import { GraphService } from './application/services/core/index.js';
@@ -45,6 +46,11 @@ import {
   ICollectionManagementService,
 } from './domain/services/index.js';
 import { EventSystemService } from './domain/services/index.js';
+import {
+  RateLimitStrategy,
+  RateLimiterFactory,
+} from './domain/services/RateLimitStrategy.js';
+import { RateLimitMetrics } from './domain/services/RateLimitMetrics.js';
 
 // 新增用例接口导入
 import type { IImportAndIndexUseCase } from './application/use-cases/index.js';
@@ -82,6 +88,8 @@ export interface AppServices {
 
   // 新增用例层
   importAndIndexUseCase: IImportAndIndexUseCase;
+  // 限流相关服务
+  rateLimitStrategy?: import('./domain/interfaces/IRateLimiter.js').IRateLimitStrategy;
 }
 
 /**
@@ -172,6 +180,21 @@ export function createApp(
     app.use('/api', dbConnectionCheck);
   }
 
+  // 添加限流中间件（如果启用了限流功能）
+  if (services.rateLimitStrategy && config.rateLimit?.enabled) {
+    const rateLimitMiddleware = createSimpleRateLimitMiddleware(
+      services.rateLimitStrategy,
+    );
+    app.use('/api', rateLimitMiddleware);
+
+    if (enhancedLogger) {
+      enhancedLogger.info('限流中间件已启用', LogTag.SYSTEM, {
+        enabled: config.rateLimit.enabled,
+        middlewareConfig: config.rateLimit.middleware,
+      });
+    }
+  }
+
   // 创建API路由 - 只传递 ApiServices 需要的属性
   const apiServices: ApiServices = {
     importService: services.importService,
@@ -184,9 +207,11 @@ export function createApp(
     scrapeService: services.scrapeService,
     importAndIndexUseCase: services.importAndIndexUseCase,
     logger: services.logger,
-    stateMachineService: services.stateMachineService ? {
-      getEngine: () => services.stateMachineService.getEngine()
-    } : undefined,
+    stateMachineService: services.stateMachineService
+      ? {
+          getEngine: () => services.stateMachineService.getEngine(),
+        }
+      : undefined,
     monitoringApiService: services.monitoringApiService,
     typeormRepo: services.typeormRepo as unknown as Record<string, unknown>,
   };

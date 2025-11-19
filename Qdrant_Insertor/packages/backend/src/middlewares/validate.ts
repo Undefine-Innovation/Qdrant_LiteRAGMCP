@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodSchema } from 'zod';
-import { AppError, ErrorCode } from '@api/contracts/error.js';
+import { AppError, ErrorCode } from '@api/contracts/Error.js';
 
 // 定义一个类型，用于扩展 Express Request 接口
 /**

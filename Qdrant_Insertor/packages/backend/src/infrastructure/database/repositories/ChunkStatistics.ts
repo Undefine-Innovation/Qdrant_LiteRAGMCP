@@ -16,6 +16,12 @@ export class ChunkStatistics extends BaseRepository<Chunk> {
 
   /**
    * 获取块总数
+   * @param docId - 文档ID过滤
+   * @param collectionId - 集合ID过滤
+   * @param options - 查询选项
+   * @param options.status - 嵌入状态过滤
+   * @param options.syncStatus - 同步状态过滤
+   * @returns 块总数
    */
   async getCount(
     docId?: DocId,
@@ -64,6 +70,11 @@ export class ChunkStatistics extends BaseRepository<Chunk> {
 
   /**
    * 根据文档ID统计块数量
+   * @param docId - 文档ID
+   * @param options - 查询选项
+   * @param options.status - 嵌入状态过滤
+   * @param options.syncStatus - 同步状态过滤
+   * @returns 块数量
    */
   async countByDocId(
     docId: DocId,
@@ -103,6 +114,8 @@ export class ChunkStatistics extends BaseRepository<Chunk> {
 
   /**
    * 根据文档ID统计已完成块数量
+   * @param docId - 文档ID
+   * @returns 已完成块数量
    */
   async countCompletedByDocId(docId: DocId): Promise<number> {
     try {
@@ -121,6 +134,8 @@ export class ChunkStatistics extends BaseRepository<Chunk> {
 
   /**
    * 根据文档ID统计失败块数量
+   * @param docId - 文档ID
+   * @returns 失败块数量
    */
   async countFailedByDocId(docId: DocId): Promise<number> {
     try {
@@ -139,6 +154,9 @@ export class ChunkStatistics extends BaseRepository<Chunk> {
 
   /**
    * 获取块统计信息
+   * @param groupByOrOptions - 分组字段或选项对象
+   * @param where - 查询条件
+   * @returns 统计结果
    */
   async getStatistics(
     groupByOrOptions:

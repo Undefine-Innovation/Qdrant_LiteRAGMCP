@@ -98,11 +98,14 @@ export class SplitStep implements Step<SplitStepInput, SplitStepOutput> {
           content = chunk;
         } else if (chunk && typeof chunk === 'object' && 'content' in chunk) {
           const chunkObj = chunk as { content: unknown };
-          content = typeof chunkObj.content === 'string' ? chunkObj.content : String(chunkObj.content);
+          content =
+            typeof chunkObj.content === 'string'
+              ? chunkObj.content
+              : String(chunkObj.content);
         } else {
           content = String(chunk);
         }
-        
+
         return {
           index,
           content,

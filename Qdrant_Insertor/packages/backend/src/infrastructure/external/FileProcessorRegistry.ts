@@ -63,7 +63,7 @@ export class FileProcessorRegistry implements IFileProcessorRegistry {
 
   /**
    * 注销文件处理器
-   * @param processor - 文件处理器实例
+   * @param proc 文件处理器实例
    */
   public unregister(proc: IFileProcessor): void {
     const processorName = proc.constructor.name;

@@ -24,7 +24,8 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
    */
   async findByActive(active: boolean = true): Promise<AlertRules[]> {
     try {
-      const results = await this.repository.find({
+      const repository = this.getRepository();
+      const results = await repository.find({
         where: {
           is_active: active,
         },
@@ -52,7 +53,8 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
   ): Promise<{ rules: AlertRules[]; total: number }> {
     try {
       const skip = (page - 1) * limit;
-      const [results, total] = await this.repository.findAndCount({
+      const repository = this.getRepository();
+      const [results, total] = await repository.findAndCount({
         where: {},
         order: {
           [sort]: order.toUpperCase(),
@@ -81,7 +83,8 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
       if (ids.length === 0) {
         return [];
       }
-      const results = await this.repository.findByIds(ids);
+      const repository = this.getRepository();
+      const results = await repository.findByIds(ids);
       return results;
     } catch (error) {
       this.logger.error('根据ID列表获取规则失败', { error });
@@ -95,7 +98,8 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
    */
   async countActive(): Promise<number> {
     try {
-      const count = await this.repository.count({
+      const repository = this.getRepository();
+      const count = await repository.count({
         where: {
           is_active: true,
         },
@@ -115,7 +119,9 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
    */
   async updateStatusBatch(ids: string[], isActive: boolean): Promise<number> {
     try {
-      const result = await this.repository!.createQueryBuilder()
+      const repository = this.getRepository();
+      const result = await repository
+        .createQueryBuilder()
         .update(AlertRules)
         .set({ is_active: isActive })
         .whereInIds(ids)

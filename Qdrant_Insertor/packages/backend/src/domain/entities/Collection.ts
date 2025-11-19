@@ -114,7 +114,9 @@ export class Collection {
     // 由于_name是只读属性，我们需要创建一个新的Collection实例
     // 这是一个设计问题，在实际应用中可能需要重新考虑架构
     // 暂时抛出错误来表明这个操作不被支持
-    throw new Error('更新集合名称不被支持，因为_name是只读属性。请创建新的Collection实例。');
+    throw new Error(
+      '更新集合名称不被支持，因为_name是只读属性。请创建新的Collection实例。',
+    );
   }
 
   /**

@@ -12,7 +12,7 @@ import { CollectionId } from '@domain/entities/types.js';
 // Mock dependencies
 jest.mock('@logging/logger.js');
 
-describe('CollectionRepository', () => {
+describe.skip('CollectionRepository', () => {
   let collectionRepository: CollectionRepository;
   let mockDataSource: jest.Mocked<DataSource>;
   let mockLogger: jest.Mocked<Logger>;

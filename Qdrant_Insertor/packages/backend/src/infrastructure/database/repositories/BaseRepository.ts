@@ -9,24 +9,27 @@ import {
   FindOptionsWhere,
   FindOptionsOrder,
   SelectQueryBuilder,
+  FindManyOptions,
+  FindOneOptions,
 } from 'typeorm';
 import { Logger } from '@logging/logger.js';
+import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
 import { CachedRepositoryBase, QueryCacheConfig } from '../cache/QueryCache.js';
 
 // Create a null logger for when no logger is provided
-const createNullLogger = (): Logger =>
-  ({
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    log: () => {},
-  }) as unknown as Logger;
+const createNullLogger = (): LoggerLike => ({
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+});
 
 // Export types used by derived repositories
 export interface PaginationOptions {
   page?: number;
   limit?: number;
+  // Backwards-compatible alias used in older code
+  pageSize?: number;
   orderBy?: Record<string, 'ASC' | 'DESC'>;
 }
 
@@ -43,10 +46,24 @@ export interface PaginatedResult<T> {
   };
 }
 
+// Backwards-compatible aliases for older imports
+export type PaginationResult<T> = PaginatedResult<T>;
+
+export interface QueryOptions<T = unknown> {
+  where?: FindOptionsWhere<T> | FindOptionsWhere<T>[];
+  order?: FindOptionsOrder<T>;
+  take?: number;
+  skip?: number;
+  limit?: number;
+  page?: number;
+  pageSize?: number;
+  [key: string]: unknown;
+}
+
 export interface BatchOperationResult {
   success: number;
   failed: number;
-  errors: string[];
+  errors?: unknown[];
   updated?: number; // Backward compatibility
 }
 
@@ -67,12 +84,12 @@ export class BaseRepository<
   repository!: Repository<T>;
   entityName: string;
   // Public logger for derived classes - always initialized to avoid undefined errors
-  declare public logger: Logger;
+  declare public logger: LoggerLike;
 
   constructor(
     dataSource: DataSource | undefined,
     entity: (new () => T) | string,
-    logger?: Logger,
+    logger?: LoggerLike,
     metricsCollector?: Record<string, unknown>,
     cacheConfig?: QueryCacheConfig,
   ) {
@@ -97,8 +114,9 @@ export class BaseRepository<
   }
 
   // Helper method for derived classes
-  protected getRepository(): Repository<T> | undefined {
-    return this.repository;
+  // Return a non-optional Repository - throw if not initialized.
+  protected getRepository(): Repository<T> {
+    return this.getRepositoryOrThrow();
   }
 
   // Helper method for derived classes - throws if repository not initialized
@@ -111,6 +129,24 @@ export class BaseRepository<
   protected getDataSourceOrThrow(): DataSource {
     if (!this.dataSource) throw new Error('DataSource not initialized');
     return this.dataSource;
+  }
+
+  // Standardized error handler for repositories - logs and re-throws
+  protected handleError(
+    message: string,
+    error: unknown,
+    meta?: Record<string, unknown>,
+  ): never {
+    try {
+      this.logger.error(message, {
+        ...meta,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } catch (e) {
+      // ensure we do not mask the original error
+    }
+    if (error instanceof Error) throw error;
+    throw new Error(String(error));
   }
 
   async create(data: DeepPartial<T>): Promise<T> {
@@ -134,7 +170,7 @@ export class BaseRepository<
 
   async findById(
     id: string | number,
-    options?: Record<string, unknown>,
+    options?: FindOneOptions<T>,
   ): Promise<T | null> {
     if (!this.repository) throw new Error('Repository not initialized');
     const whereCondition: FindOptionsWhere<T> = {
@@ -150,7 +186,7 @@ export class BaseRepository<
 
   async findByIds(
     ids: (string | number)[],
-    options?: Record<string, unknown>,
+    options?: FindManyOptions<T>,
   ): Promise<T[]> {
     if (!this.repository) throw new Error('Repository not initialized');
     if (ids.length === 0) return [];
@@ -160,14 +196,14 @@ export class BaseRepository<
     return this.repository.find({ where: whereCondition, ...(options || {}) });
   }
 
-  async findAll(options?: Record<string, unknown>): Promise<T[]> {
+  async findAll(options?: FindManyOptions<T>): Promise<T[]> {
     if (!this.repository) throw new Error('Repository not initialized');
     return this.repository.find(options || {});
   }
 
   async findBy(
     where: Record<string, unknown>,
-    options?: Record<string, unknown>,
+    options?: FindManyOptions<T>,
   ): Promise<T[]> {
     if (!this.repository) throw new Error('Repository not initialized');
     const whereCondition: FindOptionsWhere<T> =
@@ -177,7 +213,7 @@ export class BaseRepository<
 
   async findOneBy(
     where: Record<string, unknown>,
-    options?: Record<string, unknown>,
+    options?: FindOneOptions<T>,
   ): Promise<T | null> {
     if (!this.repository) throw new Error('Repository not initialized');
     const whereCondition: FindOptionsWhere<T> =
@@ -190,28 +226,43 @@ export class BaseRepository<
     );
   }
 
-  async count(where?: Record<string, unknown>): Promise<number> {
+  async count(
+    where?:
+      | FindOptionsWhere<T>
+      | FindOptionsWhere<T>[]
+      | Record<string, unknown>,
+  ): Promise<number> {
     if (!this.repository) throw new Error('Repository not initialized');
-    const whereCondition: FindOptionsWhere<T> = (where ||
-      {}) as unknown as FindOptionsWhere<T>;
+    const whereCondition: FindOptionsWhere<T> | FindOptionsWhere<T>[] =
+      (where || {}) as unknown as FindOptionsWhere<T> | FindOptionsWhere<T>[];
     return this.repository.count({ where: whereCondition });
   }
 
   async update(
-    criteria: Record<string, unknown>,
+    criteria: Record<string, unknown> | string | number,
     data: DeepPartial<T>,
   ): Promise<unknown> {
     if (!this.repository) throw new Error('Repository not initialized');
-    const whereCondition = criteria as unknown as FindOptionsWhere<T>;
+    let whereCondition: FindOptionsWhere<T>;
+    if (typeof criteria === 'string' || typeof criteria === 'number') {
+      whereCondition = { id: criteria } as unknown as FindOptionsWhere<T>;
+    } else {
+      whereCondition = criteria as unknown as FindOptionsWhere<T>;
+    }
     // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our DeepPartial type signature
     // This is necessary to work with repository.update() which requires specific TypeORM internal types
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.repository.update(whereCondition, data as any);
+    return this.repository.update(whereCondition, data as DeepPartial<T>);
   }
 
-  async delete(criteria: Record<string, unknown>): Promise<unknown> {
+  async delete(
+    criteria: Record<string, unknown> | string | number,
+  ): Promise<unknown> {
     if (!this.repository) throw new Error('Repository not initialized');
-    const whereCondition = criteria as unknown as FindOptionsWhere<T>;
+    const whereCondition: FindOptionsWhere<T> = (
+      typeof criteria === 'string' || typeof criteria === 'number'
+        ? ({ id: criteria } as unknown)
+        : (criteria as unknown)
+    ) as FindOptionsWhere<T>;
     return this.repository.delete(whereCondition);
   }
 
@@ -220,8 +271,7 @@ export class BaseRepository<
     const whereCondition = criteria as unknown as FindOptionsWhere<T>;
     const updateData = { deleted: true, deleted_at: new Date() };
     // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.repository.update(whereCondition, updateData as any);
+    return this.repository.update(whereCondition, updateData as DeepPartial<T>);
   }
 
   async updateBatch(
@@ -239,8 +289,7 @@ export class BaseRepository<
         try {
           const whereCondition = { id } as unknown as FindOptionsWhere<T>;
           // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await this.repository.update(whereCondition, data as any);
+          await this.repository.update(whereCondition, data as DeepPartial<T>);
           success++;
         } catch (error: unknown) {
           failed++;
@@ -272,25 +321,47 @@ export class BaseRepository<
       } as unknown as FindOptionsWhere<T>;
       // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
       // TypeORM requires specific internal types that conflict with our generic typing
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await this.repository.update(whereCondition, updateData as any);
+      const result = await this.repository.update(
+        whereCondition,
+        updateData as DeepPartial<T>,
+      );
       deletedCount += result.affected || 0;
     }
     return deletedCount;
   }
 
   async findWithPagination(
-    paginationOptions?: PaginationOptions,
-    query?: unknown,
+    paginationOptions?: unknown,
+    pageSizeOrQuery?: unknown,
+    maybeQuery?: unknown,
   ): Promise<PaginatedResult<T>> {
     if (!this.repository) throw new Error('Repository not initialized');
-    const { page = 1, limit = 10, orderBy } = paginationOptions || {};
-    const skip = (page - 1) * limit;
 
+    // Support legacy signature: (page: number, pageSize: number, options?)
+    let page = 1;
+    let limit = 10;
+    let orderBy: Record<string, 'ASC' | 'DESC'> | undefined;
+    let query: unknown | undefined;
+
+    if (typeof paginationOptions === 'number') {
+      page = paginationOptions;
+      if (typeof pageSizeOrQuery === 'number') limit = pageSizeOrQuery;
+      if (maybeQuery !== undefined) query = maybeQuery;
+    } else {
+      const opts = (paginationOptions || {}) as PaginationOptions;
+      page = opts.page ?? 1;
+      limit = opts.limit ?? opts.pageSize ?? 10;
+      orderBy = opts.orderBy;
+      query = pageSizeOrQuery;
+    }
+
+    const skip = (page - 1) * limit;
     let queryBuilder = this.repository.createQueryBuilder();
 
     if (typeof query === 'string') {
       queryBuilder = queryBuilder.where(query);
+    } else if (query && typeof (query as Record<string, unknown>).getQuery === 'function') {
+      queryBuilder = query as SelectQueryBuilder<T>;
     }
 
     if (orderBy) {
@@ -314,6 +385,15 @@ export class BaseRepository<
         hasPrev: page > 1,
       },
     };
+  }
+
+  // Execute a raw query against the data source
+  async executeQuery(query: string, params?: unknown[]): Promise<Array<Record<string, unknown>>> {
+    const ds = this.getDataSourceOrThrow();
+    // TypeORM DataSource exposes `query` for raw SQL
+    // Cast to a minimal query-caller shape to avoid `any` in public API
+    const q = ds as unknown as { query: (q: string, p?: unknown[]) => Promise<Array<Record<string, unknown>>> };
+    return q.query(query, params || []);
   }
 
   async findByTimeRange(...args: unknown[]): Promise<T[]> {
@@ -351,10 +431,7 @@ export class BaseRepository<
     const whereCondition: FindOptionsWhere<T> = {
       [fieldName]: ILike(`%${searchText}%`),
     } as unknown as FindOptionsWhere<T>;
-    return this.repository.find({
-      where: whereCondition,
-      ...(options || {}),
-    });
+    return this.repository.find({ where: whereCondition, ...(options || {}) } as FindManyOptions<T>);
   }
 
   async getStatistics(
@@ -402,8 +479,7 @@ export class BaseRepository<
     const existing = await this.repository.findOne({ where: whereCondition });
     if (existing) {
       // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await this.repository.update(whereCondition, data as any);
+      await this.repository.update(whereCondition, data as DeepPartial<T>);
       const result = await this.repository.findOne({ where: whereCondition });
       return result as T;
     }
@@ -412,7 +488,14 @@ export class BaseRepository<
 
   createQueryBuilder(alias?: string): SelectQueryBuilder<T> {
     if (!this.repository) throw new Error('Repository not initialized');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return this.repository.createQueryBuilder(alias || this.entityName) as any;
+    return this.repository.createQueryBuilder(alias || this.entityName) as SelectQueryBuilder<T>;
+  }
+
+  // Backward-compatible convenience method: findOne
+  async findOne(options?: FindOneOptions<T>): Promise<T | null> {
+    if (!this.repository) throw new Error('Repository not initialized');
+    const opt = options as unknown;
+    const where = (opt && (((opt as FindOneOptions<T>).where as unknown) || opt)) as unknown as FindOptionsWhere<T>;
+    return (await this.repository.findOne({ where } as FindOneOptions<T>)) || null;
   }
 }

@@ -1,9 +1,14 @@
 import { DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/error.js';
+import { AppError } from '@api/contracts/Error.js';
 import { FileFormatInfo } from '@application/services/index.js';
 import path from 'path';
 import { lookup } from 'mime-types';
+
+type SqliteDocMetadata = {
+  name?: string;
+  mime?: string;
+};
 
 /**
  * 文件格式检测器
@@ -27,9 +32,11 @@ export class FileFormatDetector {
       throw AppError.createNotFoundError(`Document with ID ${docId} not found`);
     }
 
+    const docMetadata = this.extractDocMetadata(doc);
+    const derivedMime = lookup(docMetadata.name ?? '') || undefined;
     const mimeType =
-      doc.mime || lookup(doc.name || '') || 'application/octet-stream';
-    const extension = path.extname(doc.name || '').toLowerCase();
+      docMetadata.mime || derivedMime || 'application/octet-stream';
+    const extension = path.extname(docMetadata.name ?? '').toLowerCase();
 
     let category: 'text' | 'markdown' | 'pdf' | 'word' | 'unknown';
 
@@ -52,5 +59,21 @@ export class FileFormatDetector {
       extension,
       category,
     };
+  }
+
+  /**
+   * 规范化 SQLite 文档记录中的基本元数据。
+   * @param doc SQLite 文档对象
+   * @returns 包含 name/mime 的精简对象
+   */
+  private extractDocMetadata(doc: unknown): SqliteDocMetadata {
+    if (doc && typeof doc === 'object') {
+      const { name, mime } = doc as SqliteDocMetadata;
+      return {
+        name,
+        mime,
+      };
+    }
+    return {};
   }
 }

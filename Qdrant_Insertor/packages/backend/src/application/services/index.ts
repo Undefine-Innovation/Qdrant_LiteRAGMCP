@@ -42,3 +42,8 @@ export * from './IBatchService.js';
 export * from './IAlertService.js';
 export * from './IMonitoringService.js';
 export * from './IAutoGCService.js';
+// Backwards-compat: re-export domain services under application namespace
+export * from './compat/domain-exports.js';
+// Backwards-compat: expose domain interfaces and errors
+export * from './compat/domain-interfaces.js';
+export * from './compat/domain-errors.js';

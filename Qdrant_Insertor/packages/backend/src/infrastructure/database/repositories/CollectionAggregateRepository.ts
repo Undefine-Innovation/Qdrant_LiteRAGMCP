@@ -462,6 +462,7 @@ export class CollectionAggregateRepository
    * 更新集合的部分字段
    * @param id 集合ID
    * @param data 更新数据（包括status等字段）
+   * @param data.status 集合状态
    * @returns 更新后的集合聚合或null
    */
   async updateCollection(

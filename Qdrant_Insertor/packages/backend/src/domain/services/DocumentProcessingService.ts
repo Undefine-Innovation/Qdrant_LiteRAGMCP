@@ -15,6 +15,7 @@ import {
   ChunkStatusChangedEvent,
 } from '@domain/events/DomainEvents.js';
 import { Logger } from '@logging/logger.js';
+import { ErrorFactory, ErrorContext } from '@domain/errors/index.js';
 
 /**
  * 文档处理领域服务接口
@@ -113,11 +114,25 @@ export class DocumentProcessingService implements IDocumentProcessingService {
       | 'by_headings' = 'by_size',
     maxChunkSize: number = DocumentProcessingService.DEFAULT_MAX_CHUNK_SIZE,
   ): Promise<DocumentAggregate> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'processDocumentContent',
+      parameters: {
+        documentId: documentAggregate.id,
+        collectionId: documentAggregate.collectionId,
+        contentLength: content.length,
+        chunkingStrategy,
+        maxChunkSize,
+      },
+    };
+
     // 验证内容
     const validation = this.validateDocumentContent(content);
     if (!validation.isValid) {
-      throw new Error(
+      throw ErrorFactory.createValidationError(
         `Invalid document content: ${validation.errors.join(', ')}`,
+        { validationErrors: validation.errors },
+        errorContext,
       );
     }
 
@@ -202,6 +217,37 @@ export class DocumentProcessingService implements IDocumentProcessingService {
       isValid: errors.length === 0,
       errors,
     };
+  }
+
+  /**
+   * 验证文档内容并抛出统一错误
+   * @param content 文档内容
+   * @param documentId 文档ID
+   * @param collectionId 集合ID
+   */
+  public validateDocumentContentWithErrors(
+    content: string,
+    documentId: DocId,
+    collectionId: CollectionId,
+  ): void {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'validateDocumentContent',
+      parameters: {
+        documentId,
+        collectionId,
+        contentLength: content.length,
+      },
+    };
+
+    const validation = this.validateDocumentContent(content);
+    if (!validation.isValid) {
+      throw ErrorFactory.createValidationError(
+        `Invalid document content: ${validation.errors.join(', ')}`,
+        { validationErrors: validation.errors },
+        errorContext,
+      );
+    }
   }
 
   /**

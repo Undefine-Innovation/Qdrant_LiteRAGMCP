@@ -24,6 +24,7 @@ export class MetricsService implements IMetricsService {
    * 创建MetricsService实例
    * @param {SQLiteRepo} sqliteRepo - SQLite仓库实例
    * @param {Logger} logger - 日志记录器实例
+   * @param dataSource 可选的数据源实例（用于测试环境）
    */
   constructor(
     private readonly sqliteRepo: ISQLiteRepo,
@@ -37,6 +38,7 @@ export class MetricsService implements IMetricsService {
    * 创建 MetricsService 实例（用于测试）
    * @param dataSource 数据源
    * @param logger 日志记录器
+   * @returns MetricsService实例
    */
   static createForTesting(
     dataSource: DataSource,
@@ -74,7 +76,7 @@ export class MetricsService implements IMetricsService {
 
   /**
    * 记录系统指标（实现接口方法）
-   * @param {MetricData} metric - 指标数据
+   * @param metric 指标数据
    * @returns {Promise<void>} 无返回值
    */
   public async recordMetric(metric: MetricData): Promise<void> {
@@ -83,6 +85,7 @@ export class MetricsService implements IMetricsService {
 
   /**
    * 记录指标数据（内部方法）
+   * @param metric 要记录的指标数据
    */
   private async recordMetricData(metric: MetricData): Promise<void> {
     // Build a proper SystemMetric object to satisfy typing and DB DAO contract
@@ -114,7 +117,8 @@ export class MetricsService implements IMetricsService {
     try {
       // 检查是否有直接数据源访问（测试环境）
       if (this.dataSource) {
-        const systemMetricsRepository = this.dataSource.getRepository(SystemMetrics);
+        const systemMetricsRepository =
+          this.dataSource.getRepository(SystemMetrics);
 
         // 转换缓冲区中的指标为实体对象
         const entities = this.metricsBuffer.map((metric) => {
@@ -145,6 +149,9 @@ export class MetricsService implements IMetricsService {
 
   /**
    * 获取指标历史
+   * @param metricName 指标名称
+   * @param options 查询选项
+   * @returns 指标历史数据数组
    */
   public async getMetricsHistory(
     metricName: string,
@@ -192,6 +199,9 @@ export class MetricsService implements IMetricsService {
 
   /**
    * 获取指标聚合
+   * @param metricName 指标名称
+   * @param options 聚合选项
+   * @returns 指标聚合结果
    */
   public async getMetricsAggregations(
     metricName: string,
@@ -224,7 +234,8 @@ export class MetricsService implements IMetricsService {
 
       if (options.aggregations.includes('avg')) {
         aggregations.avg =
-          values.reduce((sum: number, val: number) => sum + val, 0) / values.length;
+          values.reduce((sum: number, val: number) => sum + val, 0) /
+          values.length;
       }
       if (options.aggregations.includes('min')) {
         aggregations.min = Math.min(...values);
@@ -233,7 +244,10 @@ export class MetricsService implements IMetricsService {
         aggregations.max = Math.max(...values);
       }
       if (options.aggregations.includes('sum')) {
-        aggregations.sum = values.reduce((sum: number, val: number) => sum + val, 0);
+        aggregations.sum = values.reduce(
+          (sum: number, val: number) => sum + val,
+          0,
+        );
       }
       if (options.aggregations.includes('count')) {
         aggregations.count = values.length;
@@ -248,6 +262,8 @@ export class MetricsService implements IMetricsService {
 
   /**
    * 按标签过滤指标
+   * @param tags 标签过滤条件
+   * @returns 过滤后的指标数据数组
    */
   public async getMetricsByTags(tags: Record<string, string | number>): Promise<
     Array<{

@@ -1,6 +1,6 @@
 import { Logger, EnhancedLogger } from '@logging/logger.js';
 import { AppConfig } from '@config/config.js';
-import { LogTag } from '@logging/enhanced-logger.js';
+import { LogTag } from '../logging/EnhancedLogger.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
 import { QdrantRepo } from '@infrastructure/repositories/QdrantRepository.js';
 import {
@@ -19,10 +19,13 @@ import {
 import { DocRepository } from '@infrastructure/database/repositories/DocRepository.js';
 import { CollectionRepository } from '@infrastructure/database/repositories/CollectionRepository.js';
 import { createOpenAIEmbeddingProviderFromConfig } from '@infrastructure/external/OpenAIEmbeddingProvider.js';
-import { MarkdownSplitter } from '@infrastructure/external/MarkdownSplitter.js';
+import { UnifiedMarkdownSplitter } from '@infrastructure/external/UnifiedMarkdownSplitter.js';
+import { SemanticSplitter } from '@infrastructure/external/SemanticSplitter.js';
+import { createLLMServiceFromConfig } from '@infrastructure/external/LLMServiceFactory.js';
 import { LocalFileLoader } from '@infrastructure/external/LocalFileLoader.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { IEmbeddingProvider } from '@domain/entities/embedding.js';
+import { ILLMService } from '@domain/interfaces/llm.js';
 import { ISplitter } from '@application/services/file-processing/index.js';
 import { IFileLoader } from '@application/services/file-processing/index.js';
 import { ImportService } from '@application/services/batch/index.js';
@@ -33,7 +36,7 @@ import { CollectionService } from '@application/services/core/index.js';
 import { DocumentService } from '@application/services/core/index.js';
 import { FileProcessingService } from '@application/services/file-processing/index.js';
 import { EnhancedFileProcessingService } from '@application/services/file-processing/index.js';
-import { SyncStateMachine as MemorySyncStateMachine } from '@application/services/sync/index.js';
+import { SimplifiedSyncService } from '@application/services/sync/index.js';
 import { MonitoringService } from '@application/services/monitoring/index.js';
 import { AlertService } from '@application/services/alerting/index.js';
 import { MonitoringApiService } from '@application/services/api/index.js';
@@ -45,18 +48,28 @@ import { ICollectionService } from '@application/services/index.js';
 import { IDocumentService } from '@application/services/index.js';
 import { IFileProcessingService } from '@application/services/index.js';
 import { IBatchService } from '@application/services/index.js';
-import { AppServices } from '../../app.js';
+import { AppServices } from '../../App.js';
 import { IScrapeService } from '@domain/entities/scrape.js';
 import { ScrapeService } from '@application/services/scraping/index.js';
 import { WebCrawler } from '@infrastructure/external/WebCrawler.js';
 import { ContentExtractor } from '@infrastructure/external/ContentExtractor.js';
 import { TypeORMTransactionManager } from '@infrastructure/transactions/TypeORMTransactionManager.js';
 import { ITransactionManager } from '@domain/repositories/ITransactionManager.js';
+// 新增适配器相关导入
+import {
+  migrateServices,
+  validateMigration,
+  createDefaultMigrationConfig,
+  ServiceMigrationManager,
+} from '@infrastructure/database/adapters/index.js';
+import {
+  UnifiedRepositoryAdapter,
+  UnifiedAdapterFactory,
+} from '../database/repositories/UnifiedRepositoryAdapter.js';
 // 新增文件处理相关导入
 import { FileProcessorRegistry } from '@infrastructure/external/FileProcessorRegistry.js';
 import { TextFileProcessor } from '@infrastructure/external/processors/TextFileProcessor.js';
 import { MarkdownFileProcessor } from '@infrastructure/external/processors/MarkdownFileProcessor.js';
-import { MarkdownSplitterAdapter } from '@infrastructure/external/MarkdownSplitterAdapter.js';
 
 // 新增领域服务导入
 import {
@@ -95,8 +108,11 @@ export interface InfrastructureComponents {
   dbRepo: ISQLiteRepo;
   typeormRepo: TypeORMRepository;
   qdrantRepo: IQdrantRepo;
+  unifiedRepo?: UnifiedRepositoryAdapter<Record<string, unknown>>; // 可选的统一适配器
   embeddingProvider: IEmbeddingProvider;
   splitter: ISplitter;
+  llmService?: ILLMService; // 新增LLM服务
+  semanticSplitter?: ISplitter; // 新增语义分块器
   fileLoader: IFileLoader;
   fileProcessorRegistry: FileProcessorRegistry;
   dbConnectionManager: DatabaseConnectionManager;
@@ -228,6 +244,35 @@ export async function initializeInfrastructure(
     createOpenAIEmbeddingProviderFromConfig();
   const fileLoader: IFileLoader = new LocalFileLoader();
 
+  // 初始化LLM服务（如果配置启用）
+  let llmService: ILLMService | undefined;
+  let semanticSplitter: ISplitter | undefined;
+
+  try {
+    if (config.llm.semanticSplitting.enabled) {
+      llmService = createLLMServiceFromConfig(config, logger);
+      semanticSplitter = new SemanticSplitter(llmService, logger, {
+        enableFallback: config.llm.semanticSplitting.enableFallback,
+        fallbackStrategy: config.llm.semanticSplitting.fallbackStrategy,
+        maxRetries: config.llm.semanticSplitting.maxRetries,
+        retryDelay: config.llm.semanticSplitting.retryDelay,
+        enableCache: config.llm.semanticSplitting.enableCache,
+        cacheTTL: config.llm.semanticSplitting.cacheTTL,
+      });
+
+      logger.info('LLM服务和语义分块器已初始化', {
+        provider: llmService.getProvider(),
+        model: llmService.getModelConfig().model,
+        semanticSplittingEnabled: true,
+      });
+    } else {
+      logger.info('LLM语义分块功能已禁用');
+    }
+  } catch (error) {
+    logger.warn('LLM服务初始化失败，将使用传统分块器', { error });
+    // 不抛出错误，继续使用传统分块器
+  }
+
   // 初始化文件处理器注册表
   const fileProcessorRegistry = new FileProcessorRegistry(logger);
 
@@ -249,8 +294,9 @@ export async function initializeInfrastructure(
     });
   }
 
-  // 使用适配器创建splitter，保持向后兼容
-  const splitter: ISplitter = new MarkdownSplitterAdapter(
+  // 使用统一的Markdown分割器，保持向后兼容
+  // 如果语义分块器可用，则优先使用语义分块器
+  const splitter: ISplitter = semanticSplitter || new UnifiedMarkdownSplitter(
     fileProcessorRegistry,
     logger,
   );
@@ -297,12 +343,23 @@ export async function initializeInfrastructure(
     enhancedLogger.info('所有基础设施组件初始化完成', LogTag.SYSTEM);
   }
 
+  // 创建统一适配器实例
+  const unifiedRepo = typeormRepo
+    ? UnifiedAdapterFactory.createGenericAdapter(
+        typeormRepo as unknown as import('@infrastructure/database/repositories/BaseRepository.js').BaseRepository<Record<string, unknown>>,
+        typeormDataSource,
+      )
+    : undefined;
+
   return {
     dbRepo,
     typeormRepo,
     qdrantRepo,
+    unifiedRepo, // 添加统一适配器
     embeddingProvider,
     splitter,
+    llmService, // 添加LLM服务
+    semanticSplitter, // 添加语义分块器
     fileLoader,
     fileProcessorRegistry,
     dbConnectionManager,
@@ -343,8 +400,8 @@ export async function initializeServices(
     enhancedLogger: infraEnhancedLogger,
   } = infrastructure;
 
-  // 创建纯内存同步状态机
-  const syncStateMachine = new MemorySyncStateMachine(
+  // 创建简化的同步服务
+  const syncStateMachine = new SimplifiedSyncService(
     dbRepo, // 使用新的TypeORM Repository
     qdrantRepo,
     embeddingProvider,
@@ -352,7 +409,7 @@ export async function initializeServices(
     logger,
   );
 
-  logger.info('内存同步状态机已创建');
+  logger.info('简化的同步服务已创建');
 
   // 创建TypeORM repositories
   const docRepository = new DocRepository(typeormDataSource, logger);
@@ -429,9 +486,9 @@ export async function initializeServices(
   const scrapeService: ScrapeService = new ScrapeService(
     stateMachineService.getEngine(),
     logger,
-    dbRepo, // 使用新的TypeORM Repository
     webCrawler,
     contentExtractor,
+    dbRepo, // 使用新的TypeORM Repository
     importService,
   );
   const autoGCService = new AutoGCService(dbRepo, qdrantRepo, logger, config);
@@ -509,6 +566,14 @@ export async function initializeServices(
   // 使用默认键注册核心策略（分块和嵌入）
   strategyRegistry.registerSplitter('default', splitter);
   strategyRegistry.registerEmbedding('default', embeddingProvider);
+  
+  // 如果LLM服务可用，注册语义分块策略
+  if (infrastructure.llmService && infrastructure.semanticSplitter) {
+    strategyRegistry.registerSplitter('semantic', infrastructure.semanticSplitter);
+    strategyRegistry.registerLLM('default', infrastructure.llmService);
+    
+    logger.info('语义分块策略已注册到策略注册表');
+  }
 
   // 创建管线步骤
   const importStep = new ImportStep(streamFileLoader, logger);

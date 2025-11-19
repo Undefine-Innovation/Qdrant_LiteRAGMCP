@@ -247,6 +247,37 @@ export class BatchUploadStrategy extends BaseStateMachineStrategy {
     super('batch_upload', config, persistence, logger);
   }
 
+  // --- EnhancedStateMachineStrategy compatibility methods ---
+  async validateTransition(
+    taskId: string,
+    event: string,
+    context?: Record<string, unknown>,
+  ) {
+    // Basic permissive validator for compatibility; can be enhanced later
+    return { valid: true } as const;
+  }
+
+  async getTransitionHistory(
+    taskId: string,
+    limit?: number,
+  ): Promise<StateTransition[]> {
+    // No-op in-memory history for this strategy (can be implemented later)
+    return [];
+  }
+
+  async getTaskMetrics() {
+    // Return a simple zeroed metrics object for compatibility
+    return {
+      totalTasks: 0,
+      tasksByState: {},
+      tasksByType: {},
+      averageExecutionTime: 0,
+      successRate: 0,
+      failureRate: 0,
+      retryRate: 0,
+    };
+  }
+
   /**
    * 执行批量上传任务
    * @param taskId 任务ID

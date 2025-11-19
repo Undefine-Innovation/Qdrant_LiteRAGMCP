@@ -62,7 +62,9 @@ export class DocumentSyncProcessor {
         return item;
       } else if (item && typeof item === 'object' && 'content' in item) {
         const chunkItem = item as { content: unknown };
-        return typeof chunkItem.content === 'string' ? chunkItem.content : String(chunkItem.content);
+        return typeof chunkItem.content === 'string'
+          ? chunkItem.content
+          : String(chunkItem.content);
       } else {
         return String(item);
       }

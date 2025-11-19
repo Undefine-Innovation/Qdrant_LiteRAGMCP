@@ -10,6 +10,7 @@ import {
   SearchResult,
 } from '@domain/entities/types.js';
 import { FILE_CONSTANTS } from '@domain/constants/FileConstants.js';
+import { ErrorFactory, ErrorContext } from '@domain/errors/index.js';
 
 /**
  * 与 Qdrant 向量数据库交互的仓库类。
@@ -42,6 +43,15 @@ export class QdrantRepo implements IQdrantRepo {
    * @throws {Error} 如果无法创建或验证集合。
    */
   async ensureCollection(): Promise<void> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'ensureCollection',
+      parameters: {
+        collectionName: this.collectionName,
+        vectorSize: this.config.vectorSize,
+      },
+    };
+
     try {
       const collections = await this.client.getCollections();
       const collectionExists = collections.collections.some(
@@ -62,9 +72,15 @@ export class QdrantRepo implements IQdrantRepo {
       const actualSize = this.getVectorSizeFromCollectionInfo(info);
 
       if (actualSize && actualSize !== this.config.vectorSize) {
-        throw new Error(
+        throw ErrorFactory.configuration(
           `Qdrant collection "${this.collectionName}" vector size mismatch: ` +
             `expected ${this.config.vectorSize}, got ${actualSize}`,
+          {
+            expectedSize: this.config.vectorSize,
+            actualSize,
+            collectionName: this.collectionName,
+          },
+          errorContext,
         );
       }
     } catch (err) {
@@ -72,8 +88,18 @@ export class QdrantRepo implements IQdrantRepo {
         error: err,
         collectionName: this.collectionName,
       });
-      throw new Error(
+
+      // 如果是我们自己创建的错误，直接重新抛出
+      if (err instanceof Error && err.name === 'ConfigurationError') {
+        throw err;
+      }
+
+      // 否则包装为基础设施错误
+      throw ErrorFactory.infrastructure(
         `Failed to ensure Qdrant collection: ${this.collectionName}`,
+        { originalError: err instanceof Error ? err.message : String(err) },
+        errorContext,
+        err instanceof Error ? err : undefined,
       );
     }
   }
@@ -119,81 +145,264 @@ export class QdrantRepo implements IQdrantRepo {
 
   /**
    * 将一批数据块插入到 Qdrant 集合中。
-   * @param {CollectionId} collectionId - 要插入的集合 ID。
-   * @param {Point[]} points - 要插入的点数组。
+   * 优化了性能和错误处理，支持并发处理和进度监控
+   * @param collectionId 要插入的集合 ID
+   * @param points 要插入的点数组
+   * @param options 可选配置参数
+   * @param options.batchSize 批次大小
+   * @param options.maxConcurrentBatches 最大并发批次数
+   * @param options.enableProgressMonitoring 是否启用进度监控
+   * @param options.onProgress 进度回调函数
    */
   async upsertCollection(
     collectionId: CollectionId,
     points: Point[],
+    options?: {
+      batchSize?: number;
+      maxConcurrentBatches?: number;
+      enableProgressMonitoring?: boolean;
+      onProgress?: (progress: {
+        processed: number;
+        total: number;
+        percentage: number;
+        currentBatch: number;
+        totalBatches: number;
+        duration: number;
+      }) => void;
+    },
   ): Promise<void> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'upsertCollection',
+      parameters: {
+        collectionId,
+        pointCount: points?.length || 0,
+        batchSize: options?.batchSize,
+        maxConcurrentBatches: options?.maxConcurrentBatches,
+      },
+    };
+
     if (!points?.length) {
       this.logger.info('No points to upsert.');
       return;
     }
 
-    const BATCH_SIZE = FILE_CONSTANTS.BATCH_SIZE;
+    const BATCH_SIZE = options?.batchSize || FILE_CONSTANTS.BATCH_SIZE;
+    const MAX_CONCURRENT_BATCHES = options?.maxConcurrentBatches || 2;
     const totalBatches = Math.ceil(points.length / BATCH_SIZE);
     let successfulBatches = 0;
     let totalPointsProcessed = 0;
+    const startTime = Date.now();
 
     this.logger.info(`[QdrantSync] 开始向集合 ${collectionId} 插入向量点`, {
       totalPoints: points.length,
       batchSize: BATCH_SIZE,
+      maxConcurrentBatches: MAX_CONCURRENT_BATCHES,
       totalBatches,
     });
 
+    // 创建批次
+    const batches: Point[][] = [];
     for (let i = 0; i < points.length; i += BATCH_SIZE) {
-      const batch = points.slice(i, i + BATCH_SIZE);
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      batches.push(points.slice(i, i + BATCH_SIZE));
+    }
 
-      try {
-        const startTime = Date.now();
-        await this.client.upsert(this.collectionName, {
-          wait: true,
-          ordering: 'medium',
-          points: batch,
-        });
-        const duration = Date.now() - startTime;
+    if (MAX_CONCURRENT_BATCHES > 1) {
+      // 并发处理批次
+      await this.processBatchesConcurrently(
+        batches,
+        collectionId,
+        options,
+        startTime,
+      );
+    } else {
+      // 串行处理批次
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        const batchNumber = i + 1;
 
-        successfulBatches++;
-        totalPointsProcessed += batch.length;
+        try {
+          const batchStartTime = Date.now();
+          await this.client.upsert(this.collectionName, {
+            wait: true,
+            ordering: 'medium',
+            points: batch,
+          });
+          const batchDuration = Date.now() - batchStartTime;
 
-        this.logger.info(
-          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入成功`,
-          {
-            collectionId,
-            batchNumber,
-            batchSize: batch.length,
-            duration: `${duration}ms`,
-            totalProcessed: totalPointsProcessed,
-            totalPoints: points.length,
-            progress: `${Math.round((totalPointsProcessed / points.length) * 100)}%`,
-          },
-        );
-      } catch (e) {
-        this.logger.error(
-          `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入失败`,
-          {
-            error: e,
-            batchSize: batch.length,
-            collectionId,
-            batchNumber,
-            totalProcessed: totalPointsProcessed,
-            totalPoints: points.length,
-          },
-        );
-        throw e; // 重新抛出错误，确保调用方能感知失败
+          successfulBatches++;
+          totalPointsProcessed += batch.length;
+
+          this.logger.info(
+            `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入成功`,
+            {
+              collectionId,
+              batchNumber,
+              batchSize: batch.length,
+              duration: `${batchDuration}ms`,
+              totalProcessed: totalPointsProcessed,
+              totalPoints: points.length,
+              progress: `${Math.round((totalPointsProcessed / points.length) * 100)}%`,
+            },
+          );
+
+          // 调用进度回调
+          if (options?.enableProgressMonitoring && options?.onProgress) {
+            options.onProgress({
+              processed: totalPointsProcessed,
+              total: points.length,
+              percentage: Math.round(
+                (totalPointsProcessed / points.length) * 100,
+              ),
+              currentBatch: batchNumber,
+              totalBatches,
+              duration: Date.now() - startTime,
+            });
+          }
+        } catch (e) {
+          this.logger.error(
+            `[QdrantSync] 批次 ${batchNumber}/${totalBatches} 插入失败`,
+            {
+              error: e,
+              batchSize: batch.length,
+              collectionId,
+              batchNumber,
+              totalProcessed: totalPointsProcessed,
+              totalPoints: points.length,
+            },
+          );
+
+          // 包装为基础设施错误
+          throw ErrorFactory.infrastructure(
+            `Failed to upsert batch ${batchNumber}/${totalBatches} for collection ${collectionId}`,
+            {
+              originalError: e instanceof Error ? e.message : String(e),
+              batchNumber,
+              batchSize: batch.length,
+              collectionId,
+            },
+            errorContext,
+          );
+        }
       }
     }
 
+    const totalDuration = Date.now() - startTime;
     this.logger.info(`[QdrantSync] 集合 ${collectionId} 向量点插入完成`, {
       collectionId,
       totalPoints: points.length,
       totalBatches,
       successfulBatches,
       totalPointsProcessed,
+      totalDuration: `${totalDuration}ms`,
+      avgBatchDuration: `${Math.round(totalDuration / totalBatches)}ms`,
+      pointsPerSecond: Math.round((points.length / totalDuration) * 1000),
       successRate: `${Math.round((successfulBatches / totalBatches) * 100)}%`,
     });
+  }
+
+  /**
+   * 并发处理批次
+   * @param batches 批次数组
+   * @param collectionId 集合ID
+   * @param options 可选配置参数
+   * @param options.maxConcurrentBatches 最大并发批次数
+   * @param options.enableProgressMonitoring 是否启用进度监控
+   * @param options.onProgress 进度回调函数
+   * @param startTime 开始时间戳
+   */
+  private async processBatchesConcurrently(
+    batches: Point[][],
+    collectionId: CollectionId,
+    options?: {
+      maxConcurrentBatches?: number;
+      enableProgressMonitoring?: boolean;
+      onProgress?: (progress: {
+        processed: number;
+        total: number;
+        percentage: number;
+        currentBatch: number;
+        totalBatches: number;
+        duration: number;
+      }) => void;
+    },
+    startTime?: number,
+  ): Promise<void> {
+    const MAX_CONCURRENT_BATCHES = options?.maxConcurrentBatches || 2;
+    let processedBatches = 0;
+    let totalPointsProcessed = 0;
+
+    // 预计算总点数，避免重复计算
+    const totalPoints = batches.reduce((sum, batch) => sum + batch.length, 0);
+
+    // 分组并发处理
+    for (let i = 0; i < batches.length; i += MAX_CONCURRENT_BATCHES) {
+      const concurrentBatches = batches.slice(i, i + MAX_CONCURRENT_BATCHES);
+
+      const batchPromises = concurrentBatches.map(async (batch, index) => {
+        const batchNumber = i + index + 1;
+
+        try {
+          const batchStartTime = Date.now();
+          await this.client.upsert(this.collectionName, {
+            wait: true,
+            ordering: 'medium',
+            points: batch,
+          });
+          const batchDuration = Date.now() - batchStartTime;
+
+          this.logger.info(
+            `[QdrantSync] 并发批次 ${batchNumber}/${batches.length} 插入成功`,
+            {
+              collectionId,
+              batchNumber,
+              batchSize: batch.length,
+              duration: `${batchDuration}ms`,
+            },
+          );
+
+          return { success: true, batchSize: batch.length, batchNumber };
+        } catch (e) {
+          this.logger.error(
+            `[QdrantSync] 并发批次 ${batchNumber}/${batches.length} 插入失败`,
+            {
+              error: e,
+              batchSize: batch.length,
+              collectionId,
+              batchNumber,
+            },
+          );
+          throw e;
+        }
+      });
+
+      // 等待当前批次组完成
+      const results = await Promise.all(batchPromises);
+
+      // 更新进度
+      for (const result of results) {
+        if (result.success) {
+          processedBatches++;
+          totalPointsProcessed += result.batchSize;
+        }
+      }
+
+      // 调用进度回调
+      if (
+        options?.enableProgressMonitoring &&
+        options?.onProgress &&
+        startTime
+      ) {
+        options.onProgress({
+          processed: totalPointsProcessed,
+          total: totalPoints,
+          percentage: Math.round((totalPointsProcessed / totalPoints) * 100),
+          currentBatch: processedBatches,
+          totalBatches: batches.length,
+          duration: Date.now() - startTime,
+        });
+      }
+    }
   }
 
   /**
@@ -213,10 +422,24 @@ export class QdrantRepo implements IQdrantRepo {
       filter?: Schemas['Filter'];
     },
   ): Promise<SearchResult[]> {
+    // 创建错误上下文
+    const errorContext: ErrorContext = {
+      operation: 'search',
+      parameters: {
+        collectionId,
+        vectorLength: opts.vector?.length || 0,
+        limit: opts.limit,
+        hasFilter: !!opts.filter,
+      },
+    };
+
     const { vector, limit = 10, filter } = opts;
     if (!vector?.length) {
-      this.logger.error('[QdrantSync] 无法使用空向量进行搜索');
-      return [];
+      throw ErrorFactory.validation(
+        'Cannot search with empty vector',
+        { vectorLength: 0 },
+        errorContext,
+      );
     }
 
     this.logger.info(`[QdrantSync] 开始在集合 ${collectionId} 中搜索`, {
@@ -300,7 +523,19 @@ export class QdrantRepo implements IQdrantRepo {
           response: response?.data ?? maybe?.response,
           stack: typeof maybe?.stack === 'string' ? maybe.stack : undefined,
         });
-        return [];
+
+        // 包装为基础设施错误
+        throw ErrorFactory.infrastructure(
+          `Search failed for collection ${collectionId}`,
+          {
+            originalError: msg || 'Unknown error',
+            attempt,
+            maxAttempts,
+            vectorLength: vector.length,
+            limit,
+          },
+          errorContext,
+        );
       }
     }
     return [];
@@ -381,6 +616,34 @@ export class QdrantRepo implements IQdrantRepo {
         error: e,
       });
       throw e; // 重新抛出错误，确保调用方能感知失败
+    }
+  }
+
+  /**
+   * 删除整个集合（含所有点）
+   * @param collectionId 要删除的集合 ID
+   */
+  async deleteCollection(collectionId: string): Promise<void> {
+    if (!collectionId) return;
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) return;
+
+    try {
+      this.logger.info(
+        `[QdrantSync] 尝试删除集合 ${collectionId}（含所有点）`,
+        {
+          collectionId,
+        },
+      );
+      await this.client.deleteCollection(collectionId);
+      this.logger.info(`[QdrantSync] 集合 ${collectionId} 删除成功`, {
+        collectionId,
+      });
+    } catch (error) {
+      this.logger.error(`[QdrantSync] 删除集合 ${collectionId} 失败`, {
+        collectionId,
+        error,
+      });
+      throw error;
     }
   }
 

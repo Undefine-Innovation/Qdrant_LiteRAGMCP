@@ -7,7 +7,7 @@ import {
   LogTag,
 } from './infrastructure/logging/logger.js';
 import { validateConfig, AppConfig } from './infrastructure/config/config.js';
-import { createApp, startServer } from './app.js';
+import { createApp, startServer } from './App.js';
 import {
   initializeInfrastructure,
   initializeServices,
@@ -94,11 +94,50 @@ async function main(): Promise<void> {
     const fallbackLogger = createLogger({
       log: { level: 'error' },
       openai: { baseUrl: '', apiKey: '', model: '' },
+      llm: {
+        provider: 'openai',
+        apiKey: '',
+        baseUrl: '',
+        model: '',
+        maxTokens: 0,
+        temperature: 0,
+        timeout: 0,
+        semanticSplitting: {
+          enabled: false,
+          targetChunkSize: 1000,
+          chunkOverlap: 100,
+          maxChunks: 0,
+          strategy: 'balanced',
+          enableFallback: true,
+          fallbackStrategy: 'auto',
+          maxRetries: 1,
+          retryDelay: 0,
+          enableCache: false,
+          cacheTTL: 0,
+        },
+      },
       db: { type: 'sqlite', path: '' },
       qdrant: { url: '', collection: '', vectorSize: 0 },
       embedding: { batchSize: 0 },
       api: { port: 0 },
       gc: { intervalHours: 0 },
+      rateLimit: {
+        enabled: false,
+        global: { enabled: false },
+        ip: { enabled: false },
+        user: { enabled: false },
+        path: { enabled: false },
+        search: { enabled: false },
+        upload: { enabled: false },
+        metrics: { enabled: false },
+        middleware: {
+          includeHeaders: false,
+          logEvents: false,
+          logOnlyBlocked: false,
+          skipHealthCheck: true,
+          skipOptions: true,
+        },
+      },
     });
 
     fallbackLogger.error(

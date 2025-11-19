@@ -8,7 +8,7 @@ import {
   SystemMetricsResponse,
   DashboardDataRequest,
   DashboardDataResponse,
-} from '@api/contracts/monitoring.js';
+} from '@api/contracts/Monitoring.js';
 import { logger } from '@logging/logger.js';
 
 /**

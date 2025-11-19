@@ -3,5 +3,9 @@
  * 导出所有日志相关的实现
  */
 
-export * from './enhanced-logger.js';
-export * from './logger.js';
+export * from './EnhancedLogger.js';
+export {
+  logger,
+  createLogger,
+  createEnhancedLoggerFromConfig,
+} from './logger.js';

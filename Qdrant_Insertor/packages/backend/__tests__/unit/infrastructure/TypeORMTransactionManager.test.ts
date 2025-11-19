@@ -129,7 +129,7 @@ describe('TypeORMTransactionManager', () => {
     it('应该为不存在的父事务抛出错误', async () => {
       await expect(
         transactionManager.beginNestedTransaction('non-existent-id'),
-      ).rejects.toThrow(TransactionError);
+      ).rejects.toThrow('Transaction non-existent-id not found');
     });
   });
 
@@ -176,7 +176,7 @@ describe('TypeORMTransactionManager', () => {
     it('应该为不存在的事务抛出错误', async () => {
       await expect(
         transactionManager.commit('non-existent-id'),
-      ).rejects.toThrow(TransactionError);
+      ).rejects.toThrow('Transaction non-existent-id not found');
     });
 
     it('应该为非活跃事务抛出错误', async () => {
@@ -188,7 +188,7 @@ describe('TypeORMTransactionManager', () => {
         TransactionStatus.FAILED;
       await expect(
         transactionManager.commit(context.transactionId),
-      ).rejects.toThrow(TransactionError);
+      ).rejects.toThrow(/is not in a valid state for commit/);
     });
   });
 
@@ -237,7 +237,7 @@ describe('TypeORMTransactionManager', () => {
     it('应该为不存在的事务抛出错误', async () => {
       await expect(
         transactionManager.rollback('non-existent-id'),
-      ).rejects.toThrow(TransactionError);
+      ).rejects.toThrow('Transaction non-existent-id not found');
     });
   });
 

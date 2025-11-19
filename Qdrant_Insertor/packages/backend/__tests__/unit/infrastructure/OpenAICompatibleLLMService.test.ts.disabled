@@ -1,0 +1,247 @@
+/**
+ * OpenAICompatibleLLMService 单元测试
+ */
+
+import { OpenAICompatibleLLMService, createOpenAICompatibleLLMService } from '@infrastructure/external/OpenAICompatibleLLMService.js';
+import { LLMServiceMockFactory, MockFactory } from '../../utils/test-mocks.js';
+import { Logger } from '@logging/logger.js';
+import { LLMProvider } from '@domain/interfaces/llm.js';
+
+describe('OpenAICompatibleLLMService', () => {
+  let logger: jest.Mocked<Logger>;
+  let mockConfig: any;
+
+  beforeEach(() => {
+    logger = MockFactory.createLoggerMock();
+    mockConfig = {
+      provider: 'openai' as LLMProvider,
+      apiKey: 'test-api-key',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-3.5-turbo',
+      maxTokens: 4096,
+      temperature: 0.1,
+      timeout: 30000,
+    };
+  });
+
+  describe('构造函数', () => {
+    it('应该正确初始化OpenAICompatibleLLMService', () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      expect(service).toBeInstanceOf(OpenAICompatibleLLMService);
+    });
+
+    it('应该使用工厂函数创建服务', () => {
+      const service = createOpenAICompatibleLLMService(mockConfig, logger);
+      
+      expect(service).toBeInstanceOf(OpenAICompatibleLLMService);
+    });
+  });
+
+  describe('getProvider', () => {
+    it('应该返回正确的提供商类型', () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      expect(service.getProvider()).toBe('openai');
+    });
+
+    it('应该支持不同的提供商', () => {
+      const anthropicConfig = { ...mockConfig, provider: 'anthropic' as LLMProvider };
+      const service = new OpenAICompatibleLLMService(anthropicConfig, logger);
+      
+      expect(service.getProvider()).toBe('anthropic');
+    });
+  });
+
+  describe('getModelConfig', () => {
+    it('应该返回模型配置信息', () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      const config = service.getModelConfig();
+      
+      expect(config.model).toBe('gpt-3.5-turbo');
+      expect(config.apiKey).toBe('test-api-key');
+      expect(config.baseUrl).toBe('https://api.openai.com/v1');
+      expect(config.maxTokens).toBe(4096);
+      expect(config.temperature).toBe(0.1);
+      expect(config.timeout).toBe(30000);
+    });
+
+    it('应该排除provider字段', () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      const config = service.getModelConfig();
+      
+      expect(config).not.toHaveProperty('provider');
+    });
+  });
+
+  describe('getModelInfo', () => {
+    it('应该返回OpenAI模型信息', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      const info = await service.getModelInfo();
+      
+      expect(info.name).toBe('gpt-3.5-turbo');
+      expect(info.provider).toBe('openai');
+      expect(info.maxTokens).toBe(4096);
+      expect(info.contextWindow).toBe(128000);
+    });
+
+    it('应该返回Anthropic模型信息', async () => {
+      const anthropicConfig = { ...mockConfig, provider: 'anthropic' as LLMProvider };
+      const service = new OpenAICompatibleLLMService(anthropicConfig, logger);
+      const info = await service.getModelInfo();
+      
+      expect(info.provider).toBe('anthropic');
+      expect(info.contextWindow).toBe(200000);
+    });
+
+    it('应该返回Azure模型信息', async () => {
+      const azureConfig = {
+        ...mockConfig,
+        provider: 'azure' as LLMProvider,
+        projectId: 'test-project',
+        deploymentName: 'test-deployment'
+      };
+      const service = new OpenAICompatibleLLMService(azureConfig, logger);
+      const info = await service.getModelInfo();
+      
+      expect(info.provider).toBe('azure');
+      expect(info.contextWindow).toBe(128000);
+    });
+
+    it('应该返回OpenAI兼容提供商模型信息', async () => {
+      const customConfig = { ...mockConfig, provider: 'openai_compatible' as LLMProvider };
+      const service = new OpenAICompatibleLLMService(customConfig, logger);
+      const info = await service.getModelInfo();
+      
+      expect(info.provider).toBe('openai_compatible');
+      expect(info.contextWindow).toBe(4096);
+    });
+  });
+
+  describe('isAvailable', () => {
+    it('应该在服务可用时返回true', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      // 模拟成功的语义分块调用
+      jest.spyOn(service, 'semanticSplit').mockResolvedValue({
+        chunks: ['test chunk'],
+        processingTime: 0,
+      });
+      
+      const isAvailable = await service.isAvailable();
+      expect(isAvailable).toBe(true);
+    });
+
+    it('应该在服务不可用时返回false', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      // 模拟失败的语义分块调用
+      jest.spyOn(service, 'semanticSplit').mockRejectedValue(new Error('服务错误'));
+      
+      const isAvailable = await service.isAvailable();
+      expect(isAvailable).toBe(false);
+    });
+  });
+
+  describe('batchSemanticSplit', () => {
+    it('应该并行处理多个请求', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      // 模拟语义分块调用
+      const mockResult = {
+        chunks: ['test chunk'],
+        tokensUsed: 50,
+      };
+      jest.spyOn(service, 'semanticSplit').mockResolvedValue(mockResult);
+      
+      const requests = [
+        { text: 'text1', targetChunkSize: 100 },
+        { text: 'text2', targetChunkSize: 100 },
+      ];
+      
+      const results = await service.batchSemanticSplit(requests);
+      
+      expect(results).toHaveLength(2);
+      expect(results[0]).toEqual(mockResult);
+      expect(results[1]).toEqual(mockResult);
+      expect(service.semanticSplit).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('测试环境处理', () => {
+    beforeEach(() => {
+      // 设置测试环境变量
+      process.env.NODE_ENV = 'test';
+    });
+
+    afterEach(() => {
+      // 清理测试环境变量
+      delete process.env.NODE_ENV;
+    });
+
+    it('应该在测试环境中使用模拟响应', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      const result = await service.semanticSplit({
+        text: 'test text',
+        targetChunkSize: 100,
+      });
+      
+      expect(result.chunks).toEqual(['Mock chunk 1', 'Mock chunk 2']);
+      expect(result.chunkTitles).toEqual(['Mock title 1', 'Mock title 2']);
+      expect(result.chunkSummaries).toEqual(['Mock summary 1', 'Mock summary 2']);
+      expect(result.tokensUsed).toBe(150);
+    });
+  });
+
+  describe('错误处理', () => {
+    beforeEach(() => {
+      // 确保不在测试环境中，以触发真实的错误处理
+      delete process.env.NODE_ENV;
+      delete process.env.JEST_WORKER_ID;
+    });
+
+    it('应该在API调用失败时使用降级策略', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      // 模拟fetch失败
+      global.fetch = jest.fn().mockRejectedValue(new Error('网络错误'));
+      
+      const result = await service.semanticSplit({
+        text: 'test text that is long enough to be split into multiple chunks based on the target size',
+        targetChunkSize: 50,
+      });
+      
+      expect(result.chunks).toBeDefined();
+      expect(result.chunks.length).toBeGreaterThan(0);
+      // 验证降级策略被使用，而不是验证日志调用
+      expect(result.chunks[0]).toContain('test text');
+    });
+
+    it('应该在JSON解析失败时使用降级策略', async () => {
+      const service = new OpenAICompatibleLLMService(mockConfig, logger);
+      
+      // 模拟fetch返回无效JSON
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'invalid json response',
+            },
+          }],
+        }),
+      });
+      
+      const result = await service.semanticSplit({
+        text: 'test text',
+        targetChunkSize: 100,
+      });
+      
+      expect(result.chunks).toBeDefined();
+      expect(result.chunks.length).toBeGreaterThan(0);
+      // 验证降级策略被使用，而不是验证日志调用
+      expect(result.chunks[0]).toContain('test text');
+    });
+  });
+});

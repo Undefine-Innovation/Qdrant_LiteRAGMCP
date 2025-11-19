@@ -62,6 +62,7 @@ export interface IQdrantRepo {
       vector: number[];
       limit?: number;
       filter?: Schemas['Filter'];
+      scoreThreshold?: number;
     },
   ): Promise<SearchResult[]>;
 
@@ -90,4 +91,10 @@ export interface IQdrantRepo {
    * @param pointIds - 要删除的向量点ID数组
    */
   deletePoints(collectionId: CollectionId, pointIds: PointId[]): Promise<void>;
+
+  /**
+   * 删除一个集合
+   * @param collectionId - 集合ID
+   */
+  deleteCollection(collectionId: CollectionId): Promise<void>;
 }
