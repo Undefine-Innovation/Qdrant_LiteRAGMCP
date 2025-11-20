@@ -447,8 +447,9 @@ export class PostgreSQLOperations {
 
       const result: Record<string, { content: string }> = {};
       for (const chunk of chunks) {
-        result[chunk.point_id] = {
-          content: chunk.content,
+        const pointId = String((chunk as Record<string, unknown>)['point_id'] ?? '');
+        result[pointId] = {
+          content: String((chunk as Record<string, unknown>)['content'] ?? ''),
         };
       }
 

@@ -1,4 +1,4 @@
-import { Logger } from '@logging/logger.js';
+﻿import { Logger } from '@logging/logger.js';
 import { BatchOperationResult } from './BaseRepository.js';
 
 /**

@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, Between, ILike } from 'typeorm';
+﻿import { DataSource, FindOptionsWhere, Between, ILike } from 'typeorm';
 import { BaseRepository } from './BaseRepository.js';
 import { Doc } from '../entities/Doc.js';
 import { Logger } from '@logging/logger.js';
@@ -288,7 +288,7 @@ export class SimplifiedDocAdvancedQueries extends BaseRepository<Doc> {
       for (const { contentHash } of duplicateHashes) {
         const documents = await this.findAll({
           where: {
-            contentHash,
+            content_hash: contentHash,
             deleted: false,
             ...(options.collectionId && { collectionId: options.collectionId }),
           },

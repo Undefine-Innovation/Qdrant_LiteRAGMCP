@@ -3,7 +3,7 @@
  * 提供在多个创建器/工厂间共享的 helper，避免重复实现
  */
 import { ErrorCategory } from '@domain/sync/retry.js';
-import { ErrorCode as ApiErrorCode } from '@api/contracts/Error.js';
+import { ErrorCode as ApiErrorCode } from '@api/contracts/error.js';
 
 /**
  * 根据错误代码获取HTTP状态码

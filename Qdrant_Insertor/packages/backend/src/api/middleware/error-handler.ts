@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, ErrorCode } from '@api/contracts/error.js';
 import { logger } from '@logging/logger.js';
-import { ErrorFactory, ErrorContext } from '@domain/errors/ErrorFactory.js';
+import { ErrorFactory, ErrorContext } from '@domain/errors/index.js';
 import { globalErrorMapper } from '@infrastructure/errors/ErrorMapper.js';
 
 /**

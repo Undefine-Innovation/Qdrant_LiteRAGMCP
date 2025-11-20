@@ -18,7 +18,7 @@ import {
   ScrapeRetryRequest,
   ScrapeRetryResponse,
   ScrapeStatsResponse,
-} from '@api/contracts/Scrape.js';
+} from '@api/contracts/scrape.js';
 import { IScrapeService, IScrapeTask } from '@domain/entities/scrape.js';
 
 /**

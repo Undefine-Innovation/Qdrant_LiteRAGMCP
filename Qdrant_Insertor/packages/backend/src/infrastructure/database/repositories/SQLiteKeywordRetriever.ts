@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SQLite关键词检索器实现（TypeScript版本）
  * 使用SQLite FTS5功能提供关键词检索
  */
@@ -30,7 +30,6 @@ interface SearchRequest {
 }
 
 interface FtsTableInterface {
-  search(query: string, collectionId: string, limit: number): FtsResult[];
   search(query: string, collectionId: string, limit: number): FtsResult[];
   createBatch(data: FtsResult[]): void;
   deleteByDocId(docId: string): void;

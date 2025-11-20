@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { DocRepository, ChunkRepository } from './index.js';
 import {
@@ -44,7 +44,7 @@ export class PostgreSQLPaginationOperations {
       const skip = (page - 1) * limit;
 
       const [docs, total] = await Promise.all([
-        this.docRepository.findByCollectionId(collectionId) as Promise<Array<Record<string, unknown>>>,
+        this.docRepository.findByCollectionId(collectionId) as unknown as Promise<Array<Record<string, unknown>>>,
         this.docRepository.countByCollectionId(collectionId),
       ]);
 
@@ -86,7 +86,7 @@ export class PostgreSQLPaginationOperations {
       const skip = (page - 1) * limit;
 
       const [chunks, total] = await Promise.all([
-        this.chunkRepository.findByDocId(docId) as Promise<Array<Record<string, unknown>>>,
+        this.chunkRepository.findByDocId(docId) as unknown as Promise<Array<Record<string, unknown>>>,
         this.chunkRepository.countByDocId(docId),
       ]);
 

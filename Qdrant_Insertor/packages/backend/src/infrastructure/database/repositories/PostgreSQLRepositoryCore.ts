@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PostgreSQL仓库核心功能
  * 包含核心连接管理和健康检查功能
  */
@@ -10,6 +10,7 @@ import {
   DatabaseHealthStatus,
   DatabaseConnectionStatus,
   DatabasePerformanceMetrics,
+  DatabaseType,
 } from '@domain/interfaces/IDatabaseRepository.js';
 
 /**
@@ -174,7 +175,7 @@ export class PostgreSQLRepositoryCore {
       const dbMetrics = await this.getDatabaseSpecificMetrics();
 
       return {
-        databaseType: 'postgres' as const,
+        databaseType: DatabaseType.POSTGRESQL,
         connectionTime:
           this.connectionStartTime > 0
             ? Date.now() - this.connectionStartTime
@@ -190,7 +191,7 @@ export class PostgreSQLRepositoryCore {
       });
 
       return {
-        databaseType: 'postgres' as const,
+        databaseType: DatabaseType.POSTGRESQL,
         connectionTime: 0,
         queryTime: 0,
         transactionTime: 0,

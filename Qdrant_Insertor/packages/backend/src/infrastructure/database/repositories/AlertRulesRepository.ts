@@ -134,3 +134,4 @@ export class AlertRulesRepository extends BaseRepository<AlertRules> {
     }
   }
 }
+

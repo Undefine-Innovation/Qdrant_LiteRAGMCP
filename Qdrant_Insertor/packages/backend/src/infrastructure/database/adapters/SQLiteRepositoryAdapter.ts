@@ -5,6 +5,7 @@ import {
   DatabaseConfig,
   DatabaseMigration,
 } from '@domain/interfaces/IDatabaseRepository.js';
+import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { SQLiteRepositoryAdapter as RepoSQLiteRepositoryAdapter } from '../repositories/SQLiteRepositoryAdapter.js';
 
 // Narrowed shape for optional legacy adapter methods to avoid using `any`.
@@ -31,7 +32,9 @@ type MaybeRepoAdapter = Partial<{
  * methods that older tests and code expect (initialize, transaction, ping,
  * runMigrations, getRepositoryStats, validateEntity, etc.).
  */
-export class SQLiteRepositoryAdapter<T = unknown> {
+export class SQLiteRepositoryAdapter<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   // track applied migrations in-memory for test purposes
   private appliedMigrations: Map<string, { id: string; appliedAt: Date }> =
     new Map();
@@ -45,7 +48,7 @@ export class SQLiteRepositoryAdapter<T = unknown> {
     dataSource: DataSource,
     config: DatabaseConfig,
     logger: Logger,
-    qdrantRepo?: unknown,
+    qdrantRepo?: IQdrantRepo | undefined,
   ) {
     // Set database type for testing
     this.databaseType = config.type;
@@ -131,7 +134,7 @@ export class SQLiteRepositoryAdapter<T = unknown> {
     try {
       const stats = await this.getStatistics();
       return {
-        totalRecords: stats.totalDocuments ?? 0,
+        totalRecords: Number(stats.totalDocuments ?? 0),
         averageQueryTime: 0,
         slowQueries: 0,
         lastUpdated: new Date(),

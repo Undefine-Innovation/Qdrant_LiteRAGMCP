@@ -1,15 +1,10 @@
 import { IRepository } from './IRepository.js';
 import { CollectionId, DocId, PointId } from '../entities/types.js';
 import { IQdrantRepo } from './IQdrantRepo.js';
+import { Logger } from '@logging/logger.js';
 
 // Helper types to avoid using `any` in public interfaces
 export type EntityConstructor<T> = new (...args: unknown[]) => T;
-export type LoggerLike = {
-  info?: (...args: unknown[]) => void;
-  warn?: (...args: unknown[]) => void;
-  error?: (...args: unknown[]) => void;
-  debug?: (...args: unknown[]) => void;
-};
 
 // Allow either a constructor or a plain factory function that returns T
 export type EntityFactory<T> = EntityConstructor<T> | ((...args: unknown[]) => T);
@@ -290,7 +285,7 @@ export interface IDatabaseRepositoryFactory {
   createDatabaseRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID>;
 
@@ -305,7 +300,7 @@ export interface IDatabaseRepositoryFactory {
   createPostgreSQLRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID>;
 
@@ -320,7 +315,7 @@ export interface IDatabaseRepositoryFactory {
   createSQLiteRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID>;
 
@@ -335,7 +330,7 @@ export interface IDatabaseRepositoryFactory {
   createTypeORMRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID>;
 }

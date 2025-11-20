@@ -1,33 +1,71 @@
 {
-  "timestamp": "2025-11-18T06:33:59.188Z",
+  "timestamp": "2025-11-20T01:37:26.675Z",
   "totals": {
     "testSuites": {
-      "total": 36,
-      "passed": 30,
-      "failed": 0,
+      "total": 39,
+      "passed": 27,
+      "failed": 6,
       "skipped": 6
     },
     "tests": {
-      "total": 623,
-      "passed": 498,
-      "failed": 0,
-      "skipped": 125
+      "total": 742,
+      "passed": 555,
+      "failed": 40,
+      "skipped": 147
     },
-    "duration": "65.61s"
+    "duration": "68.65s"
   },
   "failedTestSuites": [
     {
-      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.test.ts",
+      "failingTests": 30,
+      "firstFailure": {
+        "name": "应该根据集合ID查找文档",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\nExpected: \u001b[32m[{\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-1\", \"id\": \"doc-1\", \"key\": \"doc1\", \"name\": \"Document 1\", \"status\": \"completed\"}, {\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-2\", \"id\": \"doc-2\", \"key\": \"doc2\", \"name\": \"Document 2\", \"status\": \"new\"}]\u001b[39m\nReceived: \u001b[31mundefined\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:119:22)"
+      }
+    },
+    {
+      "file": "\\__tests__\\unit\\middlewares\\rateLimit.test.ts",
+      "failingTests": 4,
+      "firstFailure": {
+        "name": "应该在请求被限流时返回429错误",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32mAny<AppError>\u001b[39m\nReceived: \u001b[31m[AppError: 请求过于频繁，请稍后再试]\u001b[39m\n"
+      }
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.test.ts",
+      "failingTests": 2,
+      "firstFailure": {
+        "name": "应该批量创建块",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+      }
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts",
+      "failingTests": 2,
+      "firstFailure": {
+        "name": "should move document between collections",
+        "error": "TypeError: sourceCollection.addDocument is not a function\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts:747:24)\n    at Promise.finally.completed (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1557:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1497:10)"
+      }
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "failingTests": 1,
+      "firstFailure": {
+        "name": "应该成功重试任务",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mfalse\u001b[39m\nReceived: \u001b[31mtrue\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts:433:23)"
+      }
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\SearchService.test.ts",
+      "failingTests": 1,
+      "firstFailure": {
+        "name": "应该成功执行向量搜索",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"test-collection\"\u001b[39m, \u001b[32m[0.1, 0.2, 0.3, 0.4, 0.5]\u001b[39m, \u001b[32mObjectContaining {\"limit\": 10, \"scoreThreshold\": 0.5}\u001b[39m\nReceived: \u001b[2m\"test-collection\"\u001b[22m, \u001b[31m{\"limit\": 10, \"scoreThreshold\": 0.5, \"vector\": [0.1, 0.2, 0.3, 0.4, 0.5]}\u001b[39m\n"
+      }
     },
     {
       "file": "\\__tests__\\unit\\infrastructure\\qdrant-batch-performance.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
-      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
       "failingTests": 0,
       "firstFailure": null
     },
@@ -47,6 +85,11 @@
       "firstFailure": null
     },
     {
+      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
+      "failingTests": 0,
+      "firstFailure": null
+    },
+    {
       "file": "\\__tests__\\unit\\domain\\collection-aggregate-immutability.test.ts",
       "failingTests": 0,
       "firstFailure": null
@@ -57,17 +100,12 @@
       "firstFailure": null
     },
     {
-      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
       "file": "\\__tests__\\unit\\database\\adapters\\AdapterFactory.test.ts",
       "failingTests": 0,
       "firstFailure": null
     },
     {
-      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
+      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
       "failingTests": 0,
       "firstFailure": null
     },
@@ -77,7 +115,7 @@
       "firstFailure": null
     },
     {
-      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
       "failingTests": 0,
       "firstFailure": null
     },
@@ -87,32 +125,12 @@
       "firstFailure": null
     },
     {
-      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.create-update.test.ts",
+      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
       "failingTests": 0,
       "firstFailure": null
     },
     {
       "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.query.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
-      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.pagination-update.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
-      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.statistics.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
-      "file": "\\__tests__\\unit\\database\\adapters\\PostgreSQLRepositoryAdapter.test.ts",
-      "failingTests": 0,
-      "firstFailure": null
-    },
-    {
-      "file": "\\__tests__\\unit\\infrastructure\\TypeORMTransactionManager.test.ts",
       "failingTests": 0,
       "firstFailure": null
     }

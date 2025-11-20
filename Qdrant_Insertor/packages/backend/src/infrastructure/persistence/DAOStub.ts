@@ -95,7 +95,7 @@ export class DAOStub {
   getByComponent = (component: string): Health => ({ status: 'healthy' });
 
   // 获取不健康的组件 - 返回空数组
-  getUnhealthyComponents = (): string[] => [];
+  getUnhealthyComponents = (): unknown[] => [];
 
   // 批量创建 - 返回 undefined
   createBatch = (items: unknown[]): unknown => undefined;
@@ -126,3 +126,4 @@ export class DAOStub {
   // 删除任务相关数据 - 返回 undefined
   deleteByTask = (taskId: string): unknown => undefined;
 }
+

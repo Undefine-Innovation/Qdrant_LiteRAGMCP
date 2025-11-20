@@ -3,7 +3,7 @@ import {
   IRateLimitStrategy,
   RateLimitResult,
 } from '@domain/interfaces/IRateLimiter.js';
-import { AppError, ErrorCode } from '@api/contracts/Error.js';
+import { AppError, ErrorCode } from '@api/contracts/error.js';
 import { LoggedRequest } from './logging.js';
 
 /**

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PostgreSQL仓库维护模块
  * 包含维护和优化功能
  */
@@ -6,6 +6,7 @@
 import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { PostgreSQLRepositoryCore } from './PostgreSQLRepositoryCore.js';
+import { DatabaseType } from '@domain/interfaces/IDatabaseRepository.js';
 
 /**
  * PostgreSQL仓库维护模块
@@ -35,7 +36,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -94,7 +95,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -143,7 +144,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -181,7 +182,7 @@ export class PostgreSQLRepositoryMaintenance {
   async updateTableStatistics(): Promise<void> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -212,7 +213,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -288,7 +289,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -349,7 +350,7 @@ export class PostgreSQLRepositoryMaintenance {
   private async applyTableOptimizations(tables: Array<Record<string, unknown>>): Promise<void> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -384,7 +385,7 @@ export class PostgreSQLRepositoryMaintenance {
   private async applyIndexOptimizations(indexes: Array<Record<string, unknown>>): Promise<void> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -418,7 +419,7 @@ export class PostgreSQLRepositoryMaintenance {
   private async cleanupExpiredLogs(olderThanDays: number): Promise<number> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -448,7 +449,7 @@ export class PostgreSQLRepositoryMaintenance {
   private async cleanupTempTables(): Promise<number> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -477,7 +478,7 @@ export class PostgreSQLRepositoryMaintenance {
   private async cleanupExpiredSessions(olderThanDays: number): Promise<number> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -575,7 +576,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -597,19 +598,19 @@ export class PostgreSQLRepositoryMaintenance {
       const lastAutoVacuum = stats[0]?.last_autovacuum;
 
       // 计算自上次VACUUM以来的更新次数
-      const updatesSinceVacuum = parseInt(stats[0]?.n_tup_upd || '0');
-      const updatesSinceAutoVacuum = parseInt(stats[0]?.n_tup_upd || '0');
+      const updatesSinceVacuum = parseInt(String(stats[0]?.n_tup_upd || '0'));
+      const updatesSinceAutoVacuum = parseInt(String(stats[0]?.n_tup_upd || '0'));
 
       // 判断是否需要VACUUM
       const needsVacuum =
         !lastVacuum ||
-        Date.now() - new Date(lastVacuum).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7天
+        Date.now() - new Date(String(lastVacuum)).getTime() > 7 * 24 * 60 * 60 * 1000 || // 7天
         updatesSinceVacuum > 10000; // 10K次更新
 
       // 判断是否需要自动VACUUM
       const needsAutoVacuum =
         !lastAutoVacuum ||
-        Date.now() - new Date(lastAutoVacuum).getTime() >
+        Date.now() - new Date(String(lastAutoVacuum)).getTime() >
           30 * 24 * 60 * 60 * 1000 || // 30天
         updatesSinceAutoVacuum > 100000; // 100K次更新
 
@@ -646,7 +647,7 @@ export class PostgreSQLRepositoryMaintenance {
   }> {
     const core = new PostgreSQLRepositoryCore(
       this.dataSource,
-      {} as unknown as Record<string, unknown>,
+      { type: DatabaseType.POSTGRESQL },
       this.logger,
     );
 
@@ -665,12 +666,12 @@ export class PostgreSQLRepositoryMaintenance {
       `;
 
       const stats = await core.query(statsQuery);
-      const scans = parseInt(stats[0]?.idx_scan || '0');
-      const reads = parseInt(stats[0]?.idx_tup_read || '0');
-      const fetches = parseInt(stats[0]?.idx_tup_fetch || '0');
-      const inserts = parseInt(stats[0]?.idx_tup_insert || '0');
-      const updates = parseInt(stats[0]?.idx_tup_update || '0');
-      const deletes = parseInt(stats[0]?.idx_tup_delete || '0');
+      const scans = parseInt(String(stats[0]?.idx_scan || '0'));
+      const reads = parseInt(String(stats[0]?.idx_tup_read || '0'));
+      const fetches = parseInt(String(stats[0]?.idx_tup_fetch || '0'));
+      const inserts = parseInt(String(stats[0]?.idx_tup_insert || '0'));
+      const updates = parseInt(String(stats[0]?.idx_tup_update || '0'));
+      const deletes = parseInt(String(stats[0]?.idx_tup_delete || '0'));
 
       // 计算读写比例
       const totalOps = reads + fetches + inserts + updates + deletes;

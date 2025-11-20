@@ -7,7 +7,7 @@ import {
   LogTag,
 } from './infrastructure/logging/logger.js';
 import { validateConfig, AppConfig } from './infrastructure/config/config.js';
-import { createApp, startServer } from './App.js';
+import { createApp, startServer } from './app.js';
 import {
   initializeInfrastructure,
   initializeServices,

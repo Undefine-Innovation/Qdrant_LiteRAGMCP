@@ -38,7 +38,7 @@ export class SQLiteOperations {
   }
 
   async deleteDoc(docId: DocId): Promise<boolean> {
-    return await this.transaction(async () => {
+    return (await this.transaction(async () => {
       await this.query('DELETE FROM chunks WHERE doc_id = ?', [docId]);
       const result = (await this.query(
         'DELETE FROM docs WHERE id = ? RETURNING id',
@@ -50,7 +50,7 @@ export class SQLiteOperations {
         this.logger.info(`删除文档成功`, { docId });
       }
       return success;
-    });
+    })) as boolean;
   }
 
   async getChunksByPointIds(

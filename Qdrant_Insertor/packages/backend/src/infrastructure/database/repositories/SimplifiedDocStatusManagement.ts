@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, DeepPartial } from 'typeorm';
+﻿import { DataSource, FindOptionsWhere, DeepPartial } from 'typeorm';
 import { BaseRepository, BatchOperationResult } from './BaseRepository.js';
 import { Doc } from '../entities/Doc.js';
 import { Logger } from '@logging/logger.js';
@@ -264,7 +264,7 @@ export class SimplifiedDocStatusManagement extends BaseRepository<Doc> {
       };
 
       if (errorMessage) {
-        updateData.error_message = errorMessage;
+        updateData.processing_error = errorMessage;
       }
 
       const result = await this.update(id, updateData);

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, ErrorCode } from '@api/contracts/Error.js';
+import { AppError, ErrorCode } from '@api/contracts/error.js';
 import { logger } from '@logging/logger.js';
 
 /**

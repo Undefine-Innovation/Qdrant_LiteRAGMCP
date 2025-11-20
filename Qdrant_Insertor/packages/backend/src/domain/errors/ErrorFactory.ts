@@ -13,6 +13,7 @@ import {
   getErrorTypeFromHttpStatus,
   inferErrorTypeFromMessage,
 } from './CoreError.js';
+import { CoreErrorFactory } from './CoreErrorFactory.js';
 
 /**
  * 统一错误工厂类
@@ -31,7 +32,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.validation(message, details, context);
+    return CoreErrorFactory.validation(message, details, context);
   }
 
   /**
@@ -46,7 +47,7 @@ export class ErrorFactory {
     resourceId?: string,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.notFound(resource, resourceId, context);
+    return CoreErrorFactory.notFound(resource, resourceId, context);
   }
 
   /**
@@ -59,7 +60,7 @@ export class ErrorFactory {
     message: string = 'Unauthorized access',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unauthorized(message, context);
+    return CoreErrorFactory.unauthorized(message, context);
   }
 
   /**
@@ -72,7 +73,7 @@ export class ErrorFactory {
     message: string = 'Access forbidden',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.forbidden(message, context);
+    return CoreErrorFactory.forbidden(message, context);
   }
 
   /**
@@ -87,7 +88,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.conflict(message, details, context);
+    return CoreErrorFactory.conflict(message, details, context);
   }
 
   /**
@@ -102,7 +103,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.businessRule(message, details, context);
+    return CoreErrorFactory.businessRule(message, details, context);
   }
 
   /**
@@ -119,7 +120,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.infrastructure(message, details, context, cause);
+    return CoreErrorFactory.infrastructure(message, details, context, cause);
   }
 
   /**
@@ -134,7 +135,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.configuration(message, details, context);
+    return CoreErrorFactory.configuration(message, details, context);
   }
 
   /**
@@ -151,7 +152,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.internal(message, details, context, cause);
+    return CoreErrorFactory.internal(message, details, context, cause);
   }
 
   /**
@@ -164,7 +165,7 @@ export class ErrorFactory {
     service: string = 'Service',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.serviceUnavailable(service, context);
+    return CoreErrorFactory.serviceUnavailable(service, context);
   }
 
   /**
@@ -181,7 +182,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.database(message, details, context, cause);
+    return CoreErrorFactory.database(message, details, context, cause);
   }
 
   /**
@@ -198,7 +199,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.network(message, details, context, cause);
+    return CoreErrorFactory.network(message, details, context, cause);
   }
 
   /**
@@ -217,7 +218,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.externalService(service, message, details, context, cause);
+    return CoreErrorFactory.externalService(service, message, details, context, cause);
   }
 
   /**
@@ -234,7 +235,7 @@ export class ErrorFactory {
     maxSize?: number,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.payloadTooLarge(resource, size, maxSize, context);
+    return CoreErrorFactory.payloadTooLarge(resource, size, maxSize, context);
   }
 
   /**
@@ -251,7 +252,7 @@ export class ErrorFactory {
     maxSize?: number,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.fileTooLarge(filename, size, maxSize, context);
+    return CoreErrorFactory.fileTooLarge(filename, size, maxSize, context);
   }
 
   /**
@@ -268,7 +269,7 @@ export class ErrorFactory {
     supportedTypes?: string[],
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unsupportedFileType(
+    return CoreErrorFactory.unsupportedFileType(
       filename,
       fileType,
       supportedTypes,
@@ -288,7 +289,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     defaultMessage: string = 'An unexpected error occurred',
   ): CoreError {
-    return CoreError.fromError(error, context, defaultMessage);
+    return CoreErrorFactory.fromError(error, context, defaultMessage);
   }
 
   /**
@@ -305,7 +306,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.fromHttpStatus(httpStatus, message, details, context);
+    return CoreErrorFactory.fromHttpStatus(httpStatus, message, details, context);
   }
 
   // ==================== 向后兼容的方法 ====================
@@ -322,7 +323,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.validation(message, details, context);
+    return CoreErrorFactory.validation(message, details, context);
   }
 
   /**
@@ -337,7 +338,7 @@ export class ErrorFactory {
     resourceId?: string,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.notFound(resource, resourceId, context);
+    return CoreErrorFactory.notFound(resource, resourceId, context);
   }
 
   /**
@@ -350,7 +351,7 @@ export class ErrorFactory {
     message: string = 'Unauthorized access',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unauthorized(message, context);
+    return CoreErrorFactory.unauthorized(message, context);
   }
 
   /**
@@ -363,7 +364,7 @@ export class ErrorFactory {
     message: string = 'Access forbidden',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.forbidden(message, context);
+    return CoreErrorFactory.forbidden(message, context);
   }
 
   /**
@@ -378,7 +379,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.conflict(message, details, context);
+    return CoreErrorFactory.conflict(message, details, context);
   }
 
   /**
@@ -393,7 +394,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.businessRule(message, details, context);
+    return CoreErrorFactory.businessRule(message, details, context);
   }
 
   /**
@@ -410,7 +411,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.infrastructure(message, details, context, cause);
+    return CoreErrorFactory.infrastructure(message, details, context, cause);
   }
 
   /**
@@ -425,7 +426,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.configuration(message, details, context);
+    return CoreErrorFactory.configuration(message, details, context);
   }
 
   /**
@@ -442,7 +443,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.internal(message, details, context, cause);
+    return CoreErrorFactory.internal(message, details, context, cause);
   }
 
   /**
@@ -455,7 +456,7 @@ export class ErrorFactory {
     service: string = 'Service',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.serviceUnavailable(service, context);
+    return CoreErrorFactory.serviceUnavailable(service, context);
   }
 
   /**
@@ -472,7 +473,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.database(message, details, context, cause);
+    return CoreErrorFactory.database(message, details, context, cause);
   }
 
   /**
@@ -489,7 +490,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.network(message, details, context, cause);
+    return CoreErrorFactory.network(message, details, context, cause);
   }
 
   /**
@@ -508,7 +509,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     cause?: Error,
   ): CoreError {
-    return CoreError.externalService(service, message, details, context, cause);
+    return CoreErrorFactory.externalService(service, message, details, context, cause);
   }
 
   /**
@@ -525,7 +526,7 @@ export class ErrorFactory {
     maxSize?: number,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.payloadTooLarge(resource, size, maxSize, context);
+    return CoreErrorFactory.payloadTooLarge(resource, size, maxSize, context);
   }
 
   /**
@@ -542,7 +543,7 @@ export class ErrorFactory {
     maxSize?: number,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.fileTooLarge(filename, size, maxSize, context);
+    return CoreErrorFactory.fileTooLarge(filename, size, maxSize, context);
   }
 
   /**
@@ -559,7 +560,7 @@ export class ErrorFactory {
     supportedTypes?: string[],
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unsupportedFileType(
+    return CoreErrorFactory.unsupportedFileType(
       filename,
       fileType,
       supportedTypes,
@@ -582,7 +583,7 @@ export class ErrorFactory {
     const message = reason
       ? `File upload failed: ${reason}`
       : 'File upload failed';
-    return CoreError.infrastructure(message, { filename, reason }, context);
+    return CoreErrorFactory.infrastructure(message, { filename, reason }, context);
   }
 
   /**
@@ -597,7 +598,7 @@ export class ErrorFactory {
     context?: ErrorContext,
     defaultMessage?: string,
   ): CoreError {
-    return CoreError.fromError(error, context, defaultMessage);
+    return CoreErrorFactory.fromError(error, context, defaultMessage);
   }
 
   // ==================== Unified错误方法（向后兼容） ====================
@@ -614,7 +615,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.validation(message, details, context);
+    return CoreErrorFactory.validation(message, details, context);
   }
 
   /**
@@ -629,7 +630,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.database(message, details, context);
+    return CoreErrorFactory.database(message, details, context);
   }
 
   /**
@@ -644,7 +645,7 @@ export class ErrorFactory {
     details?: Record<string, unknown>,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.network(message, details, context);
+    return CoreErrorFactory.network(message, details, context);
   }
 
   /**
@@ -661,7 +662,7 @@ export class ErrorFactory {
     maxSize?: number,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.fileTooLarge(filename, size, maxSize, context);
+    return CoreErrorFactory.fileTooLarge(filename, size, maxSize, context);
   }
 
   /**
@@ -678,7 +679,7 @@ export class ErrorFactory {
     supportedTypes?: string[],
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unsupportedFileType(
+    return CoreErrorFactory.unsupportedFileType(
       filename,
       fileType,
       supportedTypes,
@@ -696,7 +697,7 @@ export class ErrorFactory {
     message: string = 'Unauthorized access',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.unauthorized(message, context);
+    return CoreErrorFactory.unauthorized(message, context);
   }
 
   /**
@@ -709,7 +710,7 @@ export class ErrorFactory {
     message: string = 'Access forbidden',
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.forbidden(message, context);
+    return CoreErrorFactory.forbidden(message, context);
   }
 
   /**
@@ -724,7 +725,7 @@ export class ErrorFactory {
     resourceId?: string,
     context?: ErrorContext,
   ): CoreError {
-    return CoreError.notFound(resource, resourceId, context);
+    return CoreErrorFactory.notFound(resource, resourceId, context);
   }
 
   // ==================== 事务错误方法 ====================
@@ -736,7 +737,7 @@ export class ErrorFactory {
    * @returns CoreError实例
    */
   static fromTransactionError(error: Error, context?: ErrorContext): CoreError {
-    return CoreError.fromError(error, context, 'Transaction error occurred');
+    return CoreErrorFactory.fromError(error, context, 'Transaction error occurred');
   }
 
   /**

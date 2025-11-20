@@ -1,4 +1,4 @@
-import { DataSource, DeleteResult } from 'typeorm';
+﻿import { DataSource, DeleteResult } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { ScrapeResults } from '../entities/index.js';
 import { BaseRepository } from './BaseRepository.js';

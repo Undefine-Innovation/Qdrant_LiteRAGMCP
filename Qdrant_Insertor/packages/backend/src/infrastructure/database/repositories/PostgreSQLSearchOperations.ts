@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { DocRepository, ChunkRepository } from './index.js';
 import { DocId, CollectionId } from '@domain/entities/types.js';
@@ -38,7 +38,7 @@ export class PostgreSQLSearchOperations {
     limit?: number;
   }): Promise<Array<Record<string, unknown>>> {
     try {
-      let docs = (await this.docRepository.findAll()) as Array<Record<string, unknown>>;
+      let docs = (await this.docRepository.findAll()) as unknown as Array<Record<string, unknown>>;
 
       // 应用过滤条件
       if (query.keyword) {
@@ -82,7 +82,7 @@ export class PostgreSQLSearchOperations {
     limit?: number;
   }): Promise<Array<Record<string, unknown>>> {
     try {
-      let chunks = (await this.chunkRepository.findAll()) as Array<Record<string, unknown>>;
+      let chunks = (await this.chunkRepository.findAll()) as unknown as Array<Record<string, unknown>>;
 
       // 应用过滤条件
       if (query.keyword) {

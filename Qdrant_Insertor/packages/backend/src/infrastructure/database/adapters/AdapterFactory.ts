@@ -1,6 +1,5 @@
 import { EntityTarget, ObjectLiteral } from 'typeorm';
 import { Logger } from '@logging/logger.js';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
 import { AppConfig } from '@config/config.js';
 import { DatabaseConfig, DatabaseType } from '@domain/interfaces/IDatabaseRepository.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
@@ -40,7 +39,7 @@ export class AdapterFactory
    * @param logger 日志记录器
    * @returns 适配器管理器实例
    */
-  createAdapterManager(logger: LoggerLike): AdapterManager {
+  createAdapterManager(logger: Logger): AdapterManager {
     return new AdapterManager(this, logger);
   }
 
@@ -53,7 +52,7 @@ export class AdapterFactory
    */
   async createFromEnv<T extends ObjectLiteral>(
     entityType: EntityTarget<T>,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): Promise<IRepositoryAdapter<T>> {
     const config = EnvironmentConfigParser.parseFromEnv();
@@ -148,7 +147,7 @@ export class AdapterFactory
   async createWithFullConfig<T extends ObjectLiteral>(
     entityType: EntityTarget<T>,
     appConfig: AppConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): Promise<IRepositoryAdapter<T>> {
     // 验证应用配置
@@ -171,7 +170,7 @@ export class AdapterFactory
   async createBatch<T extends ObjectLiteral>(
     entityTypes: EntityTarget<T>[],
     appConfig: AppConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): Promise<IRepositoryAdapter<T>[]> {
     const adapters: IRepositoryAdapter<T>[] = [];
@@ -208,7 +207,7 @@ export class AdapterFactory
    */
   async testMultipleConnections(
     configs: DatabaseConfig[],
-    logger: LoggerLike,
+    logger: Logger,
   ): Promise<
     Array<{
       config: DatabaseConfig;

@@ -7,7 +7,7 @@ import {
   FindOptionsOrder,
   ObjectLiteral,
 } from 'typeorm';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@logging/logger.js';
 import {
   IRepository,
   PaginationOptions,
@@ -25,13 +25,13 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
 {
   protected readonly dataSource: DataSource;
   protected readonly entityClass: EntityTarget<T>;
-  protected readonly logger: LoggerLike;
+  protected readonly logger: Logger;
   protected readonly repository: Repository<T>;
 
   constructor(
     dataSource: DataSource,
     entityClass: EntityTarget<T>,
-    logger: LoggerLike,
+    logger: Logger,
   ) {
     this.dataSource = dataSource;
     this.entityClass = entityClass;
@@ -46,12 +46,12 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async create(entity: Partial<T>): Promise<T> {
     try {
-      this.logger.debug(`Creating entity for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Creating entity for ${this.getEntityName()}`, {
         entity,
       });
       const newEntity = this.repository.create(entity as DeepPartial<T>);
       const result = await this.repository.save(newEntity);
-      this.logger.info(
+      this.logger?.info?.(
         `Successfully created entity for ${this.getEntityName()}`,
         {
           id: this.getEntityId(result),
@@ -74,7 +74,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async findById(id: ID): Promise<T | null> {
     try {
-      this.logger.debug(`Finding entity by ID for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Finding entity by ID for ${this.getEntityName()}`, {
         id,
       });
       const whereCondition: FindOptionsWhere<T> = {
@@ -98,7 +98,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async find(criteria: Partial<T>): Promise<T[]> {
     try {
-      this.logger.debug(`Finding entities for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Finding entities for ${this.getEntityName()}`, {
         criteria,
       });
       const whereCondition: FindOptionsWhere<T> =
@@ -121,7 +121,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async findOne(criteria: Partial<T>): Promise<T | null> {
     try {
-      this.logger.debug(`Finding one entity for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Finding one entity for ${this.getEntityName()}`, {
         criteria,
       });
       const whereCondition: FindOptionsWhere<T> =
@@ -145,7 +145,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async update(id: ID, data: Partial<T>): Promise<T> {
     try {
-      this.logger.debug(`Updating entity for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Updating entity for ${this.getEntityName()}`, {
         id,
         data,
       });
@@ -153,7 +153,13 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
         id,
       } as unknown as FindOptionsWhere<T>;
 
-      await this.repository.update(whereCondition, data as DeepPartial<T>);
+      await this.repository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set(data as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
 
       const updatedEntity = await this.findById(id);
       if (!updatedEntity) {
@@ -162,7 +168,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
         );
       }
 
-      this.logger.info(
+      this.logger?.info?.(
         `Successfully updated entity for ${this.getEntityName()}`,
         { id },
       );
@@ -183,7 +189,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async delete(id: ID): Promise<boolean> {
     try {
-      this.logger.debug(`Deleting entity for ${this.getEntityName()}`, { id });
+      this.logger?.debug?.(`Deleting entity for ${this.getEntityName()}`, { id });
       const whereCondition: FindOptionsWhere<T> = {
         id,
       } as unknown as FindOptionsWhere<T>;
@@ -192,12 +198,12 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
       const success = (result.affected || 0) > 0;
 
       if (success) {
-        this.logger.info(
+        this.logger?.info?.(
           `Successfully deleted entity for ${this.getEntityName()}`,
           { id },
         );
       } else {
-        this.logger.warn(
+        this.logger?.warn?.(
           `No entity found to delete for ${this.getEntityName()}`,
           { id },
         );
@@ -220,7 +226,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async count(criteria?: Partial<T>): Promise<number> {
     try {
-      this.logger.debug(`Counting entities for ${this.getEntityName()}`, {
+      this.logger?.debug?.(`Counting entities for ${this.getEntityName()}`, {
         criteria,
       });
       const whereCondition: FindOptionsWhere<T> = (criteria ||
@@ -243,7 +249,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
    */
   async exists(criteria: Partial<T>): Promise<boolean> {
     try {
-      this.logger.debug(
+      this.logger?.debug?.(
         `Checking entity existence for ${this.getEntityName()}`,
         { criteria },
       );
@@ -294,7 +300,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
     meta?: Record<string, unknown>,
   ): never {
     try {
-      this.logger.error(message, {
+      this.logger?.error?.(message, {
         ...meta,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
@@ -348,7 +354,7 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
     duration: number,
     metadata?: Record<string, unknown>,
   ): void {
-    this.logger.debug(`Performance metric for ${this.getEntityName()}`, {
+    this.logger?.debug?.(`Performance metric for ${this.getEntityName()}`, {
       operation,
       duration,
       entityName: this.getEntityName(),
@@ -381,3 +387,4 @@ export abstract class AbstractRepository<T extends ObjectLiteral, ID>
     }
   }
 }
+

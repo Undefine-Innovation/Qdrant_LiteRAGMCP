@@ -7,14 +7,15 @@ import {
   FindManyOptions,
   FindOneOptions,
   UpdateResult,
+  ObjectLiteral,
 } from 'typeorm';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@logging/logger.js';
 
 /**
  * BaseRepository核心功能
  * 提供基础的CRUD操作
  */
-export class BaseRepositoryCore<T> {
+export class BaseRepositoryCore<T extends ObjectLiteral> {
   /**
    * 创建BaseRepositoryCore实例
    * @param dataSource TypeORM数据源
@@ -24,7 +25,7 @@ export class BaseRepositoryCore<T> {
   constructor(
     protected readonly dataSource: DataSource,
     protected readonly entity: EntityTarget<T>,
-    protected readonly logger: LoggerLike,
+    protected readonly logger: Logger,
   ) {}
 
   /**
@@ -151,7 +152,8 @@ export class BaseRepositoryCore<T> {
   async update(id: string | number, data: Partial<T>): Promise<T | null> {
     try {
       const repository = this.getRepository();
-      await repository.update(id, data as DeepPartial<T>);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await repository.update(id, data as any); // TypeORM 的 update 方法需要特定的内部类型
       const whereCondition = { id } as unknown as FindOptionsWhere<T>;
       const result = await repository.findOne({ where: whereCondition } as FindOneOptions<T>);
       this.logger.debug(`更新实体成功`, { id });
@@ -175,7 +177,8 @@ export class BaseRepositoryCore<T> {
   async updateBy(where: FindOptionsWhere<T>, data: Partial<T>): Promise<UpdateResult> {
     try {
       const repository = this.getRepository();
-      const result = await repository.update(where, data as DeepPartial<T>);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await repository.update(where, data as any); // TypeORM 的 update 方法需要特定的内部类型
       this.logger.debug(`根据条件更新实体成功`, {
         where,
         affected: result.affected,
@@ -272,3 +275,4 @@ export class BaseRepositoryCore<T> {
     }
   }
 }
+

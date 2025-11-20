@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { ChunkMetaRepository } from './index.js';
 import { DocId, CollectionId } from '@domain/entities/types.js';
@@ -69,7 +69,7 @@ export class PostgreSQLChunkMetaOperations {
    * @param id 块元数据ID
    * @returns 块元数据对象或null
    */
-  async getChunkMeta(id: string): Promise<Record<string, unknown> | null> {
+  async getChunkMeta(id: string): Promise<unknown | null> {
     try {
       const chunkMeta = await this.chunkMetaRepository.findById(id);
       return chunkMeta;
@@ -88,7 +88,7 @@ export class PostgreSQLChunkMetaOperations {
    * @param updates 更新数据
    * @returns 更新结果
    */
-  async updateChunkMeta(id: string, updates: Partial<Record<string, unknown>>): Promise<Record<string, unknown>> {
+  async updateChunkMeta(id: string, updates: Partial<Record<string, unknown>>): Promise<unknown> {
     try {
       const chunkMeta = await this.chunkMetaRepository.update(
         id as unknown as Record<string, unknown>,
@@ -116,7 +116,7 @@ export class PostgreSQLChunkMetaOperations {
    * @param docId 文档ID
    * @returns 块元数据数组
    */
-  async getChunkMetasByDocId(docId: DocId): Promise<Array<Record<string, unknown>>> {
+  async getChunkMetasByDocId(docId: DocId): Promise<unknown[]> {
     try {
       const chunkMetas = await this.chunkMetaRepository.findByDocId(docId);
       return chunkMetas;
@@ -136,7 +136,7 @@ export class PostgreSQLChunkMetaOperations {
    */
   async getChunkMetasByCollectionId(
     collectionId: CollectionId,
-  ): Promise<Array<Record<string, unknown>>> {
+  ): Promise<unknown[]> {
     try {
       const chunkMetas =
         await this.chunkMetaRepository.findByCollectionId(collectionId);

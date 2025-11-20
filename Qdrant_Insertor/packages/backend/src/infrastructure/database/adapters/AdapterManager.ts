@@ -1,4 +1,3 @@
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
 import { Logger } from '@infrastructure/logging/logger.js';
 import {
   DatabaseHealthStatus,
@@ -15,14 +14,14 @@ import { AdapterFactoryCore } from './AdapterFactoryCore.js';
 export class AdapterManager {
   private adapters = new Map<string, IRepositoryAdapter<unknown>>();
   private factory: AdapterFactoryCore;
-  private logger: LoggerLike;
+  private logger: Logger;
 
   /**
    * 创建适配器管理器实例
    * @param factory 适配器工厂核心实例
    * @param logger 日志记录器
    */
-  constructor(factory: AdapterFactoryCore, logger: LoggerLike) {
+  constructor(factory: AdapterFactoryCore, logger: Logger) {
     this.factory = factory;
     this.logger = logger;
   }
@@ -32,7 +31,7 @@ export class AdapterManager {
    * @param like 宽松的 LoggerLike 实例
    * @returns 一个符合 `Logger` 接口的适配器对象
    */
-  private createSafeLogger(like: LoggerLike): Logger {
+  private createSafeLogger(like: Logger): Logger {
     return {
       debug: (message: string, ...args: unknown[]) =>
         like.debug ? like.debug(message, ...args) : undefined,

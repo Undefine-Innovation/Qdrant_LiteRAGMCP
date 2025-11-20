@@ -15,7 +15,7 @@ import {
   TransactionOperationType,
 } from '@domain/repositories/ITransactionManager.js';
 import { Logger, EnhancedLogger, LogTag } from '@logging/logger.js';
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import { CollectionAggregate } from '@domain/aggregates/index.js';
 import { ICollectionAggregateRepository } from '@domain/repositories/index.js';
 import { IEventPublisher } from '@domain/events/index.js';

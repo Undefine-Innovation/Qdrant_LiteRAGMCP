@@ -1,10 +1,11 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import {
   DatabaseConfig,
   DatabaseHealthStatus,
   DatabaseConnectionStatus,
   DatabasePerformanceMetrics,
+  DatabaseType,
 } from '@domain/interfaces/IDatabaseRepository.js';
 
 /**
@@ -114,7 +115,13 @@ export class PostgreSQLConnectionManager {
         connected: isConnected,
         lastCheck: new Date(),
         lastCheckTime: Date.now(),
-        connectionPool: poolStatus,
+        connectionPool: {
+          totalConnections: poolStatus.totalConnections,
+          activeConnections: poolStatus.activeConnections,
+          idleConnections: poolStatus.idleConnections,
+          waitingClients: poolStatus.waitingClients,
+          idleInTransaction: poolStatus.idleInTransaction,
+        },
       };
     } catch (error) {
       this.logger.error('获取PostgreSQL数据库健康状态失败', {
@@ -164,7 +171,7 @@ export class PostgreSQLConnectionManager {
       );
 
       return {
-        databaseType: 'postgresql' as const,
+        databaseType: DatabaseType.POSTGRESQL,
         connectionTime: 0,
         queryTime: 0,
         transactionTime: 0,

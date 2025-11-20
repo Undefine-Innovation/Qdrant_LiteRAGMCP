@@ -10,8 +10,8 @@ import { LogTag } from '@logging/logger.js';
 import {
   UploadToCollectionSchema,
   UploadDocumentResponseSchema,
-} from '@api/contracts/Document.js';
-import { AppError } from '@api/contracts/Error.js';
+} from '@api/contracts/document.js';
+import { AppError } from '@api/contracts/error.js';
 import {
   FILE_SIZE_LIMITS,
   SUPPORTED_MIME_TYPES,

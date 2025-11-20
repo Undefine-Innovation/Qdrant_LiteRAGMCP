@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, Not, In, Between, FindManyOptions } from 'typeorm';
+﻿import { DataSource, FindOptionsWhere, Not, In, Between, FindManyOptions } from 'typeorm';
 import {
   BaseRepository,
   PaginationOptions,
@@ -24,7 +24,7 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
    */
   async findById(docId: string): Promise<Doc | null> {
     try {
-      return await this.findOne({ docId } as FindOptionsWhere<Doc>);
+      return await this.findOne({ where: { docId } as FindOptionsWhere<Doc> });
     } catch (error) {
       this.logger.error(`根据docId查找文档失败`, {
         docId,
@@ -46,10 +46,12 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
   ): Promise<Doc | null> {
     try {
       return await this.findOne({
-        collectionId,
-        key,
-        deleted: false,
-      } as FindOptionsWhere<Doc>);
+        where: {
+          collectionId,
+          key,
+          deleted: false,
+        } as FindOptionsWhere<Doc>
+      });
     } catch (error) {
       this.logger.error(`根据集合ID和键值查找文档失败`, {
         collectionId,
@@ -68,9 +70,11 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
   async findByContentHash(contentHash: string): Promise<Doc | null> {
     try {
       return await this.findOne({
-        contentHash,
-        deleted: false,
-      } as FindOptionsWhere<Doc>);
+        where: {
+          content_hash: contentHash,
+          deleted: false,
+        }
+      });
     } catch (error) {
       this.logger.error(`根据内容哈希查找文档失败`, {
         contentHash,
@@ -93,9 +97,9 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
 
       return await this.findAll({
         where: {
-          contentHash: In(contentHashes),
+          content_hash: In(contentHashes),
           deleted: false,
-        } as FindOptionsWhere<Doc>,
+        },
       });
     } catch (error) {
       this.logger.error(`根据内容哈希批量查找文档失败`, {
@@ -281,10 +285,10 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
    * @param status - 文档状态
    * @returns 找到的文档数组
    */
-  async findByStatus(status: string): Promise<Doc[]> {
+  async findByStatus(status: 'new' | 'processing' | 'completed' | 'failed'): Promise<Doc[]> {
     try {
       return await this.findAll({
-        where: { status, deleted: false },
+        where: { status: status, deleted: false },
         order: { created_at: 'DESC' },
       });
     } catch (error) {
@@ -304,11 +308,11 @@ export class SimplifiedDocQueries extends BaseRepository<Doc> {
    */
   async findByCollectionIdAndStatus(
     collectionId: CollectionId,
-    status: string,
+    status: 'new' | 'processing' | 'completed' | 'failed',
   ): Promise<Doc[]> {
     try {
       return await this.findAll({
-        where: { collectionId, status, deleted: false },
+        where: { collectionId, status: status, deleted: false },
         order: { created_at: 'DESC' },
       });
     } catch (error) {

@@ -89,10 +89,13 @@ export class BaseRepositoryBatchOperations<T extends ObjectLiteral> {
         const whereCondition = {
           id: In(batch),
         } as unknown as FindOptionsWhere<T>;
-        const result = (await this.getRepository().update(
-          whereCondition,
-          data as DeepPartial<T>,
-        )) as UpdateResult;
+        const result = (await this.getRepository()
+          .createQueryBuilder()
+          .update()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .set(data as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+          .where(whereCondition)
+          .execute()) as UpdateResult;
         const duration = Date.now() - startTime;
 
         const affectedCount = result.affected || 0;
@@ -192,10 +195,13 @@ export class BaseRepositoryBatchOperations<T extends ObjectLiteral> {
         const whereCondition = {
           id: In(batch),
         } as unknown as FindOptionsWhere<T>;
-        const result = (await this.getRepository().update(
-          whereCondition,
-          updateData as DeepPartial<T>,
-        )) as UpdateResult;
+        const result = (await this.getRepository()
+          .createQueryBuilder()
+          .update()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .set(updateData as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+          .where(whereCondition)
+          .execute()) as UpdateResult;
         const duration = Date.now() - startTime;
 
         const batchDeletedCount = result.affected || 0;
@@ -233,3 +239,4 @@ export class BaseRepositoryBatchOperations<T extends ObjectLiteral> {
     return deletedCount;
   }
 }
+

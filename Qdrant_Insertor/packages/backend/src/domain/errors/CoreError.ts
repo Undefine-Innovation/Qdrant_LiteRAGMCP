@@ -201,8 +201,45 @@ export class CoreError extends Error {
       this.severity === ErrorSeverity.HIGH
     );
   }
-}
 
+  public static validation: typeof CoreErrorFactory.validation =
+    CoreErrorFactory.validation;
+  public static notFound: typeof CoreErrorFactory.notFound =
+    CoreErrorFactory.notFound;
+  public static unauthorized: typeof CoreErrorFactory.unauthorized =
+    CoreErrorFactory.unauthorized;
+  public static forbidden: typeof CoreErrorFactory.forbidden =
+    CoreErrorFactory.forbidden;
+  public static conflict: typeof CoreErrorFactory.conflict =
+    CoreErrorFactory.conflict;
+  public static businessRule: typeof CoreErrorFactory.businessRule =
+    CoreErrorFactory.businessRule;
+  public static infrastructure: typeof CoreErrorFactory.infrastructure =
+    CoreErrorFactory.infrastructure;
+  public static configuration: typeof CoreErrorFactory.configuration =
+    CoreErrorFactory.configuration;
+  public static internal: typeof CoreErrorFactory.internal =
+    CoreErrorFactory.internal;
+  public static serviceUnavailable: typeof CoreErrorFactory.serviceUnavailable =
+    CoreErrorFactory.serviceUnavailable;
+  public static database: typeof CoreErrorFactory.database =
+    CoreErrorFactory.database;
+  public static network: typeof CoreErrorFactory.network =
+    CoreErrorFactory.network;
+  public static externalService: typeof CoreErrorFactory.externalService =
+    CoreErrorFactory.externalService;
+  public static payloadTooLarge: typeof CoreErrorFactory.payloadTooLarge =
+    CoreErrorFactory.payloadTooLarge;
+  public static fileTooLarge: typeof CoreErrorFactory.fileTooLarge =
+    CoreErrorFactory.fileTooLarge;
+  public static unsupportedFileType: typeof CoreErrorFactory.unsupportedFileType =
+    CoreErrorFactory.unsupportedFileType;
+  public static fromError: typeof CoreErrorFactory.fromError =
+    CoreErrorFactory.fromError;
+  public static fromHttpStatus: typeof CoreErrorFactory.fromHttpStatus =
+    CoreErrorFactory.fromHttpStatus;
+
+}
 Object.assign(CoreError, {
   validation: CoreErrorFactory.validation,
   notFound: CoreErrorFactory.notFound,

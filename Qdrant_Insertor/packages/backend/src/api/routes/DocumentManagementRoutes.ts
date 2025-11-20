@@ -6,8 +6,8 @@ import { IDocumentService } from '@application/services/index.js';
 import { validate, ValidatedRequest } from '@middleware/validate.js';
 import { LoggedRequest } from '@middleware/logging.js';
 import { LogTag } from '@logging/logger.js';
-import { ListDocsQuerySchema } from '@api/contracts/Document.js';
-import { AppError } from '@api/contracts/Error.js';
+import { ListDocsQuerySchema } from '@api/contracts/document.js';
+import { AppError } from '@api/contracts/error.js';
 
 /**
  * 创建文档管理相关的API路由

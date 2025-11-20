@@ -6,7 +6,7 @@ import {
 } from './infrastructure/logging/logger.js';
 import { AppConfig } from './infrastructure/config/config.js';
 import { DataSource } from 'typeorm';
-import { createApiRouter, ApiServices } from './Api.js';
+import { createApiRouter, ApiServices } from './api.js';
 import { errorHandler } from './api/middleware/ErrorHandler.js';
 import { dbConnectionCheck } from './api/middleware/DbConnectionCheck.js';
 import {

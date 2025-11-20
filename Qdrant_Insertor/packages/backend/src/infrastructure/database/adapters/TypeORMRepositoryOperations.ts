@@ -3,7 +3,15 @@
  * 包含CRUD操作方法和查询功能
  */
 
-import { Repository, DeepPartial, ObjectLiteral, FindOptionsWhere, EntityManager, UpdateResult, DeleteResult } from 'typeorm';
+import {
+  Repository,
+  DeepPartial,
+  ObjectLiteral,
+  FindOptionsWhere,
+  EntityManager,
+  UpdateResult,
+  DeleteResult,
+} from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { PaginationQuery, PaginatedResponse } from '@domain/entities/types.js';
 import {
@@ -44,7 +52,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result as T;
     } catch (error) {
-      this.logger.error(`创建实体失败`, {
+      this.logger.error?.(`创建实体失败`, {
         entity,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -86,7 +94,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return results;
     } catch (error) {
-      this.logger.error(`批量创建实体失败`, {
+      this.logger.error?.(`批量创建实体失败`, {
         count: entities.length,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -117,7 +125,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result || undefined;
     } catch (error) {
-      this.logger.error(`根据ID查找实体失败`, {
+      this.logger.error?.(`根据ID查找实体失败`, {
         id,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -148,7 +156,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result;
     } catch (error) {
-      this.logger.error(`根据条件查找实体失败`, {
+      this.logger.error?.(`根据条件查找实体失败`, {
         conditions,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -181,7 +189,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result || undefined;
     } catch (error) {
-      this.logger.error(`查找单个实体失败`, {
+      this.logger.error?.(`查找单个实体失败`, {
         conditions,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -201,7 +209,13 @@ export abstract class TypeORMRepositoryOperations<
   ): Promise<{ affected: number }> {
     const startTime = Date.now();
     try {
-      const result: UpdateResult = await this.repository.update(conditions as unknown as FindOptionsWhere<T>, updates as DeepPartial<T>);
+      const result: UpdateResult = await this.repository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set(updates as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(conditions as unknown as FindOptionsWhere<T>)
+        .execute();
       const queryTime = Date.now() - startTime;
       this.recordQueryTime(queryTime);
 
@@ -216,7 +230,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return { affected: result.affected || 0 };
     } catch (error) {
-      this.logger.error(`更新实体失败`, {
+      this.logger.error?.(`更新实体失败`, {
         conditions,
         updates,
         error: error instanceof Error ? error.message : String(error),
@@ -248,7 +262,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return { affected: result.affected || 0 };
     } catch (error) {
-      this.logger.error(`删除实体失败`, {
+      this.logger.error?.(`删除实体失败`, {
         conditions,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -279,7 +293,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result;
     } catch (error) {
-      this.logger.error(`计算实体数量失败`, {
+      this.logger.error?.(`计算实体数量失败`, {
         conditions,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -341,7 +355,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result;
     } catch (error) {
-      this.logger.error(`分页查询实体失败`, {
+      this.logger.error?.(`分页查询实体失败`, {
         conditions,
         pagination,
         error: error instanceof Error ? error.message : String(error),
@@ -374,7 +388,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return result;
     } catch (error) {
-      this.logger.error(`执行原生SQL查询失败`, {
+      this.logger.error?.(`执行原生SQL查询失败`, {
         query,
         parameters,
         error: error instanceof Error ? error.message : String(error),
@@ -407,7 +421,7 @@ export abstract class TypeORMRepositoryOperations<
 
       return Array.isArray(result) && result.length > 0 ? result[0] : undefined;
     } catch (error) {
-      this.logger.error(`执行原生SQL查询失败`, {
+      this.logger.error?.(`执行原生SQL查询失败`, {
         query,
         parameters,
         error: error instanceof Error ? error.message : String(error),
@@ -425,3 +439,5 @@ export abstract class TypeORMRepositoryOperations<
     return await this.dataSource.transaction(fn as (entityManager: EntityManager) => Promise<T>);
   }
 }
+
+

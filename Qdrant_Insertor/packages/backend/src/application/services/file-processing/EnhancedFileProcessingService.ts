@@ -1,7 +1,7 @@
 // DocId and Doc imported below together
 import { Logger } from '@logging/logger.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import {
   IFileProcessingService,
   FileFormatInfo,

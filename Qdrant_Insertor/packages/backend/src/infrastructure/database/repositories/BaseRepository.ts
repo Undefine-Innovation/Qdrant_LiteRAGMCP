@@ -13,11 +13,10 @@ import {
   FindOneOptions,
 } from 'typeorm';
 import { Logger } from '@logging/logger.js';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
 import { CachedRepositoryBase, QueryCacheConfig } from '../cache/QueryCache.js';
 
 // Create a null logger for when no logger is provided
-const createNullLogger = (): LoggerLike => ({
+const createNullLogger = (): Logger => ({
   debug: () => {},
   info: () => {},
   warn: () => {},
@@ -84,16 +83,30 @@ export class BaseRepository<
   repository!: Repository<T>;
   entityName: string;
   // Public logger for derived classes - always initialized to avoid undefined errors
-  declare public logger: LoggerLike;
+  declare public logger: Logger;
 
   constructor(
     dataSource: DataSource | undefined,
     entity: (new () => T) | string,
-    logger?: LoggerLike,
+    logger?: Logger,
     metricsCollector?: Record<string, unknown>,
     cacheConfig?: QueryCacheConfig,
   ) {
-    super(logger, cacheConfig);
+    // Adapt Logger (optional methods) to the stricter Logger interface
+    const loggerForCache: Logger | undefined = logger
+      ? {
+          debug: (message: string, ...args: unknown[]) =>
+            logger.debug?.(message, ...args),
+          info: (message: string, ...args: unknown[]) =>
+            logger.info?.(message, ...args),
+          warn: (message: string, ...args: unknown[]) =>
+            logger.warn?.(message, ...args),
+          error: (message: string, ...args: unknown[]) =>
+            logger.error?.(message, ...args),
+        }
+      : undefined;
+
+    super(loggerForCache, cacheConfig);
     this.dataSource = dataSource;
     this.entity = entity;
     // Only assign repository when a DataSource is provided. We use a
@@ -103,8 +116,8 @@ export class BaseRepository<
       this.repository = dataSource.getRepository(entity) as Repository<T>;
     }
     this.entityName = this.getEntityName();
-    // Ensure logger is always available
-    this.logger = logger || createNullLogger();
+    // Ensure logger is always available (use adapted Logger for strict type)
+    this.logger = loggerForCache || createNullLogger();
   }
 
   getEntityName(): string {
@@ -249,9 +262,16 @@ export class BaseRepository<
     } else {
       whereCondition = criteria as unknown as FindOptionsWhere<T>;
     }
-    // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our DeepPartial type signature
-    // This is necessary to work with repository.update() which requires specific TypeORM internal types
-    return this.repository.update(whereCondition, data as DeepPartial<T>);
+    // TypeScript 类型问题：TypeORM 的 _QueryDeepPartialEntity 与我们的 DeepPartial 类型签名不兼容
+    // 通过 unknown->any 转换来满足 TypeScript，同时委托给 TypeORM 运行时处理
+    const result = await this.repository
+      .createQueryBuilder()
+      .update()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .set(data as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+      .where(whereCondition)
+      .execute();
+    return { affected: result.affected || 0 };
   }
 
   async delete(
@@ -270,8 +290,14 @@ export class BaseRepository<
     if (!this.repository) throw new Error('Repository not initialized');
     const whereCondition = criteria as unknown as FindOptionsWhere<T>;
     const updateData = { deleted: true, deleted_at: new Date() };
-    // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-    return this.repository.update(whereCondition, updateData as DeepPartial<T>);
+    // TypeScript 类型问题：TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+    return this.repository
+      .createQueryBuilder()
+      .update()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .set(updateData as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+      .where(whereCondition)
+      .execute();
   }
 
   async updateBatch(
@@ -288,8 +314,14 @@ export class BaseRepository<
       for (const id of batch) {
         try {
           const whereCondition = { id } as unknown as FindOptionsWhere<T>;
-          // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-          await this.repository.update(whereCondition, data as DeepPartial<T>);
+          // TypeScript 类型问题：TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+          await this.repository
+            .createQueryBuilder()
+            .update()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .set(data as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+            .where(whereCondition)
+            .execute();
           success++;
         } catch (error: unknown) {
           failed++;
@@ -319,12 +351,15 @@ export class BaseRepository<
       const whereCondition = {
         id: In(batch),
       } as unknown as FindOptionsWhere<T>;
-      // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-      // TypeORM requires specific internal types that conflict with our generic typing
-      const result = await this.repository.update(
-        whereCondition,
-        updateData as DeepPartial<T>,
-      );
+      // TypeScript 类型问题：TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+      // TypeORM 需要特定的内部类型，与我们的泛型类型冲突
+      const result = await this.repository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set(updateData as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
       deletedCount += result.affected || 0;
     }
     return deletedCount;
@@ -478,8 +513,14 @@ export class BaseRepository<
       whereObj as unknown as FindOptionsWhere<T>;
     const existing = await this.repository.findOne({ where: whereCondition });
     if (existing) {
-      // TS Issue: TypeORM's _QueryDeepPartialEntity is incompatible with our generic type system
-      await this.repository.update(whereCondition, data as DeepPartial<T>);
+      // TypeScript 类型问题：TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+      await this.repository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set(data as unknown as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
       const result = await this.repository.findOne({ where: whereCondition });
       return result as T;
     }
@@ -499,3 +540,4 @@ export class BaseRepository<
     return (await this.repository.findOne({ where } as FindOneOptions<T>)) || null;
   }
 }
+

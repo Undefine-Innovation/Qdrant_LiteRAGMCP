@@ -23,11 +23,18 @@ async function testEnhancedLogger() {
     },
     // 其他配置项使用默认值
     openai: { baseUrl: '', apiKey: '', model: '' },
+    llm: {
+      provider: 'openai',
+      apiKey: '',
+      model: '',
+      semanticSplitting: { enabled: false },
+    },
     db: { type: 'sqlite', path: '' },
     qdrant: { url: '', collection: '', vectorSize: 0 },
     embedding: { batchSize: 0 },
     api: { port: 0 },
     gc: { intervalHours: 0 },
+    rateLimit: {},
   };
 
   // 创建增强日志器实例

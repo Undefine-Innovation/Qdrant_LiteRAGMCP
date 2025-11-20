@@ -1,18 +1,204 @@
 {
-  "timestamp": "2025-11-18T06:33:59.189Z",
+  "timestamp": "2025-11-20T01:37:26.675Z",
   "failedTestSuites": [
     {
-      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
-      "numFailingTests": 0,
-      "failures": []
+      "file": "\\__tests__\\unit\\infrastructure\\DocRepository.test.ts",
+      "numFailingTests": 30,
+      "failures": [
+        {
+          "name": "应该根据集合ID查找文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\nExpected: \u001b[32m[{\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-1\", \"id\": \"doc-1\", \"key\": \"doc1\", \"name\": \"Document 1\", \"status\": \"completed\"}, {\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-2\", \"id\": \"doc-2\", \"key\": \"doc2\", \"name\": \"Document 2\", \"status\": \"new\"}]\u001b[39m\nReceived: \u001b[31mundefined\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:119:22)"
+        },
+        {
+          "name": "应该支持状态过滤",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"doc.status = :status\"\u001b[39m, \u001b[32m{\"status\": \"completed\"}\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m"
+        },
+        {
+          "name": "应该支持结果限制",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m5\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m"
+        },
+        {
+          "name": "应该支持自定义排序",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"doc.name\"\u001b[39m, \u001b[32m\"ASC\"\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31mundefined\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+        },
+        {
+          "name": "应该返回所有活跃文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\nExpected: \u001b[32m[{\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-1\", \"id\": \"doc-1\", \"key\": \"doc1\", \"name\": \"Document 1\", \"status\": \"completed\"}, {\"collectionId\": \"collection-2\", \"deleted\": false, \"docId\": \"doc-2\", \"id\": \"doc-2\", \"key\": \"doc2\", \"name\": \"Document 2\", \"status\": \"new\"}]\u001b[39m\nReceived: \u001b[31mundefined\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:344:22)"
+        },
+        {
+          "name": "应该支持状态过滤",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"doc.status = :status\"\u001b[39m, \u001b[32m{\"status\": \"completed\"}\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31mundefined\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+        },
+        {
+          "name": "应该软删除文档",
+          "error": "TypeError: this.repository.createQueryBuilder(...).update is not a function\n    at SimplifiedDocStatusManagement.update (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\BaseRepository.ts:269:8)\n    at SimplifiedDocStatusManagement.update [as softDeleteDoc] (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocStatusManagement.ts:23:33)\n    at SimplifiedDocRepository.softDeleteDoc (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocRepository.ts:246:31)\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:491:42)"
+        },
+        {
+          "name": "当文档不存在时应该返回false",
+          "error": "TypeError: this.repository.createQueryBuilder(...).update is not a function\n    at SimplifiedDocStatusManagement.update (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\BaseRepository.ts:269:8)\n    at SimplifiedDocStatusManagement.update [as softDeleteDoc] (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocStatusManagement.ts:23:33)\n    at SimplifiedDocRepository.softDeleteDoc (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocRepository.ts:246:31)\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:512:42)"
+        },
+        {
+          "name": "当数据库操作失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected substring: \u001b[32m\"Database error\"\u001b[39m\nReceived message:   \u001b[31m\"this.repository.createQueryBuilder(...).update is not a function\"\u001b[39m\n"
+        },
+        {
+          "name": "应该批量软删除文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m2\u001b[39m\nReceived: \u001b[31m0\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:550:22)"
+        },
+        {
+          "name": "当批量软删除失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31m0\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "应该恢复已删除的文档",
+          "error": "TypeError: this.repository.createQueryBuilder(...).update is not a function\n    at SimplifiedDocStatusManagement.update (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\BaseRepository.ts:269:8)\n    at SimplifiedDocStatusManagement.update [as restore] (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocStatusManagement.ts:49:33)\n    at SimplifiedDocRepository.restore (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocRepository.ts:255:31)\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:584:42)"
+        },
+        {
+          "name": "当文档不存在时应该返回false",
+          "error": "TypeError: this.repository.createQueryBuilder(...).update is not a function\n    at SimplifiedDocStatusManagement.update (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\BaseRepository.ts:269:8)\n    at SimplifiedDocStatusManagement.update [as restore] (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocStatusManagement.ts:49:33)\n    at SimplifiedDocRepository.restore (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocRepository.ts:255:31)\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:605:42)"
+        },
+        {
+          "name": "当数据库操作失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected substring: \u001b[32m\"Database error\"\u001b[39m\nReceived message:   \u001b[31m\"this.repository.createQueryBuilder(...).update is not a function\"\u001b[39m\n"
+        },
+        {
+          "name": "应该批量恢复文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m[Function Doc]\u001b[39m\nReceived\n       1: called with 0 arguments"
+        },
+        {
+          "name": "当批量恢复失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31m0\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+        },
+        {
+          "name": "应该更新文档基本信息",
+          "error": "TypeError: this.repository.createQueryBuilder(...).update is not a function\n    at SimplifiedDocStatusManagement.update (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\BaseRepository.ts:269:8)\n    at SimplifiedDocStatusManagement.update [as updateDocInfo] (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocStatusManagement.ts:118:33)\n    at SimplifiedDocRepository.updateDocInfo (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\src\\infrastructure\\database\\repositories\\SimplifiedDocRepository.ts:281:31)\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:846:42)"
+        },
+        {
+          "name": "当更新失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected substring: \u001b[32m\"Update failed\"\u001b[39m\nReceived message:   \u001b[31m\"this.repository.createQueryBuilder(...).update is not a function\"\u001b[39m\n"
+        },
+        {
+          "name": "应该根据状态查找文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\nExpected: \u001b[32m[{\"collectionId\": \"collection-1\", \"deleted\": false, \"docId\": \"doc-1\", \"id\": \"doc-1\", \"key\": \"doc1\", \"name\": \"Document 1\", \"status\": \"failed\"}]\u001b[39m\nReceived: \u001b[31mundefined\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\infrastructure\\DocRepository.test.ts:910:22)"
+        },
+        {
+          "name": "应该支持集合ID过滤",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"doc.collectionId = :collectionId\"\u001b[39m, \u001b[32m{\"collectionId\": \"collection-1\"}\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m"
+        },
+        {
+          "name": "当数据库查询失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31mundefined\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "应该批量更新文档状态",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 3\u001b[39m\n\u001b[31m+ Received  + 6\u001b[39m\n"
+        },
+        {
+          "name": "当批量更新失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31m{\"errors\": [\"ID doc-1: this.repository.createQueryBuilder(...).update is not a function\"], \"failed\": 1, \"success\": 0}\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        },
+        {
+          "name": "应该返回文档统计信息",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"SUM(CASE WHEN status = :new THEN 1 ELSE 0 END)\"\u001b[39m, \u001b[32m\"new\"\u001b[39m\nReceived\n       1: \u001b[31m\"SUM(CASE WHEN doc.status = :new THEN 1 ELSE 0 END)\"\u001b[39m, \u001b[2m\"new\"\u001b[22m"
+        },
+        {
+          "name": "应该使用事务管理器删除文档",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+        }
+      ]
+    },
+    {
+      "file": "\\__tests__\\unit\\middlewares\\rateLimit.test.ts",
+      "numFailingTests": 4,
+      "failures": [
+        {
+          "name": "应该在请求被限流时返回429错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32mAny<AppError>\u001b[39m\nReceived: \u001b[31m[AppError: 请求过于频繁，请稍后再试]\u001b[39m\n"
+        },
+        {
+          "name": "应该在中间件出错时记录错误日志",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"限流中间件错误\"\u001b[39m, \u001b[32m{\"error\": \"策略错误\", \"method\": \"GET\", \"stack\": Any<String>, \"url\": \"/api/test\"}\u001b[39m\nReceived: \u001b[2m\"限流中间件错误\"\u001b[22m, \u001b[31mundefined\u001b[39m, \u001b[31m{\"error\": \"策略错误\", \"method\": \"GET\", \"stack\": \"Error: 策略错误\u001b[39m\n\u001b[31m    at Object.<anonymous> (D:\\\\code\\\\JS\\\\Qdrant_MCP_RAG\\\\Qdrant_Insertor\\\\packages\\\\backend\\\\__tests__\\\\unit\\\\middlewares\\\\rateLimit.test.ts:253:15)\u001b[39m"
+        },
+        {
+          "name": "应该记录限流事件",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"请求被限流\"\u001b[39m, \u001b[32m{\"allResults\": Any<Array>, \"blockedBy\": \"test\", \"ip\": \"192.168.1.1\", \"key\": \"test-key\", \"method\": \"GET\", \"remaining\": 0, \"resetTime\": Any<String>, \"url\": \"/api/test\", \"userAgent\": undefined}\u001b[39m\nReceived\n       1: \u001b[31m\"限流事件\"\u001b[39m, \u001b[31mundefined\u001b[39m, \u001b[31m{\"ip\": \"192.168.1.1\", \"method\": \"GET\", \"results\": [{\"allowed\": false, \"key\": \"test-key\", \"limiterType\": \"test\", \"maxTokens\": undefined, \"remaining\": 0, \"resetTime\": \"2025-11-20T01:36:27.966Z\"}], \"timestamp\": \"2025-11-20T01:36:22.966Z\", \"url\": \"/api/test\", \"userAgent\": undefined}\u001b[39m"
+        },
+        {
+          "name": "应该在logOnlyBlocked为false时记录所有请求",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"限流检查通过\"\u001b[39m, \u001b[32mAny<Object>\u001b[39m\nReceived: \u001b[2m\"限流检查通过\"\u001b[22m, \u001b[31mundefined\u001b[39m, \u001b[31m{\"ip\": \"192.168.1.1\", \"method\": \"GET\", \"results\": [{\"allowed\": true, \"key\": \"test-key\", \"limiterType\": \"test\", \"maxTokens\": undefined, \"remaining\": 9, \"resetTime\": \"2025-11-20T01:36:23.971Z\"}], \"timestamp\": \"2025-11-20T01:36:22.971Z\", \"url\": \"/api/test\", \"userAgent\": undefined}\u001b[39m\n"
+        }
+      ]
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.test.ts",
+      "numFailingTests": 2,
+      "failures": [
+        {
+          "name": "应该批量创建块",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n"
+        },
+        {
+          "name": "当批量创建失败时应该抛出错误",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mrejects\u001b[2m.\u001b[22mtoThrow\u001b[2m()\u001b[22m\n\nReceived promise resolved instead of rejected\nResolved to value: \u001b[31m[]\u001b[39m\n    at expect (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\expect\\build\\index.js:2116:15)"
+        }
+      ]
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts",
+      "numFailingTests": 2,
+      "failures": [
+        {
+          "name": "should move document between collections",
+          "error": "TypeError: sourceCollection.addDocument is not a function\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts:747:24)\n    at Promise.finally.completed (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1557:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1497:10)"
+        },
+        {
+          "name": "should reject moving document with duplicate key",
+          "error": "TypeError: sourceCollection.addDocument is not a function\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\domain\\AggregateBusinessRules.test.ts:810:24)\n    at Promise.finally.completed (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1557:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\node_modules\\jest-circus\\build\\jestAdapterInit.js:1497:10)"
+        }
+      ]
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "numFailingTests": 1,
+      "failures": [
+        {
+          "name": "应该成功重试任务",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mfalse\u001b[39m\nReceived: \u001b[31mtrue\u001b[39m\n    at Object.<anonymous> (D:\\code\\JS\\Qdrant_MCP_RAG\\Qdrant_Insertor\\packages\\backend\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts:433:23)"
+        }
+      ]
+    },
+    {
+      "file": "\\__tests__\\unit\\domain\\SearchService.test.ts",
+      "numFailingTests": 1,
+      "failures": [
+        {
+          "name": "应该成功执行向量搜索",
+          "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"test-collection\"\u001b[39m, \u001b[32m[0.1, 0.2, 0.3, 0.4, 0.5]\u001b[39m, \u001b[32mObjectContaining {\"limit\": 10, \"scoreThreshold\": 0.5}\u001b[39m\nReceived: \u001b[2m\"test-collection\"\u001b[22m, \u001b[31m{\"limit\": 10, \"scoreThreshold\": 0.5, \"vector\": [0.1, 0.2, 0.3, 0.4, 0.5]}\u001b[39m\n"
+        }
+      ]
     },
     {
       "file": "\\__tests__\\unit\\infrastructure\\qdrant-batch-performance.test.ts",
-      "numFailingTests": 0,
-      "failures": []
-    },
-    {
-      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -32,6 +218,11 @@
       "failures": []
     },
     {
+      "file": "\\__tests__\\unit\\infrastructure\\SemanticSplitter.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
       "file": "\\__tests__\\unit\\domain\\collection-aggregate-immutability.test.ts",
       "numFailingTests": 0,
       "failures": []
@@ -42,17 +233,12 @@
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
-      "numFailingTests": 0,
-      "failures": []
-    },
-    {
       "file": "\\__tests__\\unit\\database\\adapters\\AdapterFactory.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
+      "file": "\\__tests__\\unit\\domain\\TokenBucketRateLimiter.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -62,7 +248,7 @@
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\domain\\enhanced-state-machine.test.ts",
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.find.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -72,12 +258,17 @@
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.create-update.test.ts",
+      "file": "\\__tests__\\unit\\database\\adapters\\ServiceMigrationHelper.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
     {
       "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.query.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
+      "file": "\\__tests__\\unit\\infrastructure\\ChunkRepository.create-update.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -112,22 +303,12 @@
       "failures": []
     },
     {
+      "file": "\\__tests__\\unit\\domain\\SyncJobStatusMapper.test.ts",
+      "numFailingTests": 0,
+      "failures": []
+    },
+    {
       "file": "\\__tests__\\unit\\infrastructure\\LLMServiceFactory.test.ts",
-      "numFailingTests": 0,
-      "failures": []
-    },
-    {
-      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.validation.test.ts",
-      "numFailingTests": 0,
-      "failures": []
-    },
-    {
-      "file": "\\__tests__\\unit\\middlewares\\rateLimit.test.ts",
-      "numFailingTests": 0,
-      "failures": []
-    },
-    {
-      "file": "\\__tests__\\unit\\infrastructure\\UnifiedMarkdownSplitter.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -137,7 +318,7 @@
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\domain\\SyncJobStatusMapper.test.ts",
+      "file": "\\__tests__\\unit\\infrastructure\\UnifiedMarkdownSplitter.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -147,7 +328,7 @@
       "failures": []
     },
     {
-      "file": "\\__tests__\\unit\\domain\\SearchService.test.ts",
+      "file": "\\__tests__\\unit\\domain\\AggregateBusinessRules.validation.test.ts",
       "numFailingTests": 0,
       "failures": []
     },
@@ -184,17 +365,17 @@
   ],
   "summaryStats": {
     "testSuites": {
-      "total": 36,
-      "passed": 30,
-      "failed": 0,
+      "total": 39,
+      "passed": 27,
+      "failed": 6,
       "skipped": 6
     },
     "tests": {
-      "total": 623,
-      "passed": 498,
-      "failed": 0,
-      "skipped": 125
+      "total": 742,
+      "passed": 555,
+      "failed": 40,
+      "skipped": 147
     },
-    "duration": "65.61s"
+    "duration": "68.65s"
   }
 }

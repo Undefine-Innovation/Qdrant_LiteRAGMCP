@@ -4,7 +4,6 @@ import {
   EntityTarget,
   ILike,
   ObjectLiteral,
-  QueryDeepPartialEntity,
   FindManyOptions,
   FindOneOptions,
   FindOptionsWhere,
@@ -186,3 +185,4 @@ export class BaseRepositoryAdvancedQueries<T extends ObjectLiteral> {
     }
   }
 }
+

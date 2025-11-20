@@ -1,6 +1,6 @@
 import { Doc, DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import { ThumbnailSize } from '@application/services/index.js';
 import fs from 'fs/promises';
 import path from 'path';

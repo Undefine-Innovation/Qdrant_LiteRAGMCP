@@ -332,13 +332,20 @@ export function createEnhancedLogger(config: AppConfig): EnhancedLogger {
  */
 export const enhancedLogger: EnhancedLogger = createEnhancedLogger({
   log: { level: 'info' },
-  // 为满足 AppConfig 接口，提供模拟值。在实际应用中，应使用完整配置创建 Logger
+  // 为满足 AppConfig 接口，提供模拟值（实际应用中请使用真实配置）
   openai: { baseUrl: '', apiKey: '', model: '' },
+  llm: {
+    provider: 'openai',
+    apiKey: '',
+    model: '',
+    semanticSplitting: { enabled: false },
+  },
   db: { type: 'sqlite', path: '' },
   qdrant: { url: '', collection: '', vectorSize: 0 },
   embedding: { batchSize: 0 },
   api: { port: 0 },
   gc: { intervalHours: 0 },
+  rateLimit: {},
 });
 
 /**
@@ -392,3 +399,4 @@ export class LoggerAdapter implements Logger {
     this.enhancedLogger.error(message, this.defaultTag, { args });
   }
 }
+

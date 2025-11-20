@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 文档聚合仓储（重构后）
  * 基于TypeORM实现文档聚合的持久化操作
  */
@@ -34,20 +34,10 @@ export class DocumentAggregateRepository
    * @param logger 日志记录器
    */
   constructor(dataSource: DataSource, logger: Logger) {
-    super(
-      dataSource,
-      logger,
-      // 这里需要传入实际的DocRepository和ChunkRepository实例
-      // 由于我们在重构中，这些将在子类中初始化
-      {} as Record<string, unknown>,
-      {} as Record<string, unknown>,
-    );
-    this.queries = new DocumentAggregateQueries(
-      dataSource,
-      logger,
-      {} as Record<string, unknown>,
-      {} as Record<string, unknown>,
-    );
+    const docRepository = new (require('./DocRepository.js').DocRepository)(dataSource, logger);
+    const chunkRepository = new (require('./ChunkRepository.js').ChunkRepository)(dataSource, logger);
+    super(dataSource, logger, docRepository, chunkRepository);
+    this.queries = new DocumentAggregateQueries(dataSource, logger, docRepository, chunkRepository);
   }
 
   // 继承所有查询方法

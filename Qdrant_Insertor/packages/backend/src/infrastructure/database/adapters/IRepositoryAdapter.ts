@@ -1,5 +1,5 @@
 import { DataSource, EntityTarget, ObjectLiteral } from 'typeorm';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@infrastructure/logging/logger.js';
 import {
   CollectionId,
   DocId,
@@ -44,7 +44,7 @@ export interface IRepositoryAdapter<T> extends IDatabaseRepository {
   /**
    * 日志记录器（宽松接口，允许替代实现）
    */
-  readonly logger: LoggerLike;
+  readonly logger: Logger;
 
   /**
    * 创建实体
@@ -202,7 +202,7 @@ export interface IRepositoryAdapterFactory {
     entityType: EntityTarget<T>,
     dataSource: DataSource,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): IRepositoryAdapter<T>;
 
   /**

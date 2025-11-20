@@ -48,7 +48,7 @@ import { ICollectionService } from '@application/services/index.js';
 import { IDocumentService } from '@application/services/index.js';
 import { IFileProcessingService } from '@application/services/index.js';
 import { IBatchService } from '@application/services/index.js';
-import { AppServices } from '../../App.js';
+import { AppServices } from '../../app.js';
 import { IScrapeService } from '@domain/entities/scrape.js';
 import { ScrapeService } from '@application/services/scraping/index.js';
 import { WebCrawler } from '@infrastructure/external/WebCrawler.js';

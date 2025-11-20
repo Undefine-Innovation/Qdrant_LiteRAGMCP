@@ -1,6 +1,5 @@
 import { DataSource, EntityTarget, ObjectLiteral } from 'typeorm';
 import { Logger } from '@logging/logger.js';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
 import { AppConfig } from '@config/config.js';
 import {
   DatabaseType,
@@ -38,7 +37,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
     entityType: EntityTarget<T>,
     dataSource: DataSource,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): IRepositoryAdapter<T> {
     const cacheKey = this.getCacheKey(entityType, config);
 
@@ -99,7 +98,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
   async createFromAppConfig<T extends ObjectLiteral>(
     entityType: EntityTarget<T>,
     appConfig: AppConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): Promise<IRepositoryAdapter<T>> {
     const dbConfig = this.convertAppConfigToDatabaseConfig(appConfig);
@@ -121,7 +120,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
     entityType: EntityTarget<T>,
     dataSource: DataSource,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo: IQdrantRepo,
   ): IRepositoryAdapter<T> {
     const cacheKey = this.getCacheKey(entityType, config) + '_with_qdrant';
@@ -409,7 +408,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
    */
   protected async getOrCreateDataSource(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): Promise<DataSource> {
     const cacheKey = this.getDataSourceCacheKey(config);
 
@@ -432,7 +431,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
    */
   async createDataSource(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): Promise<DataSource> {
     const cacheKey = this.getDataSourceCacheKey(config);
 
@@ -529,7 +528,7 @@ export class AdapterFactoryCore implements IRepositoryAdapterFactory {
    */
   async testConnection(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): Promise<{
     success: boolean;
     message: string;

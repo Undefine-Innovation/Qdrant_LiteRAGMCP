@@ -9,6 +9,12 @@ export class SQLiteMaintenance {
     private readonly config: Record<string, unknown>,
   ) {}
 
+  private getDatabasePath(): string {
+    return typeof this.config.path === 'string'
+      ? (this.config.path as string)
+      : './data/app.db';
+  }
+
   async performDatabaseOptimizations(): Promise<string[]> {
     const optimizations: string[] = [];
 
@@ -150,7 +156,7 @@ export class SQLiteMaintenance {
   ): Promise<{ success: boolean; message: string; error?: string }> {
     try {
       const fs = await import('fs/promises');
-      await fs.copyFile(this.config.path || './data/app.db', backupPath);
+      await fs.copyFile(this.getDatabasePath(), backupPath);
       this.logger.info(`SQLite备份创建成功`, { backupPath });
       return { success: true, message: `备份创建成功: ${backupPath}` };
     } catch (error) {
@@ -166,7 +172,7 @@ export class SQLiteMaintenance {
   ): Promise<{ success: boolean; message: string; error?: string }> {
     try {
       const fs = await import('fs/promises');
-      await fs.copyFile(backupPath, this.config.path || './data/app.db');
+      await fs.copyFile(backupPath, this.getDatabasePath());
       this.logger.info(`SQLite备份恢复成功`, { backupPath });
       return { success: true, message: `备份恢复成功: ${backupPath}` };
     } catch (error) {
@@ -199,3 +205,4 @@ export class SQLiteMaintenance {
     }
   }
 }
+

@@ -16,7 +16,7 @@ import {
   EntityManager,
   SelectQueryBuilder,
 } from 'typeorm';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@logging/logger.js';
 import {
   DatabaseType,
   DatabaseConfig,
@@ -54,7 +54,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
   readonly databaseType: DatabaseType;
   readonly config: DatabaseConfig;
   readonly dataSource: DataSource;
-  readonly logger: LoggerLike;
+  readonly logger: Logger;
 
   // TypeORM Repository实例
   protected repository: Repository<T>;
@@ -84,11 +84,12 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
     entityClass: EntityTarget<T>,
     dataSource: DataSource,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     adapterConfig: AdapterConfig = {},
   ) {
     this.dataSource = dataSource;
     this.config = config;
+    this.databaseType = config.type;
     this.logger = logger;
     this.adapterConfig = {
       // 默认配置
@@ -113,13 +114,13 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
    * @param logger 日志记录器
    * @returns 初始化结果
    */
-  async initialize(logger: LoggerLike): Promise<{
+  async initialize(logger: Logger): Promise<{
     success: boolean;
     message: string;
     error?: string;
   }> {
     try {
-      logger.info(`正在初始化${this.databaseType}数据库连接...`);
+      logger.info?.(`正在初始化${this.databaseType}数据库连接...`);
 
       if (!this.dataSource.isInitialized) {
         await this.dataSource.initialize();
@@ -131,7 +132,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
       // 执行数据库特定的初始化
       await this.performDatabaseInitialization();
 
-      logger.info(`${this.databaseType}数据库连接初始化成功`);
+      logger.info?.(`${this.databaseType}数据库连接初始化成功`);
 
       return {
         success: true,
@@ -140,7 +141,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      logger.error(`${this.databaseType}数据库初始化失败`, {
+      logger.error?.(`${this.databaseType}数据库初始化失败`, {
         error: errorMessage,
       });
 
@@ -160,10 +161,10 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
     try {
       if (this.dataSource.isInitialized) {
         await this.dataSource.destroy();
-        this.logger.info(`${this.databaseType}数据库连接已关闭`);
+        this.logger.info?.(`${this.databaseType}数据库连接已关闭`);
       }
     } catch (error) {
-      this.logger.error(`关闭${this.databaseType}数据库连接失败`, {
+      this.logger.error?.(`关闭${this.databaseType}数据库连接失败`, {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -187,7 +188,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
       this.lastHealthCheck = Date.now();
       return responseTime < 5000; // 5秒内响应视为健康
     } catch (error) {
-      this.logger.warn(`${this.databaseType}数据库ping检查失败`, {
+      this.logger.warn?.(`${this.databaseType}数据库ping检查失败`, {
         error: error instanceof Error ? error.message : String(error),
       });
       return false;
@@ -255,7 +256,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
         ...dbMetrics,
       };
     } catch (error) {
-      this.logger.error(`获取${this.databaseType}性能指标失败`, {
+      this.logger.error?.(`获取${this.databaseType}性能指标失败`, {
         error: error instanceof Error ? error.message : String(error),
       });
 
@@ -294,7 +295,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
 
       return result;
     } catch (error) {
-      this.logger.error(`${this.databaseType}事务执行失败`, {
+      this.logger.error?.(`${this.databaseType}事务执行失败`, {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -329,7 +330,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
       try {
         listener.onAdapterEvent(event);
       } catch (error) {
-        this.logger.error('事件监听器执行失败', {
+        this.logger.error?.('事件监听器执行失败', {
           eventType: event.type,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -411,7 +412,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
         slowQueries: this.slowQueryCount,
       };
     } catch (error) {
-      this.logger.error(`获取仓库统计信息失败`, {
+      this.logger.error?.(`获取仓库统计信息失败`, {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -434,7 +435,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
       const dbOptimizations = await this.performDatabaseOptimizations();
       optimizations.push(...dbOptimizations);
 
-      this.logger.info(`仓库优化完成`, { optimizations });
+      this.logger.info?.(`仓库优化完成`, { optimizations });
 
       return {
         success: true,
@@ -444,7 +445,7 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      this.logger.error(`仓库优化失败`, { error: errorMessage });
+      this.logger.error?.(`仓库优化失败`, { error: errorMessage });
 
       return {
         success: false,
@@ -625,8 +626,14 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
    * @param parameters 可选参数数组
    * @returns 查询结果数组
    */
-  async query(query: string, parameters?: unknown[]): Promise<unknown[]> {
-    return (await this.dataSource.query(query, parameters)) as unknown[];
+  async query(
+    query: string,
+    parameters?: unknown[],
+  ): Promise<Record<string, unknown>[]> {
+    return (await this.dataSource.query(
+      query,
+      parameters,
+    )) as Record<string, unknown>[];
   }
 
   /**
@@ -635,8 +642,14 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
    * @param parameters 可选参数数组
    * @returns 第一条记录或 `undefined`
    */
-  async queryOne(query: string, parameters?: unknown[]): Promise<unknown | undefined> {
-    const results = (await this.dataSource.query(query, parameters)) as unknown[];
+  async queryOne(
+    query: string,
+    parameters?: unknown[],
+  ): Promise<Record<string, unknown> | undefined> {
+    const results = (await this.dataSource.query(
+      query,
+      parameters,
+    )) as Record<string, unknown>[];
     return results.length > 0 ? results[0] : undefined;
   }
 
@@ -723,3 +736,6 @@ export abstract class TypeORMRepositoryCore<T extends ObjectLiteral>
   abstract toDomainObject(entity: T): unknown;
   abstract fromDomainObject(domainObject: unknown): Partial<T>;
 }
+
+
+

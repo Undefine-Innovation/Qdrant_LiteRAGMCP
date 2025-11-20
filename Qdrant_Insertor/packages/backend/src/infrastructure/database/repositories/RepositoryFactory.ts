@@ -1,4 +1,4 @@
-import { DataSource, DataSourceOptions } from 'typeorm';
+﻿import { DataSource, DataSourceOptions } from 'typeorm';
 import {
   IRepositoryFactory,
   IRepositoryManager,
@@ -15,7 +15,8 @@ import {
   DatabaseConfig,
   IDatabaseRepository,
 } from '@domain/repositories/IDatabaseRepository.js';
-import { EntityFactory, LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { EntityFactory } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@logging/logger.js';
 import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
 import { AbstractRepository } from './AbstractRepository.js';
 import { DatabaseRepository } from './DatabaseRepository.js';
@@ -30,7 +31,7 @@ import { DatabaseRepository } from './DatabaseRepository.js';
 type RepositoryFactoryFn = <T, ID>(
   entityClass: EntityFactory<T>,
   config: DatabaseConfig,
-  logger: LoggerLike,
+  logger: Logger,
   qdrantRepo?: IQdrantRepo,
 ) => IRepository<T, ID>;
 
@@ -70,7 +71,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   createRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IRepository<T, ID> {
     this.validateConfig(config);
@@ -112,7 +113,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   createQueryRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): IQueryRepository<T, ID> {
     // 查询仓库通常基于基础仓库实现
     const baseRepository = this.createRepository<T, ID>(
@@ -137,7 +138,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   createCommandRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): ICommandRepository<T, ID> {
     // 命令仓库通常基于基础仓库实现
     const baseRepository = this.createRepository<T, ID>(
@@ -163,7 +164,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   createAggregateRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IAggregateRepository<T, ID> {
     // 聚合仓库通常基于数据库仓库实现
@@ -189,7 +190,7 @@ export class RepositoryFactory implements IRepositoryFactory {
    */
   createCollectionAggregateRepository(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): import('@domain/repositories/IAggregateRepository.js').ICollectionAggregateRepository {
     // 这里应该创建一个专门的集合聚合仓库实现
@@ -206,7 +207,7 @@ export class RepositoryFactory implements IRepositoryFactory {
    */
   createDocumentAggregateRepository(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): import('@domain/repositories/IAggregateRepository.js').IDocumentAggregateRepository {
     // 这里应该创建一个专门的文档聚合仓库实现
@@ -225,7 +226,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   createDatabaseRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID> {
     this.validateConfig(config);
@@ -303,7 +304,7 @@ export class RepositoryFactory implements IRepositoryFactory {
     repositoryType: string,
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ):
     | IRepository<T, ID>
@@ -413,7 +414,7 @@ export class RepositoryFactory implements IRepositoryFactory {
    */
   createRepositoryManager(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IRepositoryManager {
     return new RepositoryManager(this, config, logger, qdrantRepo);
@@ -430,7 +431,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   protected createPostgreSQLRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID> {
     // 这里应该创建一个具体的PostgreSQLRepository实现
@@ -449,7 +450,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   protected createSQLiteRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID> {
     // 这里应该创建一个具体的SQLiteRepository实现
@@ -468,7 +469,7 @@ export class RepositoryFactory implements IRepositoryFactory {
   protected createTypeORMRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IDatabaseRepository<T, ID> {
     // 这里应该创建一个具体的TypeORMRepository实现
@@ -484,7 +485,7 @@ export class RepositoryFactory implements IRepositoryFactory {
 class RepositoryManager implements IRepositoryManager {
   private readonly factory: RepositoryFactory;
   private readonly config: DatabaseConfig;
-  private readonly logger: LoggerLike;
+  private readonly logger: Logger;
   private readonly qdrantRepo?: IQdrantRepo;
   private readonly activeRepositories: Map<string, unknown> = new Map();
   private currentTransaction?: import('@domain/repositories/IDatabaseRepository.js').ITransactionContext;
@@ -493,7 +494,7 @@ class RepositoryManager implements IRepositoryManager {
   constructor(
     factory: RepositoryFactory,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ) {
     this.factory = factory;

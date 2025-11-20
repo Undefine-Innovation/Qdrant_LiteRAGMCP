@@ -14,7 +14,7 @@ import {
   
   SelectQueryBuilder,
 } from 'typeorm';
-import { LoggerLike } from '@domain/repositories/IDatabaseRepository.js';
+import { Logger } from '@infrastructure/logging/logger.js';
 import {
   CollectionId,
   DocId,
@@ -45,7 +45,7 @@ export class SimplifiedRepositoryAdapter<T extends ObjectLiteral> {
   private _repository: Repository<T> | undefined = undefined;
   private _entityClass: EntityTarget<T>;
   protected dataSource: DataSource;
-  protected logger: LoggerLike;
+  protected logger: Logger;
   protected qdrantRepo?: IQdrantRepo;
 
   /**
@@ -60,7 +60,7 @@ export class SimplifiedRepositoryAdapter<T extends ObjectLiteral> {
     entityClass: EntityTarget<T>,
     dataSource: DataSource,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ) {
     this.dataSource = dataSource;

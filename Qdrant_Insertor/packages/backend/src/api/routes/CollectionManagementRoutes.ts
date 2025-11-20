@@ -10,7 +10,7 @@ import {
   UpdateCollectionSchema,
   CollectionIdParamsSchema,
   ListCollectionsQuerySchema,
-} from '../../api/contracts/Collection.js';
+} from '../../api/contracts/collection.js';
 
 /**
  * 创建集合管理相关的API路由

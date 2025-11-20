@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import {
   CollectionId,
@@ -10,6 +10,7 @@ import {
   PaginationQuery,
   PaginatedResponse,
   Doc as DomainDoc,
+  Doc,
 } from '@domain/entities/types.js';
 import {
   IDatabaseRepository,
@@ -184,7 +185,14 @@ export class SimplifiedPostgreSQLRepository implements IDatabaseRepository {
       content: string;
     }>
   > {
-    return this.documentOperations.getDocumentChunks(docId);
+    return this.documentOperations.getDocumentChunks(docId) as unknown as Array<{
+      pointId: PointId;
+      docId: DocId;
+      collectionId: CollectionId;
+      chunkIndex: number;
+      title?: string;
+      content: string;
+    }>;
   }
 
   /**
@@ -206,7 +214,14 @@ export class SimplifiedPostgreSQLRepository implements IDatabaseRepository {
       content: string;
     }>
   > {
-    return this.documentOperations.getDocumentChunksPaginated(docId, query);
+    return this.documentOperations.getDocumentChunksPaginated(docId, query) as unknown as PaginatedResponse<{
+      pointId: PointId;
+      docId: DocId;
+      collectionId: CollectionId;
+      chunkIndex: number;
+      title?: string;
+      content: string;
+    }>;
   }
 
   /**
@@ -215,7 +230,7 @@ export class SimplifiedPostgreSQLRepository implements IDatabaseRepository {
    * @returns 文档对象
    */
   async getDoc(docId: DocId): Promise<DomainDoc | undefined> {
-    return this.documentOperations.getDoc(docId);
+    return this.documentOperations.getDoc(docId) as unknown as Doc | undefined;
   }
 
   /**
@@ -284,7 +299,7 @@ export class SimplifiedPostgreSQLRepository implements IDatabaseRepository {
    * @returns 已删除的文档数组
    */
   async listDeletedDocs(): Promise<DomainDoc[]> {
-    return this.documentOperations.listDeletedDocs();
+    return this.documentOperations.listDeletedDocs() as unknown as Doc[];
   }
 
   /**

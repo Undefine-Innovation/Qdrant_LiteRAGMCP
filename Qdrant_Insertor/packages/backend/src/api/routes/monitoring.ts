@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { MonitoringApiService } from '../../application/services/api/index.js';
 import { IMonitoringApiService } from '@domain/repositories/IMonitoringApiService.js';
-import { createMonitoringRoutes } from '../Monitoring.js';
+import { createMonitoringRoutes } from '../monitoring.js';
 
 /**
  * 创建监控路由的包装函数

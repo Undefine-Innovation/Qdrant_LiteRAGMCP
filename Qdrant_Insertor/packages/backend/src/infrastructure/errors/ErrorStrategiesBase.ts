@@ -1,6 +1,6 @@
 import { ErrorContext } from '@domain/errors/index.js';
 import { ErrorFactory } from '@domain/errors/index.js';
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import { ErrorMappingStrategy } from './ErrorMapperInterfaces.js';
 
 const toAppError = (error: Error): AppError =>

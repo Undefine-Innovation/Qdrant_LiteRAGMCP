@@ -22,7 +22,7 @@ import type {
   UpdateNotificationChannelRequest,
   TestNotificationRequest,
   TestNotificationResponse,
-} from '../../api/contracts/Monitoring.js';
+} from '../../api/contracts/monitoring.js';
 
 /**
  * 监控API服务接口

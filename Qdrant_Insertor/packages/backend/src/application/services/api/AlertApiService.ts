@@ -5,7 +5,7 @@ import {
   UpdateAlertRuleRequest,
   AlertHistoryRequest,
   AlertHistoryResponse,
-} from '@api/contracts/Monitoring.js';
+} from '@api/contracts/monitoring.js';
 import { logger } from '@logging/logger.js';
 import { AlertRule, AlertSeverity } from '@infrastructure/sqlite/dao/index.js';
 

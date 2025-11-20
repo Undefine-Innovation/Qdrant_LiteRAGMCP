@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { CollectionRepository } from './index.js';
 import { CollectionId } from '@domain/entities/types.js';
@@ -60,7 +60,7 @@ export class PostgreSQLCollectionOperations {
   async getCollection(id: CollectionId): Promise<Record<string, unknown> | null> {
     try {
       const collection = await this.collectionRepository.findById(id);
-      return collection;
+      return collection as unknown as Record<string, unknown>;
     } catch (error) {
       this.logger.error(`获取集合失败`, {
         id,
@@ -77,7 +77,7 @@ export class PostgreSQLCollectionOperations {
   async getAllCollections(): Promise<Array<Record<string, unknown>>> {
     try {
       const collections = await this.collectionRepository.findAll();
-      return collections;
+      return collections as unknown as Array<Record<string, unknown>>;
     } catch (error) {
       this.logger.error(`获取所有集合失败`, {
         error: error instanceof Error ? error.message : String(error),
@@ -107,7 +107,7 @@ export class PostgreSQLCollectionOperations {
 
       this.logger.info(`更新集合成功`, { collectionId: id });
 
-      return collection;
+      return collection as unknown as Record<string, unknown>;
     } catch (error) {
       this.logger.error(`更新集合失败`, {
         id,

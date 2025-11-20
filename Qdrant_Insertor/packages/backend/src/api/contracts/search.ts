@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ChunkResponseSchema } from './Document.js';
+import { ChunkResponseSchema } from './document.js';
 import { RetrievalResultType } from '@domain/entities/types.js';
 
 /**

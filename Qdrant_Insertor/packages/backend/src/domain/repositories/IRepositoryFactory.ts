@@ -4,8 +4,9 @@ import {
   ICommandRepository,
   IAggregateRepository,
 } from './index.js';
-import { DatabaseConfig, EntityFactory, LoggerLike } from './IDatabaseRepository.js';
-import { IQdrantRepo } from './IQdrantRepo.js';
+import { DatabaseConfig, EntityFactory } from './IDatabaseRepository.js';
+import { IQdrantRepo } from '@domain/repositories/IQdrantRepo.js';
+import { Logger } from '@infrastructure/logging/logger.js';
 
 /**
  * 统一仓库工厂接口
@@ -23,7 +24,7 @@ export interface IRepositoryFactory {
   createRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IRepository<T, ID>;
 
@@ -37,7 +38,7 @@ export interface IRepositoryFactory {
   createQueryRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): IQueryRepository<T, ID>;
 
   /**
@@ -50,7 +51,7 @@ export interface IRepositoryFactory {
   createCommandRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
   ): ICommandRepository<T, ID>;
 
   /**
@@ -64,7 +65,7 @@ export interface IRepositoryFactory {
   createAggregateRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IAggregateRepository<T, ID>;
 
@@ -77,7 +78,7 @@ export interface IRepositoryFactory {
    */
   createCollectionAggregateRepository(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): import('./IAggregateRepository.js').ICollectionAggregateRepository;
 
@@ -90,7 +91,7 @@ export interface IRepositoryFactory {
    */
   createDocumentAggregateRepository(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): import('./IAggregateRepository.js').IDocumentAggregateRepository;
 
@@ -105,7 +106,7 @@ export interface IRepositoryFactory {
   createDatabaseRepository<T, ID>(
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): import('./IDatabaseRepository.js').IDatabaseRepository<T, ID>;
 
@@ -122,7 +123,7 @@ export interface IRepositoryFactory {
     factory: <T, ID>(
       entityClass: EntityFactory<T>,
       config: DatabaseConfig,
-      logger: LoggerLike,
+      logger: Logger,
       qdrantRepo?: IQdrantRepo,
     ) => IRepository<T, ID>,
   ): void;
@@ -138,7 +139,7 @@ export interface IRepositoryFactory {
     | (<T, ID>(
         entityClass: EntityFactory<T>,
         config: DatabaseConfig,
-        logger: LoggerLike,
+        logger: Logger,
         qdrantRepo?: IQdrantRepo,
       ) => IRepository<T, ID>)
     | undefined;
@@ -152,7 +153,7 @@ export interface IRepositoryFactory {
     <T, ID>(
       entityClass: EntityFactory<T>,
       config: DatabaseConfig,
-      logger: LoggerLike,
+      logger: Logger,
       qdrantRepo?: IQdrantRepo,
     ) => IRepository<T, ID>
   >;
@@ -170,7 +171,7 @@ export interface IRepositoryFactory {
     repositoryType: string,
     entityClass: EntityFactory<T>,
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ):
     | IRepository<T, ID>
@@ -214,7 +215,7 @@ export interface IRepositoryFactory {
    */
   createRepositoryManager(
     config: DatabaseConfig,
-    logger: LoggerLike,
+    logger: Logger,
     qdrantRepo?: IQdrantRepo,
   ): IRepositoryManager;
 }
@@ -357,7 +358,7 @@ export interface IRepositoryFactoryConfig {
     <T, ID>(
       entityClass: EntityFactory<T>,
       config: DatabaseConfig,
-      logger: LoggerLike,
+      logger: Logger,
       qdrantRepo?: IQdrantRepo,
     ) => IRepository<T, ID>
   >;
@@ -410,7 +411,7 @@ export interface IRepositoryFactoryBuilder {
     factory: <T, ID>(
       entityClass: EntityFactory<T>,
       config: DatabaseConfig,
-      logger: LoggerLike,
+      logger: Logger,
       qdrantRepo?: IQdrantRepo,
     ) => IRepository<T, ID>,
   ): IRepositoryFactoryBuilder;

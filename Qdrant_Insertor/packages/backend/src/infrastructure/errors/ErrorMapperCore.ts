@@ -1,4 +1,4 @@
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import { CoreError } from '@domain/errors/CoreError.js';
 import { ErrorFactory, ErrorContext } from '@domain/errors/index.js';
 import { ErrorCategory } from '@domain/sync/retry.js';

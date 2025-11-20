@@ -1,6 +1,6 @@
 import { Doc, DocId } from '@domain/entities/types.js';
 import { ISQLiteRepo } from '@domain/repositories/ISQLiteRepo.js';
-import { AppError } from '@api/contracts/Error.js';
+import { AppError } from '@api/contracts/error.js';
 import { promises as fs } from 'fs';
 
 type StoredDoc = Pick<Doc, 'name' | 'key' | 'content'>;

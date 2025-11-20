@@ -1,4 +1,4 @@
-import {
+﻿import {
   DataSource,
   FindOptionsWhere,
   Not,
@@ -155,12 +155,17 @@ export class SimplifiedDocRepository extends BaseRepository<Doc> {
    * @param page 页码（从1开始）
    * @param pageSize 每页数量
    * @param options 可选的查询选项
+   * @param options.collectionId 可选的集合ID过滤器
+   * @param options.status 可选的状态过滤器
    * @returns 分页结果
    */
   async findWithPagination(
     page: number,
     pageSize: number,
-    options?: unknown,
+    options?: {
+      collectionId?: CollectionId;
+      status?: 'new' | 'processing' | 'completed' | 'failed';
+    },
   ): Promise<PaginationResult<Doc>> {
     // 转换参数格式以匹配内部实现
     const paginationOptions: PaginationOptions = { page, pageSize };
@@ -390,14 +395,14 @@ export class SimplifiedDocRepository extends BaseRepository<Doc> {
   // === 向后兼容的方法 ===
 
   async findByStatus(status: string): Promise<Doc[]> {
-    return this.queryHelper.findByStatus(status);
+    return this.queryHelper.findByStatus(status as 'new' | 'processing' | 'completed' | 'failed');
   }
 
   async findByCollectionIdAndStatus(
     collectionId: CollectionId,
     status: string,
   ): Promise<Doc[]> {
-    return this.queryHelper.findByCollectionIdAndStatus(collectionId, status);
+    return this.queryHelper.findByCollectionIdAndStatus(collectionId, status as 'new' | 'processing' | 'completed' | 'failed');
   }
 
   async findDeleted(collectionId?: CollectionId): Promise<Doc[]> {

@@ -5,7 +5,7 @@
 
 import { Logger } from '@logging/logger.js';
 import { ObjectLiteral } from 'typeorm';
-import { DatabasePerformanceMetrics } from '@domain/interfaces/IDatabaseRepository.js';
+import { DatabasePerformanceMetrics, DatabaseType } from '@domain/interfaces/IDatabaseRepository.js';
 import {
   IRepositoryAdapter,
   AdapterEventType,
@@ -47,9 +47,11 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
   protected async getPerformanceMetrics(): Promise<DatabasePerformanceMetrics> {
     return {
       queryCount: this.queryCount,
-      totalQueryTime: this.totalQueryTime,
-      slowQueryCount: this.slowQueryCount,
-    } as DatabasePerformanceMetrics;
+      databaseType: this.databaseType as DatabaseType,
+      connectionTime: 0,
+      queryTime: this.totalQueryTime,
+      transactionTime: 0,
+    };
   }
 
   protected async ping(): Promise<boolean> {
@@ -101,7 +103,7 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
         averageTime:
           this.queryCount > 0 ? this.totalQueryTime / this.queryCount : 0,
         slowQueries: this.slowQueryCount,
-        slowQueryThreshold: this.adapterConfig.slowQueryThreshold || 1000,
+        slowQueryThreshold: (this.adapterConfig.slowQueryThreshold as number) ?? 1000,
       },
       connection: {
         uptime:
@@ -112,8 +114,8 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
         status: await this.getConnectionHealthStatus(),
       },
       cache: {
-        enabled: this.adapterConfig.enableQueryCache || false,
-        expiration: this.adapterConfig.cacheExpiration || 300000,
+        enabled: (this.adapterConfig.enableQueryCache as boolean) ?? false,
+        expiration: (this.adapterConfig.cacheExpiration as number) ?? 300000,
         hitRate: await this.getCacheHitRate(),
       },
     };
@@ -206,10 +208,10 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
     this.lastHealthCheck = Date.now();
 
     this.emitEvent({
-      type: 'PERFORMANCE_STATS_RESET',
+      type: AdapterEventType.QUERY_EXECUTED,
       timestamp: new Date(),
       entityType: this.getEntityName(),
-      databaseType: this.databaseType,
+      databaseType: this.databaseType as DatabaseType,
       data: { resetTime: Date.now() },
     });
   }
@@ -281,7 +283,7 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
         this.queryCount > 0 ? (this.slowQueryCount / this.queryCount) * 100 : 0;
       const slowQueryThreshold = this.adapterConfig.slowQueryThreshold || 1000;
 
-      if (avgQueryTime > slowQueryThreshold * 0.8 || slowQueryRate > 10) {
+      if (avgQueryTime > (slowQueryThreshold as number) * 0.8 || slowQueryRate > 10) {
         return 'degraded';
       }
 
@@ -377,8 +379,9 @@ export abstract class TypeORMRepositoryPerformance<T extends ObjectLiteral> {
       type: eventType,
       timestamp: new Date(),
       entityType: this.getEntityName(),
-      databaseType: this.databaseType,
+      databaseType: this.databaseType as DatabaseType,
       data,
     });
   }
 }
+

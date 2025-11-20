@@ -139,10 +139,14 @@ export class CollectionRepositoryExtensions<T extends ObjectLiteral>
     count: number,
   ): Promise<boolean> {
     try {
-      await this.baseRepository.update(
-        { id } as unknown as FindOptionsWhere<T>,
-        { documentCount: count } as DeepPartial<T>,
-      );
+      const whereCondition = { id } as unknown as FindOptionsWhere<T>;
+      await this.baseRepository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set({ documentCount: count } as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
       return true;
     } catch (error) {
       this.logger.error('更新集合文档数量失败', { id, count, error });
@@ -152,10 +156,14 @@ export class CollectionRepositoryExtensions<T extends ObjectLiteral>
 
   async updateChunkCount(id: string | number, count: number): Promise<boolean> {
     try {
-      await this.baseRepository.update(
-        { id } as unknown as FindOptionsWhere<T>,
-        { chunkCount: count } as DeepPartial<T>,
-      );
+      const whereCondition = { id } as unknown as FindOptionsWhere<T>;
+      await this.baseRepository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set({ chunkCount: count } as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
       return true;
     } catch (error) {
       this.logger.error('更新集合块数量失败', { id, count, error });
@@ -264,7 +272,7 @@ export class DocRepositoryExtensions<T extends ObjectLiteral>
     status: string,
   ): Promise<BatchOperationResult> {
     try {
-      return await this.baseRepository.updateBatch(ids, { status } as DeepPartial<T>);
+      return await this.baseRepository.updateBatch(ids, { status } as unknown as DeepPartial<T>);
     } catch (error) {
       this.logger.error('批量更新文档状态失败', { ids, status, error });
       throw error;
@@ -283,15 +291,19 @@ export class DocRepositoryExtensions<T extends ObjectLiteral>
     }
   }
 
-  async restore(id: DocId): Promise<boolean> {
+  async restore(id: string | number): Promise<boolean> {
     try {
-      await this.baseRepository.update(
-        { id } as unknown as FindOptionsWhere<T>,
-        { deleted: false } as DeepPartial<T>,
-      );
+      const whereCondition = { id } as unknown as FindOptionsWhere<T>;
+      await this.baseRepository
+        .createQueryBuilder()
+        .update()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .set({ deletedAt: null } as any) // TypeORM 的 _QueryDeepPartialEntity 与我们的泛型类型系统不兼容
+        .where(whereCondition)
+        .execute();
       return true;
     } catch (error) {
-      this.logger.error('恢复文档失败', { id, error });
+      this.logger.error('恢复记录失败', { id, error });
       throw error;
     }
   }
@@ -389,9 +401,7 @@ export class ChunkRepositoryExtensions<T extends ObjectLiteral>
     status: string,
   ): Promise<BatchOperationResult> {
     try {
-      return await this.baseRepository.updateBatch(ids, {
-        embeddingStatus: status,
-      } as DeepPartial<T>);
+      return await this.baseRepository.updateBatch(ids, { embeddingStatus: status } as unknown as DeepPartial<T>);
     } catch (error) {
       this.logger.error('批量更新块状态失败', { ids, status, error });
       throw error;
@@ -403,7 +413,7 @@ export class ChunkRepositoryExtensions<T extends ObjectLiteral>
     syncStatus: DbSyncJobStatus | string,
   ): Promise<BatchOperationResult> {
     try {
-      return await this.baseRepository.updateBatch(ids, { syncStatus } as DeepPartial<T>);
+      return await this.baseRepository.updateBatch(ids, { syncStatus } as unknown as DeepPartial<T>);
     } catch (error) {
       this.logger.error('批量更新块同步状态失败', { ids, syncStatus, error });
       throw error;
@@ -479,3 +489,4 @@ export class RepositoryExtensionFactory {
     return new ChunkRepositoryExtensions(baseRepository, logger);
   }
 }
+

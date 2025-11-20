@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { DocRepository } from './index.js';
 import {
@@ -79,7 +79,7 @@ export class PostgreSQLDocumentOperations {
    * @param id 文档ID
    * @returns 文档对象或null
    */
-  async getDoc(id: DocId): Promise<Record<string, unknown> | null> {
+  async getDoc(id: DocId): Promise<unknown | null> {
     try {
       const doc = await this.docRepository.findById(id);
       return doc;
@@ -123,7 +123,7 @@ export class PostgreSQLDocumentOperations {
    * @param collectionId 集合ID
    * @returns 文档数组
    */
-  async getDocsByCollectionId(collectionId: CollectionId): Promise<Record<string, unknown>[]> {
+  async getDocsByCollectionId(collectionId: CollectionId): Promise<unknown[]> {
     try {
       const docs = await this.docRepository.findByCollectionId(collectionId);
       return docs;
@@ -142,7 +142,7 @@ export class PostgreSQLDocumentOperations {
    * @param updates 更新数据
    * @returns 更新结果
    */
-  async updateDoc(id: DocId, updates: Partial<Record<string, unknown>>): Promise<Record<string, unknown>> {
+  async updateDoc(id: DocId, updates: Partial<Record<string, unknown>>): Promise<unknown> {
     try {
       const doc = await this.docRepository.update(
         { id } as Record<string, unknown>,

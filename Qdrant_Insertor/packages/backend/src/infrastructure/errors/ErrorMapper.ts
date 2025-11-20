@@ -1,10 +1,11 @@
-import { AppError, ErrorCode } from '@api/contracts/error.js';
-import {
-  TransactionError,
-  TransactionErrorType,
-} from '@infrastructure/transactions/TransactionErrorHandler.js';
+// Use domain's AppError (CoreError alias) here — API contract AppError is a different shape
+import { CoreError } from '@domain/errors/CoreError.js';
+import { TransactionError } from '@infrastructure/transactions/TransactionErrorHandler.js';
 import { ErrorCategory } from '@domain/sync/retry.js';
-import { ErrorFactory, ErrorContext } from '@domain/errors/ErrorFactory.js';
+import { ErrorFactory, ErrorContext } from '@domain/errors/index.js';
+
+const ensureError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
 
 /**
  * 错误映射策略接口
@@ -16,8 +17,8 @@ export interface ErrorMappingStrategy {
   priority: number;
   /** 是否可以处理指定的错误 */
   canHandle(error: Error): boolean;
-  /** 将错误映射为AppError */
-  map(error: Error, context?: ErrorContext): AppError;
+  /** 将错误映射为CoreError (域错误) */
+  map(error: Error, context?: ErrorContext): CoreError;
 }
 
 /**
@@ -54,7 +55,7 @@ export class DatabaseErrorMappingStrategy implements ErrorMappingStrategy {
     );
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     const message = error.message.toLowerCase();
 
     // 约束违反
@@ -143,7 +144,7 @@ export class NetworkErrorMappingStrategy implements ErrorMappingStrategy {
    * @param context 可选上下文
    * @returns 标准化的 AppError
    */
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     const message = error.message.toLowerCase();
 
     // DNS错误
@@ -217,7 +218,7 @@ export class FileProcessingErrorMappingStrategy
     return fileKeywords.some((keyword) => message.includes(keyword));
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     const message = error.message.toLowerCase();
 
     // 文件过大
@@ -287,7 +288,7 @@ export class PayloadTooLargeErrorMappingStrategy
     );
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     const errorWithCode = error as Error & { statusCode?: number };
     return ErrorFactory.createPayloadTooLargeError(
       'Request payload',
@@ -324,7 +325,7 @@ export class ValidationErrorMappingStrategy implements ErrorMappingStrategy {
     );
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     return ErrorFactory.createValidationError(
       error.message,
       { originalError: error.message },
@@ -354,7 +355,7 @@ export class PermissionErrorMappingStrategy implements ErrorMappingStrategy {
     return permissionKeywords.some((keyword) => message.includes(keyword));
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     const message = error.message.toLowerCase();
 
     // 未授权
@@ -399,7 +400,7 @@ export class NotFoundErrorMappingStrategy implements ErrorMappingStrategy {
     return notFoundKeywords.some((keyword) => message.includes(keyword));
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     return ErrorFactory.createNotFoundError(
       'Resource',
       context?.resourceId,
@@ -419,7 +420,7 @@ export class DefaultErrorMappingStrategy implements ErrorMappingStrategy {
     return true; // 默认策略总是可以处理
   }
 
-  map(error: Error, context?: ErrorContext): AppError {
+  map(error: Error, context?: ErrorContext): CoreError {
     return ErrorFactory.fromError(error, context);
   }
 }
@@ -475,9 +476,9 @@ export class ErrorMapper {
    * @param context 错误上下文
    * @returns 映射后的AppError
    */
-  map(error: Error, context?: ErrorContext): AppError {
-    // 如果已经是AppError，直接返回
-    if (error instanceof AppError) {
+  map(error: Error, context?: ErrorContext): CoreError {
+    // 如果已经是 CoreError（域错误），直接返回
+    if (error instanceof CoreError) {
       return error;
     }
 
@@ -492,10 +493,11 @@ export class ErrorMapper {
         try {
           return strategy.map(error, context);
         } catch (mappingError) {
+          const normalizedError = ensureError(mappingError);
           // 如果映射失败，记录错误并继续尝试下一个策略
           console.error(
             `Error mapping strategy '${strategy.name}' failed:`,
-            mappingError,
+            normalizedError,
           );
           continue;
         }
@@ -512,7 +514,7 @@ export class ErrorMapper {
    * @param context 错误上下文
    * @returns 映射后的AppError数组
    */
-  mapBatch(errors: Error[], context?: ErrorContext): AppError[] {
+  mapBatch(errors: Error[], context?: ErrorContext): CoreError[] {
     return errors.map((error) => this.map(error, context));
   }
 
@@ -522,8 +524,8 @@ export class ErrorMapper {
    * @returns 带有上下文的错误映射器
    */
   withContext(baseContext: ErrorContext): {
-    map: (error: Error, additionalContext?: ErrorContext) => AppError;
-    mapBatch: (errors: Error[], additionalContext?: ErrorContext) => AppError[];
+    map: (error: Error, additionalContext?: ErrorContext) => CoreError;
+    mapBatch: (errors: Error[], additionalContext?: ErrorContext) => CoreError[];
   } {
     return {
       map: (error: Error, additionalContext?: ErrorContext) => {
@@ -548,13 +550,9 @@ export class ErrorMapper {
     category: ErrorCategory,
     error: Error,
     context?: ErrorContext,
-  ): AppError {
-    return ErrorFactory.fromErrorCategory(
-      category,
-      error.message,
-      context,
-      error,
-    );
+  ): CoreError {
+    // ErrorFactory.fromErrorCategory expects (category, message, context)
+    return ErrorFactory.fromErrorCategory(category, error.message, context);
   }
 }
 
@@ -570,3 +568,4 @@ export function createErrorMapper(): ErrorMapper {
  * 全局错误映射器实例
  */
 export const globalErrorMapper = createErrorMapper();
+

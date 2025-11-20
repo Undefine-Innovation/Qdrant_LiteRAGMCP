@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+﻿import { DataSource } from 'typeorm';
 import { Logger } from '@logging/logger.js';
 import { ChunkRepository } from './index.js';
 import { DocId, PointId, CollectionId } from '@domain/entities/types.js';
@@ -77,7 +77,7 @@ export class PostgreSQLChunkOperations {
   async getChunk(id: string): Promise<Record<string, unknown> | null> {
     try {
       const chunk = await this.chunkRepository.findById(id);
-      return chunk;
+      return chunk as unknown as Record<string, unknown>;
     } catch (error) {
       this.logger.error(`获取文档块失败`, {
         id,
@@ -95,7 +95,7 @@ export class PostgreSQLChunkOperations {
   async getChunksByDocId(docId: DocId): Promise<Array<Record<string, unknown>>> {
     try {
       const chunks = await this.chunkRepository.findByDocId(docId);
-      return chunks;
+      return chunks as unknown as Array<Record<string, unknown>>;
     } catch (error) {
       this.logger.error(`根据文档ID获取块列表失败`, {
         docId,
@@ -123,7 +123,7 @@ export class PostgreSQLChunkOperations {
 
       this.logger.info(`更新文档块成功`, { chunkId: id });
 
-      return chunk;
+      return chunk as unknown as Record<string, unknown>;
     } catch (error) {
       this.logger.error(`更新文档块失败`, {
         id,

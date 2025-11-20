@@ -236,3 +236,4 @@ export class AlertHistoryRepository extends BaseRepository<AlertHistory> {
     }
   }
 }
+
